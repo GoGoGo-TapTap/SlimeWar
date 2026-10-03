@@ -1,14 +1,51 @@
-Binaries
-DerivedDataCache
-Intermediate
-Saved
-.vscode
-.vs
+# ============================================
+# Unreal Engine 生成物
+# ============================================
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
 *.VC.db
 *.opensdf
-*.opendb
 *.sdf
+*.suo
+*.xcodeproj/
+*.xcworkspace/
+
+# ============================================
+# 插件生成物（只忽略生成物，不要忽略整个 Plugins/）
+# ============================================
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+Plugins/*/DerivedDataCache/
+Plugins/*/Saved/
+
+# 注意：Plugins/*/Content/ 与 Plugins/*/*.uplugin 必须入库。
+# Lyra 系插件（CommonGame/CommonUser/...）的资产是游戏运行依赖，
+# 忽略掉会导致队友 clone 后缺资产、工程直接挂。
+# 如果只想让搜索工具跳过它们，请写到 .ignore，不要写在这里。
+
+# ============================================
+# IDE / 编辑器（个人机器配置，不入库）
+# ============================================
+.vs/
+.idea/
+.vscode/
+*.code-workspace
+
+# 解决方案与用户级文件由本机生成，不入库
 *.sln
 *.suo
-*.xcodeproj
-*.xcworkspace
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.opendb
+*.VC.VC.opendb
+
+# ============================================
+# 系统噪声文件
+# ============================================
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,40 +1,90 @@
 # ============================================
-# Unreal Engine Git LFS 配置（推荐）
-# 通过扩展名而不是路径进行跟踪
+# Unreal Engine 5 协作规则
+# 通过扩展名（而不是路径）进行 LFS 跟踪
 # ============================================
 
-# 核心 UE 资产（二进制，必须走 LFS）
-*.uasset filter=lfs diff=lfs merge=lfs -text
-*.umap   filter=lfs diff=lfs merge=lfs -text
+# 兜底：未显式声明的文件按文本处理、统一 LF
+# 用于消除跨平台 / core.autocrlf 差异造成的整文件假 diff
+* text=auto eol=lf
+
+# ============================================
+# UE 二进制资产：LFS + 文件锁（lockable）
+# 这些文件无法合并，锁定后避免"双方各改一版、只能弃一方"
+# 注意：需服务端支持 LFS Locking，见下方说明
+# ============================================
+*.uasset filter=lfs diff=lfs merge=lfs -text lockable
+*.umap   filter=lfs diff=lfs merge=lfs -text lockable
 *.ubulk  filter=lfs diff=lfs merge=lfs -text
 *.uexp   filter=lfs diff=lfs merge=lfs -text
 *.uptnl  filter=lfs diff=lfs merge=lfs -text
+*.upk    filter=lfs diff=lfs merge=lfs -text
+*.udk    filter=lfs diff=lfs merge=lfs -text
+*.t3d    filter=lfs diff=lfs merge=lfs -text
 
-# 常见大体积源文件（可选，建议走 LFS）
-*.fbx    filter=lfs diff=lfs merge=lfs -text
-*.psd    filter=lfs diff=lfs merge=lfs -text
-*.tga    filter=lfs diff=lfs merge=lfs -text
-*.png    filter=lfs diff=lfs merge=lfs -text
-*.jpg    filter=lfs diff=lfs merge=lfs -text
-*.jpeg   filter=lfs diff=lfs merge=lfs -text
-*.exr    filter=lfs diff=lfs merge=lfs -text
-*.hdr    filter=lfs diff=lfs merge=lfs -text
-*.wav    filter=lfs diff=lfs merge=lfs -text
-*.mp4    filter=lfs diff=lfs merge=lfs -text
-*.mov    filter=lfs diff=lfs merge=lfs -text
+# ============================================
+# DCC / 建模源文件（体积大，按需保留）
+# ============================================
+*.fbx   filter=lfs diff=lfs merge=lfs -text
+*.obj   filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.max   filter=lfs diff=lfs merge=lfs -text
+*.mb    filter=lfs diff=lfs merge=lfs -text
+*.ma    filter=lfs diff=lfs merge=lfs -text
+*.abc   filter=lfs diff=lfs merge=lfs -text
 
-# -------------------- 文本文件（不走 LFS） --------------------
-*.ini      text
-*.json     text
-*.uplugin  text
-*.uproject text
-*.cs       text
-*.h        text
-*.hpp      text
-*.cpp      text
-*.c        text
-*.txt      text
-*.sh       text
-*.bat      text
-.gitattributes text
-.gitignore    text
+# ============================================
+# 图片
+# ============================================
+*.psd  filter=lfs diff=lfs merge=lfs -text
+*.tga  filter=lfs diff=lfs merge=lfs -text
+*.png  filter=lfs diff=lfs merge=lfs -text
+*.jpg  filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.gif  filter=lfs diff=lfs merge=lfs -text
+*.bmp  filter=lfs diff=lfs merge=lfs -text
+*.tif  filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.exr  filter=lfs diff=lfs merge=lfs -text
+*.hdr  filter=lfs diff=lfs merge=lfs -text
+*.svg  filter=lfs diff=lfs merge=lfs -text
+
+# ============================================
+# 音频 / 视频（含 Wwise）
+# ============================================
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.wem  filter=lfs diff=lfs merge=lfs -text
+*.bnk  filter=lfs diff=lfs merge=lfs -text
+*.ogg  filter=lfs diff=lfs merge=lfs -text
+*.mp3  filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+*.mp4  filter=lfs diff=lfs merge=lfs -text
+*.mov  filter=lfs diff=lfs merge=lfs -text
+
+# ============================================
+# 文本文件：显式 LF（避免 autocrlf 假 diff）
+# ============================================
+*.ini      text eol=lf
+*.uproject text eol=lf
+*.uplugin  text eol=lf
+*.json     text eol=lf
+*.cs       text eol=lf
+*.h        text eol=lf
+*.hpp      text eol=lf
+*.cpp      text eol=lf
+*.c        text eol=lf
+*.txt      text eol=lf
+*.md       text eol=lf
+*.sh       text eol=lf
+
+# Windows 脚本保持 CRLF，否则 cmd/PowerShell 可能异常
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# ============================================
+# 配置文件自身
+# ============================================
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+.ignore        text eol=lf
