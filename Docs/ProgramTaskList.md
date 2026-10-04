@@ -876,6 +876,11 @@ public:
 
 ## 10. 参考文档
 
+> 📌 **2026-10-04 路径已变**：本文与策划案已随 Phase 0 一起入库，路径改成——
+> 本文 `Docs/ProgramTaskList.md`、策划案 `Docs/GameDesign/DesignDoc.md`、
+> 图片 `Docs/GameDesign/Images/ImageMain.png` ~ `Image4.png`（对应原 `image.png`、`image 1~4.png`）。
+> 原因：**中文/带空格的文件名会让 UBT 构建崩溃**，见 `Docs/Collaboration.md` §8。下表路径为历史记录。
+
 | 文档 | 路径 | 用途 |
 |---|---|---|
 | 策划案 | `策划案/策划案.md` | 规则与体验的唯一来源 |

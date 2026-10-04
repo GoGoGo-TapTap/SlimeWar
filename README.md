@@ -321,7 +321,7 @@ UHT 解析 49 个文件全通过。模块现在是 `Public/{Core,GameplayFramewo
 
 | 计划任务 | 状态 | 说明 |
 |---|---|---|
-| M0-01 仓库 / 分支 / LFS | 🔶 | 仓库与 LFS 早已存在；本轮补了《仓库路径必须 ASCII》硬规则（见下） |
+| M0-01 仓库 / 分支 / LFS | ✅ | 已切到 `main` 并提交 `7736789`；补了《仓库路径必须 ASCII》硬规则（见下） |
 | M0-02 目录骨架 + 模板迁移 | ✅ | `Public/Private` 分层，`SlimeWarCharacter`/`SlimeWarGameMode` 已迁入 |
 | M0-03 Build.cs + uproject | ✅ | `GameplayAbilities/GameplayTags/GameplayTasks/DeveloperSettings` + 编辑器侧 `GameplayAbilitiesEditor` |
 | M0-04 `SlimeWarCoreTypes.h` | ✅ | C1~C4，并补齐计划漏掉的 `FWeaponStatRow`、`FSlimeSpawnSlot`、`USlimeSpawnLayout` |
