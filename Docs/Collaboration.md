@@ -160,3 +160,27 @@ git push --force
 | `.ignore` | **ripgrep / VS Code 搜索** | **Git 完全不读**，只影响代码搜索 |
 
 `.ignore` 里排除了 `/Content`，所以 VS Code / `rg` 搜不到资产名。这是刻意的（否则搜代码会被资产淹没），搜资产请用 UE 的 Content Browser。
+
+---
+
+## 8. 仓库内路径必须是 ASCII ⚠️（UE 构建硬约束）
+
+**目录名和文件名只能用小写字母、数字、下划线、短横线。中文名和空格会让 UE 构建直接崩。**
+
+不是风格问题，是 UnrealBuildTool 的坑：它用 `git status` 的结果算"改动工作集"，
+而 git 默认会把非 ASCII / 含空格的路径转义成 `"Docs/\347\250\213..."` 这种带引号的形式，
+UBT 解析时抛出：
+
+```
+System.ArgumentException: Path fragment '"Docs/\347\250\213..."' contains invalid directory separators.
+```
+
+**所以：**
+
+- 文档、源码、资产一律用 ASCII 路径（如 `Docs/ProgramTaskList.md`、`L_Sandbox_OnePoint.umap`）。
+- 内容可以是中文，路径不行。
+- 已经踩过的坑：把 `策划案/` 直接搬进仓库 → 编辑器/命令行编译全挂。
+  正确做法是目录改名 `Docs/GameDesign/`，文件名改 `DesignDoc.md`、`Image1.png`。
+
+> 顺带一条：`git config core.quotePath false` 能绕过这个问题，但那是**每台机器**的本地配置，
+> 不能指望队友也设。改路径才是根治。

@@ -1,0 +1,2 @@
+Name,Damage,FireRate,MagazineSize,ReloadDuration,Range,AimAssistStrength
+Rifle,20,10,8,1.0,10000,0.3
