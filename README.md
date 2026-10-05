@@ -1,5 +1,10 @@
 # SlimeWar（粘液城市）· 工程 README
 
+> ⚠️ **本文写于 Phase 0 之前，§1「现状核对」和第 7 节的问题清单已经过期**（Phase 0 已落地、
+> Phase A 已实现）。当前进度的唯一来源是 **[Docs/ProgramTaskList.md](Docs/ProgramTaskList.md)**，
+> 编辑器操作步骤见 **[Docs/PhaseA/PhaseA-Checklist.md](Docs/PhaseA/PhaseA-Checklist.md)**。
+> 本文其余部分（分层设计、契约、问题分析）仍然可读。
+
 > 一句话：UE 5.5 单机 TPS Game Jam 项目——玩家拿枪打史莱姆，史莱姆会两两融合变大变强，
 > 180 秒内在 3 个生成点上刷分。**无网络、无存档、无商店、无技能树**。
 >

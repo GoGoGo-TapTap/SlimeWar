@@ -8,6 +8,7 @@
 #include "SlimeWeaponComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSlimeAmmoChangedSignature, int32, CurrentAmmo, int32, MagazineSize);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSlimeWeaponHitSignature, AActor*, HitActor, FVector, ImpactPoint, bool, bHit);
 
 /**
  * Weapon shell. Phase 0 stores the stat row and owns the current magazine ammo.
@@ -40,8 +41,42 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Weapon")
 	FWeaponStatRow GetStatRow() const { return StatRow; }
 
+	/** Remove one round. Returns false when the magazine is empty (nothing is removed). */
+	UFUNCTION(BlueprintCallable, Category = "Slime|Weapon")
+	bool ConsumeShot();
+
+	/** Refill the magazine to its size (reload finished). Broadcasts OnAmmoChanged. */
+	UFUNCTION(BlueprintCallable, Category = "Slime|Weapon")
+	void RefillMagazine();
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Weapon")
+	bool IsMagazineEmpty() const { return MagazineAmmo <= 0; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Weapon")
+	bool IsMagazineFull() const { return MagazineSize > 0 && MagazineAmmo >= MagazineSize; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Weapon")
+	float GetDamage() const { return StatRow.Damage; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Weapon")
+	float GetRange() const { return StatRow.Range; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Weapon")
+	float GetFireRate() const { return StatRow.FireRate; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Weapon")
+	float GetReloadDuration() const { return StatRow.ReloadDuration; }
+
+	/** Presentation hook for Phase D / PE: reports where the shot went. */
+	UFUNCTION(BlueprintCallable, Category = "Slime|Weapon")
+	void BroadcastShotResult(AActor* HitActor, FVector ImpactPoint, bool bHit);
+
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Weapon")
 	FSlimeAmmoChangedSignature OnAmmoChanged;
+
+	/** Fired for every shot attempt, hit or miss. No gameplay logic consumes it in Phase A. */
+	UPROPERTY(BlueprintAssignable, Category = "Slime|Weapon")
+	FSlimeWeaponHitSignature OnWeaponHit;
 
 protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Slime|Weapon")

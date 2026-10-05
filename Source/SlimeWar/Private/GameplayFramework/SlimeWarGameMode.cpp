@@ -2,6 +2,7 @@
 
 #include "GameplayFramework/SlimeWarGameMode.h"
 #include "Core/SlimeWarLog.h"
+#include "Debug/SlimeHUD.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -19,6 +20,9 @@ ASlimeWarGameMode::ASlimeWarGameMode()
 
 	// Routes console input to USlimeCheatManager (SlimeDumpTables / SlimeDamageNearestEnemy).
 	PlayerControllerClass = ASlimeWarPlayerController::StaticClass();
+
+	// C++ crosshair + Phase A debug draw (no widget assets needed).
+	HUDClass = ASlimeHUD::StaticClass();
 }
 
 void ASlimeWarGameMode::OnEnemyKilled(ETargetKind Kind, int32 Mass)

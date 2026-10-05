@@ -51,9 +51,79 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player")
 	float PlayerTurnRateDegPerSec = 0.f;
 
+	/** Ground acceleration in cm/s^2. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player")
+	float PlayerAcceleration = 0.f;
+
+	/** Braking deceleration while walking in cm/s^2. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player")
+	float PlayerBrakingDeceleration = 0.f;
+
 	/** Invulnerability window after being hit, in seconds (design: 0.6). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player")
 	float HitProtectionDuration = 0.f;
+
+	// -- Camera / weapon (TPS shoulder view) --
+
+	/** Spring arm length in cm. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+	float CameraBoomLength = 0.f;
+
+	/** Spring arm socket offset, cm. Positive Y pushes the camera to the character's right. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+	FVector CameraSocketOffset = FVector::ZeroVector;
+
+	/** Camera field of view, degrees. 0 keeps the engine default. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+	float CameraFieldOfView = 0.f;
+
+	/** Muzzle offset from the camera, in camera space (cm). X forward, Y right, Z up. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+	FVector MuzzleOffsetLocal = FVector::ZeroVector;
+
+	/** Aim assist cone half angle in degrees, measured from the camera forward. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+	float AimAssistMaxAngleDeg = 0.f;
+
+	// -- Normal slime AI (Phase A: StateTree, numbers stay in data) --
+
+	/** Delay after spawning before a normal slime starts looking for a partner, seconds (design: 2). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
+	float AISpawnWaitTime = 0.f;
+
+	/** Activity radius around the spawn point, cm (design: 6 m). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
+	float AIActivityRadius = 0.f;
+
+	/** Max wander step when no partner is found, cm (design: <= 3 m). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
+	float AIWanderRadius = 0.f;
+
+	/** Wander pause lower bound, seconds (design: 0.5). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
+	float AIWanderPauseMin = 0.f;
+
+	/** Wander pause upper bound, seconds (design: 1.5). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
+	float AIWanderPauseMax = 0.f;
+
+	/** Give-up time for a single approach / wander step, seconds (design: 2). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
+	float AIApproachTimeout = 0.f;
+
+	/** Mass sum cap for fusion (design: 8). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
+	int32 AIFusionMassCap = 0;
+
+	// -- Aggressive slime --
+
+	/** DT_AggroStats. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Aggro")
+	TSoftObjectPtr<UDataTable> AggroStatTable;
+
+	/** Row name used inside the aggro table. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Aggro")
+	FName AggroRowName;
 
 	// -- Data tables --
 

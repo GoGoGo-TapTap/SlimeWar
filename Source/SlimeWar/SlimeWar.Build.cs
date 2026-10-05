@@ -20,7 +20,13 @@ public class SlimeWar : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			// USlimeGameSettings : UDeveloperSettings
-			"DeveloperSettings"
+			"DeveloperSettings",
+			// Phase A 敌人 AI：AIController + NavMesh 寻路
+			"AIModule",
+			"NavigationSystem",
+			// Phase A 敌人 AI：StateTree（StateTreeModule 为核心，GameplayStateTree 提供 AI Component）
+			"StateTreeModule",
+			"GameplayStateTreeModule"
 		});
 
 		if (Target.bBuildEditor)

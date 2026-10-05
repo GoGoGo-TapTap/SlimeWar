@@ -10,9 +10,11 @@
 #include "Core/SlimeStateComponent.h"
 #include "Core/SlimeWarCVars.h"
 #include "Core/SlimeWarLog.h"
+#include "Enemy/SlimeAIController.h"
 #include "Engine/GameInstance.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameplayFramework/SlimeRunConfig.h"
 #include "GameplayFramework/SlimeWarGameMode.h"
 #include "GameplayFramework/StatTableProvider.h"
 
@@ -37,11 +39,29 @@ ASlimeEnemyBase::ASlimeEnemyBase()
 	State = CreateDefaultSubobject<USlimeStateComponent>(TEXT("State"));
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	// The weapon traces against ECC_Visibility, so the capsule must block that channel
+	// explicitly (the default Pawn profile is not guaranteed to).
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	}
+
+	// Pawn defaults to PlacedInWorld, which means runtime spawned enemies would never get an
+	// AIController and their StateTree would never start.
+	AIControllerClass = ASlimeAIController::StaticClass();
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void ASlimeEnemyBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Placed-in-level actors have no spawner to call InitializeFromSpawn.
+	if (ActivityCenter.IsNearlyZero())
+	{
+		ActivityCenter = GetActorLocation();
+	}
 
 	if (State && TargetKind == ETargetKind::Normal)
 	{
@@ -54,6 +74,12 @@ void ASlimeEnemyBase::BeginPlay()
 	}
 
 	ApplyStatRow(Mass);
+}
+
+void ASlimeEnemyBase::InitializeFromSpawn(int32 InPointId, const FVector& InActivityCenter)
+{
+	PointId = InPointId;
+	ActivityCenter = InActivityCenter;
 }
 
 float ASlimeEnemyBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -71,6 +97,12 @@ float ASlimeEnemyBase::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 void ASlimeEnemyBase::ApplyStatRow(int32 NewMass)
 {
+	if (IsAggressive())
+	{
+		ApplyAggroStatRow();
+		return;
+	}
+
 	Mass = FMath::Max(1, NewMass);
 
 	UStatTableProvider* Provider = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStatTableProvider>() : nullptr;
@@ -106,6 +138,84 @@ void ASlimeEnemyBase::ApplyStatRow(int32 NewMass)
 	}
 }
 
+FName ASlimeEnemyBase::GetAggroRowName() const
+{
+	const UStatTableProvider* Provider = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStatTableProvider>() : nullptr;
+	const USlimeRunConfig* RunConfig = Provider ? Provider->GetRunConfig() : nullptr;
+
+	if (RunConfig && !RunConfig->AggroRowName.IsNone())
+	{
+		return RunConfig->AggroRowName;
+	}
+
+	return FName(TEXT("Default"));
+}
+
+void ASlimeEnemyBase::ApplyAggroStatRow()
+{
+	UStatTableProvider* Provider = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStatTableProvider>() : nullptr;
+
+	FSlimeAggroStatRow Row;
+	if (!Provider || !Provider->GetAggroStat(Row))
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("ASlimeEnemyBase::ApplyAggroStatRow: no aggro row '%s' on %s, keeping current values."),
+			*GetAggroRowName().ToString(), *GetNameSafe(this));
+		return;
+	}
+
+	if (Row.MoveSpeed > 0.f)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = Row.MoveSpeed;
+	}
+
+	if (Row.BodyRadius > 0.f)
+	{
+		GetCapsuleComponent()->SetCapsuleRadius(Row.BodyRadius);
+	}
+
+	if (BodyMesh)
+	{
+		if (UStaticMesh* LoadedMesh = Row.Mesh.LoadSynchronous())
+		{
+			BodyMesh->SetStaticMesh(LoadedMesh);
+		}
+	}
+
+	if (Health)
+	{
+		Health->InitializeHealth(Row.MaxHealth);
+	}
+}
+
+void ASlimeEnemyBase::SetFusionTarget(ASlimeEnemyBase* InTarget)
+{
+	FusionTarget = InTarget;
+}
+
+void ASlimeEnemyBase::ClearAllStateTags()
+{
+	if (!State)
+	{
+		return;
+	}
+
+	static const FGameplayTag TagsToClear[] = {
+		TAG_State_Enemy_Normal_Idle,
+		TAG_State_Enemy_Normal_Fusing,
+		TAG_State_Enemy_Normal_MassLocked,
+		TAG_State_Enemy_Aggro_Chasing,
+		TAG_State_Enemy_Aggro_WindingUp,
+		TAG_State_Enemy_Aggro_Recovering,
+		TAG_State_Enemy_Aggro_Cooling
+	};
+
+	for (const FGameplayTag& Tag : TagsToClear)
+	{
+		State->RemoveStateTag(Tag);
+	}
+}
+
 void ASlimeEnemyBase::HandleDeath()
 {
 	if (SlimeCVars::DebugCombatLog != 0)
@@ -114,14 +224,21 @@ void ASlimeEnemyBase::HandleDeath()
 			*GetNameSafe(this), static_cast<int32>(TargetKind), Mass);
 	}
 
-	if (State)
-	{
-		State->RemoveStateTag(TAG_State_Enemy_Normal_Idle);
-	}
+	FusionTarget = nullptr;
+	ClearAllStateTags();
+
+	// The AI controller listens to this and stops its StateTree before the actor goes away.
+	OnEnemyDied.Broadcast(this);
 
 	NotifyDirectorOnDeath();
 
-	// TODO(Phase A/B): splash placeholder and return to the object pool.
+	// Stop participating in the world immediately: no movement, no collision, no more damage.
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	SetActorEnableCollision(false);
+
+	// TODO(Phase C, PC-08): return to the object pool instead of destroying.
+	Destroy();
 }
 
 void ASlimeEnemyBase::NotifyDirectorOnDeath()

@@ -3,6 +3,7 @@
 #include "Player/SlimePlayerAttributeSet.h"
 #include "Core/SlimeWarLog.h"
 #include "GameplayEffectExtension.h"
+#include "Player/SlimeWarCharacter.h"
 
 USlimePlayerAttributeSet::USlimePlayerAttributeSet()
 {
@@ -32,5 +33,15 @@ void USlimePlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMo
 		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
 
 		UE_LOG(LogSlimeWar, Verbose, TEXT("Player health is now %.2f / %.2f"), GetHealth(), GetMaxHealth());
+
+		// PA-07: direction hook for the Phase D damage indicator. The causer is carried in the
+		// effect context by USlimeCombatSubsystem, so this is the only place that knows it.
+		if (Data.EvaluatedData.Magnitude < 0.f)
+		{
+			if (ASlimeWarCharacter* Character = Cast<ASlimeWarCharacter>(GetOwningActor()))
+			{
+				Character->NotifyDamagedFrom(Data.EffectSpec.GetContext().GetInstigator());
+			}
+		}
 	}
 }

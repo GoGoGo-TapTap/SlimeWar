@@ -16,3 +16,26 @@ void USlimeWeaponComponent::SetupFromStatRow(FName InWeaponId, const FWeaponStat
 
 	OnAmmoChanged.Broadcast(MagazineAmmo, MagazineSize);
 }
+
+bool USlimeWeaponComponent::ConsumeShot()
+{
+	if (MagazineAmmo <= 0)
+	{
+		return false;
+	}
+
+	--MagazineAmmo;
+	OnAmmoChanged.Broadcast(MagazineAmmo, MagazineSize);
+	return true;
+}
+
+void USlimeWeaponComponent::RefillMagazine()
+{
+	MagazineAmmo = MagazineSize;
+	OnAmmoChanged.Broadcast(MagazineAmmo, MagazineSize);
+}
+
+void USlimeWeaponComponent::BroadcastShotResult(AActor* HitActor, FVector ImpactPoint, bool bHit)
+{
+	OnWeaponHit.Broadcast(HitActor, ImpactPoint, bHit);
+}

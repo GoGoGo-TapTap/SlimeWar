@@ -40,6 +40,18 @@ void USlimeCombatSubsystem::ApplyDamageTo(AActor* Target, float Amount, AActor* 
 	// Path A: the target owns an ASC (the player) -> GameplayEffect with a SetByCaller amount.
 	if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target))
 	{
+		// Hit protection (design 4.6.3): while State.Player.Invulnerable is up, incoming hits
+		// neither deal damage nor refresh anything. The attacker still pays its recovery.
+		if (TargetASC->HasMatchingGameplayTag(TAG_State_Player_Invulnerable))
+		{
+			if (SlimeCVars::DebugCombatLog != 0)
+			{
+				UE_LOG(LogSlimeWar, Log, TEXT("ApplyDamageTo: %s is invulnerable, %.2f damage dropped."),
+					*GetNameSafe(Target), Amount);
+			}
+			return;
+		}
+
 		const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
 		UClass* EffectClass = Settings ? Settings->DamageEffectClass.LoadSynchronous() : nullptr;
 

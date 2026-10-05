@@ -12,4 +12,10 @@ namespace SlimeCVars
 
 	/** 0 = off, 1 = debug draw enemy state tags and activity radius (Slime.Debug.DrawEnemyState). */
 	extern int32 DebugDrawEnemyState;
+
+	/** 0 = off, 1 = draw the crosshair (Slime.Debug.Crosshair). Default on. */
+	extern int32 DebugCrosshair;
+
+	/** 0 = off, 1 = draw the camera ray / assisted ray / picked target (Slime.Debug.DrawAimAssist). */
+	extern int32 DebugDrawAimAssist;
 }

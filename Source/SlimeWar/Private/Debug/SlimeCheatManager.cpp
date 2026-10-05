@@ -4,7 +4,9 @@
 
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarLog.h"
+#include "Enemy/SlimeAggro.h"
 #include "Enemy/SlimeEnemyBase.h"
+#include "Enemy/SlimeNormal.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -12,6 +14,48 @@
 #include "GameplayFramework/SlimeCombatSubsystem.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "Math/NumericLimits.h"
+
+namespace
+{
+	/** Spawn distance / spacing are debug-only helpers, never gameplay balance values. */
+	constexpr float SlimeCheatSpawnDistance = 500.f;
+	constexpr float SlimeCheatSpawnSpacing = 150.f;
+
+	FVector GetCheatSpawnBase(const APlayerController* PlayerController, const int32 Index, const int32 Count)
+	{
+		const APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+		const FVector Forward = PlayerPawn ? PlayerPawn->GetActorForwardVector() : FVector::ForwardVector;
+		const FVector Origin = PlayerPawn ? PlayerPawn->GetActorLocation() : FVector::ZeroVector;
+		const FVector Right = PlayerPawn ? PlayerPawn->GetActorRightVector() : FVector::RightVector;
+
+		const float Offset = (Index - (Count - 1) * 0.5f) * SlimeCheatSpawnSpacing;
+		return Origin + Forward * SlimeCheatSpawnDistance + Right * Offset;
+	}
+
+	void SpawnSlimes(UWorld* World, APlayerController* PlayerController, const TSubclassOf<ASlimeEnemyBase>& SlimeClass, const int32 Count)
+	{
+		if (!World || !SlimeClass || Count <= 0)
+		{
+			return;
+		}
+
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			const FVector Location = GetCheatSpawnBase(PlayerController, Index, Count);
+
+			// Spawned pawns auto-possess ASlimeAIController (see ASlimeEnemyBase),
+			// which starts the StateTree, so the activity centre is set right after.
+			if (ASlimeEnemyBase* Slime = World->SpawnActor<ASlimeEnemyBase>(
+				SlimeClass, Location, FRotator::ZeroRotator, SpawnParameters))
+			{
+				Slime->InitializeFromSpawn(0, Location);
+			}
+		}
+	}
+}
 
 void USlimeCheatManager::SlimeDumpTables()
 {
@@ -91,4 +135,56 @@ void USlimeCheatManager::SlimeDamageNearestEnemy(float Amount)
 	}
 
 	CombatSubsystem->ApplyDamageTo(BestEnemy, Amount, PlayerPawn);
+}
+
+void USlimeCheatManager::SlimeSpawnNormal(int32 Count)
+{
+	SpawnSlimes(GetWorld(), GetPlayerController(), ASlimeNormal::StaticClass(), Count);
+}
+
+void USlimeCheatManager::SlimeSpawnAggro(int32 Count)
+{
+	SpawnSlimes(GetWorld(), GetPlayerController(), ASlimeAggro::StaticClass(), Count);
+}
+
+void USlimeCheatManager::SlimeClearEnemies()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	int32 Destroyed = 0;
+	for (TActorIterator<ASlimeEnemyBase> It(World); It; ++It)
+	{
+		if (ASlimeEnemyBase* Enemy = *It)
+		{
+			Enemy->Destroy();
+			++Destroyed;
+		}
+	}
+
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeClearEnemies: destroyed %d enemies."), Destroyed);
+}
+
+void USlimeCheatManager::SlimeKillPlayer()
+{
+	APlayerController* PlayerController = GetPlayerController();
+	APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	USlimeCombatSubsystem* CombatSubsystem = USlimeCombatSubsystem::Get(this);
+
+	if (!PlayerPawn || !CombatSubsystem)
+	{
+		return;
+	}
+
+	// Deal exactly the player's maximum health so the whole damage path is exercised.
+	const USlimeHealthComponent* Health = PlayerPawn->FindComponentByClass<USlimeHealthComponent>();
+	if (!Health)
+	{
+		return;
+	}
+
+	CombatSubsystem->ApplyDamageTo(PlayerPawn, Health->GetMaxHealth(), PlayerPawn);
 }

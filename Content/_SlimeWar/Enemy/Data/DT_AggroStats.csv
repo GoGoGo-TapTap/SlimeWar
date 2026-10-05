@@ -1,0 +1,2 @@
+Name,MaxHealth,MoveSpeed,BodyRadius,AttackRange,AttackDamage,AttackWindupTime,AttackRecoverTime,AttackCooldown
+Default,60,480,60,120,20,0.5,0.35,1.6

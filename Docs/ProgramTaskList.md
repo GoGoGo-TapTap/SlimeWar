@@ -662,26 +662,43 @@ public:
 
 | # | 任务 | Owner | 依赖 | 状态 |
 |---|---|---|---|---|
-| PA-01 | 移动参数接入数据表（速度/转身/加减速） | P2 | CP-0 | `[ ]` |
-| PA-02 | 摄像机：TPS 肩后视角 + 灵敏度配置 | P2 | CP-0 | `[ ]` |
-| PA-03 | 输入映射：射击（可按住）/ 辅助瞄准 / 换弹 / 暂停 | P2 | CP-0 | `[ ]` |
-| PA-04 | **`GA_Fire` 实现**：LineTrace 即时命中、枪口遮挡判断、击中第一个目标即停；射速由 `GE_FireCooldown` 控制 | P2 | GAS-06, PA-03 | `[ ]` |
-| PA-05 | **伤害走 `GE_Damage`**：`GA_Fire` → `ApplyGameplayEffectToTarget`（替代直接 `ApplyDamage`），命中反馈占位（准星/音效钩子） | P2 | PA-04, GAS-04 | `[ ]` |
-| PA-06 | **`GA_Reload` 实现**：`AbilityTask_WaitDelay` + 弹匣重填；**换弹期间可移动可瞄准不可射击**；无限备弹 | P2 | GAS-05, GAS-06 | `[ ]` |
-| PA-07 | **`GA_HitProtection` 实现**：`GE_Invulnerable`（**0.6s** + `State.Player.Invulnerable`）+ 受伤方向闪示钩子 | P2 | GAS-04, GAS-07 | `[ ]` |
-| PA-08 | **玩家状态机（GAS 版）**：投放中/可操作/死亡/结算 用标签 + `ActivationBlockedTags` 表达，替代 enum + switch | P2 | GAS-02, M0-15 | `[ ]` |
-| PA-09 | 辅助瞄准（右键）：只做轻微吸附，不加伤害不减速 | P2 | PA-02 | `[ ]` |
-| PA-14 | **弹药计数归宿**：弹匣余量由谁持有（AttributeSet 还是 WeaponComponent）**定死一处**，禁止双份 | P2 | PA-06 | `[ ]` |
-| PA-15 | 输入阻塞接线：`State.Weapon.Reloading` / `State.Player.Dead` / `State.Player.Result` → 对应 GA 的 `ActivationBlockedTags` | P2 | PA-08 | `[ ]` |
-| PB-01 | `ASlimeNormal` 行为态机骨架：生成 → **等待 2s** → 找对象 | P1 | CP-0 | `[ ]` |
-| PB-02 | 本点位 6m 活动区约束 + 找不到对象时的**≤3m 游走 + 停 0.5~1.5s** | P1 | PB-01 | `[ ]` |
-| PB-03 | 对象筛选：同点位 / 未参与融合 / **体量和 ≤ 8** / 优先最近 | P1 | PB-01 | `[ ]` |
-| PB-04 | `ASlimeAggro` 追踪态机：**4.8 m/s** 追玩家 + 遇障碍绕行 | P1 | CP-0 | `[ ]` |
-| PB-05 | 攻击态机：**≤1.2m 且无遮挡且冷却完成** → 停移 + 定方向 + **蓄势 0.5s** | P1 | PB-04 | `[ ]` |
-| PB-06 | 蓄势结束再判定命中/落空 → **收势 0.35s** → **两次攻击起始间隔 ≥1.6s** | P1 | PB-05 | `[ ]` |
-| PB-07 | 攻击伤害走 `ApplyDamage`；**不击退 / 不减速 / 不隔墙 / 不瞬移** 的硬约束自查表 | P1 | PB-06 | `[ ]` |
-| PB-08 | 敌人死亡：查表 → `OnEnemyKilled` → 喷溅占位 → 回池（`ApplyStatRow` 复位） | P1 | M0-09 | `[ ]` |
+| PA-01 | 移动参数接入数据表（速度/转身/加减速） | P2 | CP-0 | `[~]` |
+| PA-02 | 摄像机：TPS 肩后视角 + 灵敏度配置 | P2 | CP-0 | `[~]` |
+| PA-03 | 输入映射：射击（可按住）/ 辅助瞄准 / 换弹 / 暂停 | P2 | CP-0 | `[~]` |
+| PA-04 | **`GA_Fire` 实现**：LineTrace 即时命中、枪口遮挡判断、击中第一个目标即停；射速由 `GE_FireCooldown` 控制 | P2 | GAS-06, PA-03 | `[~]` |
+| PA-05 | **伤害走 `GE_Damage`**：`GA_Fire` → `ApplyGameplayEffectToTarget`（替代直接 `ApplyDamage`），命中反馈占位（准星/音效钩子） | P2 | PA-04, GAS-04 | `[~]` |
+| PA-06 | **`GA_Reload` 实现**：`AbilityTask_WaitDelay` + 弹匣重填；**换弹期间可移动可瞄准不可射击**；无限备弹 | P2 | GAS-05, GAS-06 | `[~]` |
+| PA-07 | **`GA_HitProtection` 实现**：`GE_Invulnerable`（**0.6s** + `State.Player.Invulnerable`）+ 受伤方向闪示钩子 | P2 | GAS-04, GAS-07 | `[~]` |
+| PA-08 | **玩家状态机（GAS 版）**：投放中/可操作/死亡/结算 用标签 + `ActivationBlockedTags` 表达，替代 enum + switch | P2 | GAS-02, M0-15 | `[~]` |
+| PA-09 | 辅助瞄准（右键）：只做轻微吸附，不加伤害不减速 | P2 | PA-02 | `[~]` |
+| PA-14 | **弹药计数归宿**：弹匣余量由谁持有（AttributeSet 还是 WeaponComponent）**定死一处**，禁止双份 | P2 | PA-06 | `[~]` |
+| PA-15 | 输入阻塞接线：`State.Weapon.Reloading` / `State.Player.Dead` / `State.Player.Result` → 对应 GA 的 `ActivationBlockedTags` | P2 | PA-08 | `[~]` |
+| PB-01 | `ASlimeNormal` 行为态机骨架：生成 → **等待 2s** → 找对象 | P1 | CP-0 | `[~]` |
+| PB-02 | 本点位 6m 活动区约束 + 找不到对象时的**≤3m 游走 + 停 0.5~1.5s** | P1 | PB-01 | `[~]` |
+| PB-03 | 对象筛选：同点位 / 未参与融合 / **体量和 ≤ 8** / 优先最近 | P1 | PB-01 | `[~]` |
+| PB-04 | `ASlimeAggro` 追踪态机：**4.8 m/s** 追玩家 + 遇障碍绕行 | P1 | CP-0 | `[~]` |
+| PB-05 | 攻击态机：**≤1.2m 且无遮挡且冷却完成** → 停移 + 定方向 + **蓄势 0.5s** | P1 | PB-04 | `[~]` |
+| PB-06 | 蓄势结束再判定命中/落空 → **收势 0.35s** → **两次攻击起始间隔 ≥1.6s** | P1 | PB-05 | `[~]` |
+| PB-07 | 攻击伤害走 `ApplyDamage`；**不击退 / 不减速 / 不隔墙 / 不瞬移** 的硬约束自查表 | P1 | PB-06 | `[~]` |
+| PB-08 | 敌人死亡：查表 → `OnEnemyKilled` → 喷溅占位 → 回池（`ApplyStatRow` 复位） | P1 | M0-09 | `[~]` |
 | **CP-1** | 玩家能开枪打死史莱姆并计分；追兵能靠近并打到玩家（扣血+保护生效） | P1+P2 | — | `[ ]` |
+
+> **Phase A 实现注记（2026-10-05）**
+> - 代码侧已完成并**编译通过**（`SlimeWarEditor Win64 Development`，0 error / 0 warning）；
+>   `[~]` = 代码就位，等编辑器资产（见 `Docs/PhaseA/PhaseA-Checklist.md`）与 CP-1 实机验收。
+> - **PA-05 口径修正**：不再写成"GA_Fire → `ApplyGameplayEffectToTarget` 替代 `ApplyDamage`"。
+>   敌人不挂 ASC，GE 对敌人无效。实际实现为统一走 `USlimeCombatSubsystem::ApplyDamageTo`，
+>   由它按目标有无 ASC 分流（玩家 → `GE_Damage` + SetByCaller，敌人 → `HealthComponent`）。
+> - **AI 实现改为 StateTree**（决策变更）：新增 `ASlimeAIController` + `USlimeStateTreeAIComponent`
+>   + 2 个 StateTree 资产 + C++ 节点（`Enemy/StateTree/SlimeStateTreeNodes.*`）。
+>   所有数值仍从 `DA_RunConfig` / `DT_AggroStats` 读，StateTree 资产只放结构。
+> - **PB-08 的对象池推迟**：Phase A 死亡即 `DestroyActor()`，回池留给 Phase C 的 PC-08（已留 TODO）。
+> - **新增标签**：`State.Weapon.Cooldown`（由 `GE_FireCooldown` 授予）。
+>   GAS 的原生冷却通过 `UGameplayAbility::GetCooldownTags()` → `UGameplayEffect::GetGrantedTags()`
+>   判定，而该缓存只由 `UTargetTagsGameplayEffectComponent` 填充，所以 granted tags 必须走组件 API。
+> - **新增任务**：PB-17（AI 基建：AIController / StateTree 组件 / 敌人子类）、
+>   PA-17（`USlimeCombatSubsystem` 受击保护早退，原属 PA-07 的跨模块改动，由 P1 改）、
+>   PB-18（调试生成命令 `SlimeSpawnNormal/SlimeSpawnAggro/SlimeClearEnemies/SlimeKillPlayer`）。
 
 ### 6.3 Phase B —— 融合与追兵完整（并行）
 

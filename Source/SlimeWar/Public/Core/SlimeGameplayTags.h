@@ -23,6 +23,8 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Player_Dead);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Player_Result);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Player_Invulnerable);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Weapon_Reloading);
+/** Granted by GE_FireCooldown while the weapon is between two shots (drives the fire rate). */
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Weapon_Cooldown);
 
 // -- Enemy AI state (driven by USlimeStateComponent, not GAS) --
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Normal_Idle);

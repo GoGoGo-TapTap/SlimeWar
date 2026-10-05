@@ -104,6 +104,57 @@ struct FWeaponStatRow : public FTableRowBase
 	float AimAssistStrength = 0.f;
 };
 
+/**
+ * Aggressive slime stats. Aggressive individuals do not fuse and have no mass tier,
+ * so they get their own table row instead of a row inside DT_SlimeStats.
+ *
+ * Keyed in DT_AggroStats by row name (Phase A uses "Default").
+ * PLACEHOLDER: every numeric column is pending design confirmation (plan section 8 Q6,
+ * plus Q13 for the attack damage which the design document never states).
+ * Numbers must live in the DataTable, never in code.
+ */
+USTRUCT(BlueprintType)
+struct FSlimeAggroStatRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	/** Aggressive individuals do not grow, so this is a flat value (design: 60). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float MaxHealth = 0.f;
+
+	/** Chase speed in cm/s (design: 4.8 m/s for the design 6 m/s player). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float MoveSpeed = 0.f;
+
+	/** Collision body radius in cm. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float BodyRadius = 0.f;
+
+	/** Stop-and-attack distance in cm (design: 1.2 m). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float AttackRange = 0.f;
+
+	/** Damage of one landed attack. PLACEHOLDER: the design document does not state it. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float AttackDamage = 0.f;
+
+	/** Wind-up before the hit check, seconds (design: 0.5). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float AttackWindupTime = 0.f;
+
+	/** Recovery after the hit check, seconds (design: 0.35). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float AttackRecoverTime = 0.f;
+
+	/** Minimum time between two attack starts, seconds (design: 1.6). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	float AttackCooldown = 0.f;
+
+	/** Static mesh for this archetype. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aggro")
+	TSoftObjectPtr<UStaticMesh> Mesh;
+};
+
 /** One spawnable slot inside a spawn point (8 normal slots + 2 aggro slots per point). */
 USTRUCT(BlueprintType)
 struct FSlimeSpawnSlot
