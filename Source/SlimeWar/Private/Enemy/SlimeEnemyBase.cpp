@@ -11,12 +11,14 @@
 #include "Core/SlimeWarCVars.h"
 #include "Core/SlimeWarLog.h"
 #include "Enemy/SlimeAIController.h"
+#include "Enemy/SlimeFusionComponent.h"
 #include "Engine/GameInstance.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameplayFramework/SlimeRunConfig.h"
 #include "GameplayFramework/SlimeWarGameMode.h"
 #include "GameplayFramework/StatTableProvider.h"
+#include "Kismet/GameplayStatics.h"
 
 ASlimeEnemyBase::ASlimeEnemyBase()
 {
@@ -45,6 +47,12 @@ ASlimeEnemyBase::ASlimeEnemyBase()
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
 		Capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+		// The player's spring arm probes with ECC_Camera, and a Pawn capsule blocks that channel by
+		// default. Walking inside a slime (the player overlaps SlimeFusion on purpose) would then
+		// collapse the boom and snap the camera into the character. Enemies never block the camera;
+		// walls still do, because those are WorldStatic.
+		Capsule->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	}
 
 	// Pawn defaults to PlacedInWorld, which means runtime spawned enemies would never get an
@@ -73,6 +81,8 @@ void ASlimeEnemyBase::BeginPlay()
 		Health->OnDeath.AddDynamic(this, &ASlimeEnemyBase::HandleDeath);
 	}
 
+	IgnorePlayerForMovement();
+
 	ApplyStatRow(Mass);
 }
 
@@ -80,6 +90,23 @@ void ASlimeEnemyBase::InitializeFromSpawn(int32 InPointId, const FVector& InActi
 {
 	PointId = InPointId;
 	ActivityCenter = InActivityCenter;
+
+	// The player definitely exists by the time anything spawns enemies at runtime.
+	IgnorePlayerForMovement();
+}
+
+void ASlimeEnemyBase::IgnorePlayerForMovement()
+{
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (!PlayerPawn || PlayerPawn == this)
+	{
+		return;
+	}
+
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->IgnoreActorWhenMoving(PlayerPawn, true);
+	}
 }
 
 float ASlimeEnemyBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -95,7 +122,7 @@ float ASlimeEnemyBase::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	return Applied;
 }
 
-void ASlimeEnemyBase::ApplyStatRow(int32 NewMass)
+void ASlimeEnemyBase::ApplyStatRow(int32 NewMass, float HealthFraction)
 {
 	if (IsAggressive())
 	{
@@ -121,7 +148,7 @@ void ASlimeEnemyBase::ApplyStatRow(int32 NewMass)
 
 	if (Row.BodyRadius > 0.f)
 	{
-		GetCapsuleComponent()->SetCapsuleRadius(Row.BodyRadius);
+		ApplyBodyRadius(Row.BodyRadius);
 	}
 
 	if (BodyMesh)
@@ -134,7 +161,7 @@ void ASlimeEnemyBase::ApplyStatRow(int32 NewMass)
 
 	if (Health)
 	{
-		Health->InitializeHealth(Row.MaxHealth);
+		Health->InitializeHealth(Row.MaxHealth, HealthFraction);
 	}
 }
 
@@ -171,7 +198,7 @@ void ASlimeEnemyBase::ApplyAggroStatRow()
 
 	if (Row.BodyRadius > 0.f)
 	{
-		GetCapsuleComponent()->SetCapsuleRadius(Row.BodyRadius);
+		ApplyBodyRadius(Row.BodyRadius);
 	}
 
 	if (BodyMesh)
@@ -185,6 +212,30 @@ void ASlimeEnemyBase::ApplyAggroStatRow()
 	if (Health)
 	{
 		Health->InitializeHealth(Row.MaxHealth);
+	}
+}
+
+void ASlimeEnemyBase::ApplyBodyRadius(float Radius)
+{
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	if (!Capsule || Radius <= 0.f)
+	{
+		return;
+	}
+
+	const float OldHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
+
+	// UCapsuleComponent::SetCapsuleSize does CapsuleHalfHeight = max(0, NewHalfHeight, NewRadius),
+	// so a radius larger than the current half height silently makes the capsule taller.
+	Capsule->SetCapsuleRadius(Radius);
+
+	const float DeltaHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight() - OldHalfHeight;
+	if (DeltaHalfHeight > 0.f)
+	{
+		// The actor origin is the capsule centre, so a taller capsule would grow downwards and sink
+		// into the floor (that is what wedged the first mass 8 slimes). Keep the feet where they
+		// were: a safety net for any future stat row that outgrows the capsule.
+		AddActorWorldOffset(FVector(0.f, 0.f, DeltaHalfHeight), /*bSweep=*/false);
 	}
 }
 
@@ -222,6 +273,14 @@ void ASlimeEnemyBase::HandleDeath()
 	{
 		UE_LOG(LogSlimeWar, Log, TEXT("ASlimeEnemyBase: %s died (kind=%d mass=%d)."),
 			*GetNameSafe(this), static_cast<int32>(TargetKind), Mass);
+	}
+
+	// Tell the partner before anything is cleared: a fusion that is still approaching or in
+	// contact must be cancelled so the survivor does not keep a stale (and soon destroyed)
+	// target. Only the slime that actually died is scored, once, through NotifyDirectorOnDeath.
+	if (Fusion)
+	{
+		Fusion->NotifyPartnerDied();
 	}
 
 	FusionTarget = nullptr;

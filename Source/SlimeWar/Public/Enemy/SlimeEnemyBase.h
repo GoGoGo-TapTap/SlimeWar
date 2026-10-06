@@ -10,6 +10,7 @@
 class UStaticMeshComponent;
 class UStateTree;
 class USlimeHealthComponent;
+class USlimeFusionComponent;
 class USlimeStateComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimeEnemyDiedSignature, AActor*, Enemy);
@@ -51,13 +52,29 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
 	USlimeStateComponent* GetStateComponent() const { return State; }
 
-	/** Look up the stat row for a mass tier and apply health / speed / size / mesh. */
+	/** Fusion flow (PB-09~PB-14). Null on aggressive slimes: they never fuse. */
+	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
+	USlimeFusionComponent* GetFusionComponent() const { return Fusion; }
+
+	/**
+	 * Look up the stat row for a mass tier and apply health / speed / size / mesh.
+	 * HealthFraction is forwarded to USlimeHealthComponent::InitializeHealth so a fused slime
+	 * keeps the pooled remaining-health ratio of its parents (PB-12).
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
-	void ApplyStatRow(int32 NewMass);
+	void ApplyStatRow(int32 NewMass, float HealthFraction = 1.f);
 
 	/** Apply the DT_AggroStats row. Aggressive individuals have no mass tier. */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
 	void ApplyAggroStatRow();
+
+	/**
+	 * Set the capsule radius without letting the capsule sink into the floor.
+	 * UCapsuleComponent::SetCapsuleRadius forces half height >= radius, and the actor origin is the
+	 * capsule centre, so an oversized radius would push the bottom below the ground and wedge the
+	 * character. See the implementation for the compensation.
+	 */
+	void ApplyBodyRadius(float Radius);
 
 	/** Row name looked up in DT_AggroStats (falls back to "Default"). */
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
@@ -89,6 +106,22 @@ public:
 	/** Clears every enemy state tag (death / despawn). */
 	void ClearAllStateTags();
 
+	/**
+	 * Movement level: never let the player's capsule shove this enemy around.
+	 *
+	 * The slime's own move sweeps are the source of the "player walks into a slime and it gets
+	 * launched" behaviour: while the slime walks towards its fusion meeting point with the player
+	 * capsule inside it, its sweep reports a start-penetrating blocking hit and the engine ejects
+	 * it along the penetration normal. IgnoreActorWhenMoving removes the player from exactly this
+	 * component's sweeps (see FPrimitiveComponent::InitSweepCollisionParams), so no hit -> no
+	 * ejection. The channel responses are untouched, so aggro slimes are still blocked by normal
+	 * slimes (PB-16).
+	 *
+	 * Safe to call repeatedly; it is refreshed whenever the player pawn may have changed.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
+	void IgnorePlayerForMovement();
+
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Enemy")
 	FSlimeEnemyDiedSignature OnEnemyDied;
 
@@ -106,6 +139,10 @@ protected:
 	/** Lightweight tag state (not GAS). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	TObjectPtr<USlimeStateComponent> State;
+
+	/** Created by ASlimeNormal; aggressive slimes leave it null (see the class comment). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
+	TObjectPtr<USlimeFusionComponent> Fusion;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	TObjectPtr<UStaticMeshComponent> BodyMesh;

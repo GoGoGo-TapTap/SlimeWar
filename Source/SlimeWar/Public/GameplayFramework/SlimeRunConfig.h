@@ -115,6 +115,34 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Normal")
 	int32 AIFusionMassCap = 0;
 
+	// -- Fusion (Phase B) --
+
+	/** Continuous contact needed before two slimes fuse, seconds (design 4.4: 0.4). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Fusion")
+	float FusionContactTime = 0.f;
+
+	/**
+	 * Extra slack added to the two capsule radii when testing "touching", cm.
+	 * Small on purpose: it only absorbs the frame step, it is not a magnet range.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Fusion")
+	float FusionContactTolerance = 0.f;
+
+	/** Wait after a successful fusion before the fused body may look again, seconds (design 4.4: 1). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Fusion")
+	float FusionPostFusionDelay = 0.f;
+
+	/** Wait after a cancelled attempt before looking again, seconds (design 4.6.2: 1). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Fusion")
+	float FusionRetryDelay = 0.f;
+
+	/**
+	 * Participants per fusion. Phase B always uses 2; the resolve code folds over the list, so
+	 * raising this is the only data change a future multi-way fusion needs (see the component).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Fusion")
+	int32 FusionMaxParticipants = 2;
+
 	// -- Aggressive slime --
 
 	/** DT_AggroStats. */

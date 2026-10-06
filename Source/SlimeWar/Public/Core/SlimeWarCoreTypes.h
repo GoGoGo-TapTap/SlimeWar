@@ -59,7 +59,14 @@ struct FSlimeStatRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slime")
 	float MoveSpeed = 0.f;
 
-	/** Collision body radius in cm (design quotes 0.4m for mass 1). */
+	/**
+	 * Collision body radius in cm.
+	 *
+	 * Careful: the design table quotes *diameters* (0.4 m at mass 1, 1.2 m at mass 8), so the
+	 * CSV stores half of those values (20 ... 60). Keeping them as radii means the capsule never
+	 * has to grow past the character's half height, which is what made the big slimes sink into
+	 * the floor and get stuck.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slime")
 	float BodyRadius = 0.f;
 

@@ -45,4 +45,18 @@ public:
 	/** Kill the player through the normal damage path (for death-path testing). */
 	UFUNCTION(Exec)
 	void SlimeKillPlayer();
+
+	// -- Phase B: fusion scenarios for the CP-2 pass --
+
+	/** Spawn Count normal slimes of a given mass in a tight cluster (they pair up on their own). */
+	UFUNCTION(Exec)
+	void SlimeSpawnNormalAtMass(int32 Mass = 1, int32 Count = 1);
+
+	/** Re-stat the nearest normal slime to Mass, keeping its health ratio. */
+	UFUNCTION(Exec)
+	void SlimeSetMass(int32 Mass);
+
+	/** Force the two nearest normal slimes of one spawn point into a fusion pair. */
+	UFUNCTION(Exec)
+	void SlimeForceFuse();
 };

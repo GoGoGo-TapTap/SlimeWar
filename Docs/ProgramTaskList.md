@@ -704,18 +704,88 @@ public:
 
 | # | 任务 | Owner | 依赖 | 状态 |
 |---|---|---|---|---|
-| PB-09 | `USlimeFusionComponent`：配对请求/接受/拒绝的握手协议 | P1 | PB-03 | `[ ]` |
-| PB-10 | 双方**朝彼此之间空地移动**（不穿墙）+ 靠近失败检测 | P1 | PB-09 | `[ ]` |
-| PB-11 | **持续接触 0.4s** 判定（双方存活、未分开、条件仍成立），任一失效即取消 | P1 | PB-10 | `[ ]` |
-| PB-12 | 融合结算：体量求和 → `ApplyStatRow` → **按剩余生命比例继承** → 新体量按新最大生命换算 | P1 | PB-11 | `[ ]` |
-| PB-13 | 融合后 **等待 1s** 才能再融合；**体量 8 锁死为不再融合** | P1 | PB-12 | `[ ]` |
-| PB-14 | **融合过程中被杀 → 取消融合，只结算被打死那只一次收益** | P1 | PB-12 | `[ ]` |
-| PB-15 | 三只同时接触：只允许两只融合，第三只等待/另找；同一只不能同时参与两次 | P1 | PB-12 | `[ ]` |
-| PB-16 | 追兵与普通史莱姆的碰撞关系：可被挡住但需绕行 | P1 | PB-11 | `[ ]` |
-| PA-10 | **死亡/终局时 `CancelAbilities`**：取消换弹、禁止射击（对齐策划案"死亡和终局取消换弹"） | P2 | PA-06, PA-08 | `[ ]` |
-| PA-11 | **`GA_Die` 实现**：加 `State.Player.Dead` → `CancelAbilities` → `IBattleDirector::OnPlayerDied()` | P2 | GAS-05, PA-08 | `[ ]` |
-| PA-16 | **受击保护验证**：`State.Player.Invulnerable` 存在时，后续命中**不扣血**、不误导为连续真实伤害（策划案 4.6.3） | P2 | PA-07 | `[ ]` |
+| PB-09 | `USlimeFusionComponent`：配对请求/接受/拒绝的握手协议 | P1 | PB-03 | `[~]` |
+| PB-10 | 双方**朝彼此之间空地移动**（不穿墙）+ 靠近失败检测 | P1 | PB-09 | `[~]` |
+| PB-11 | **持续接触 0.4s** 判定（双方存活、未分开、条件仍成立），任一失效即取消 | P1 | PB-10 | `[~]` |
+| PB-12 | 融合结算：体量求和 → `ApplyStatRow` → **按剩余生命比例继承** → 新体量按新最大生命换算 | P1 | PB-11 | `[~]` |
+| PB-13 | 融合后 **等待 1s** 才能再融合；**体量 8 锁死为不再融合** | P1 | PB-12 | `[~]` |
+| PB-14 | **融合过程中被杀 → 取消融合，只结算被打死那只一次收益** | P1 | PB-12 | `[~]` |
+| PB-15 | 三只同时接触：只允许两只融合，第三只等待/另找；同一只不能同时参与两次 | P1 | PB-12 | `[~]` |
+| PB-16 | 追兵与普通史莱姆的碰撞关系：可被挡住但需绕行 | P1 | PB-11 | `[~]` |
+| PA-10 | **死亡/终局时 `CancelAbilities`**：取消换弹、禁止射击（对齐策划案"死亡和终局取消换弹"） | P2 | PA-06, PA-08 | `[~]` |
+| PA-11 | **`GA_Die` 实现**：加 `State.Player.Dead` → `CancelAbilities` → `IBattleDirector::OnPlayerDied()` | P2 | GAS-05, PA-08 | `[~]` |
+| PA-16 | **受击保护验证**：`State.Player.Invulnerable` 存在时，后续命中**不扣血**、不误导为连续真实伤害（策划案 4.6.3） | P2 | PA-07 | `[~]` |
 | **CP-2** | 两只史莱姆能稳定融合且**不产生击杀分**；融合中被杀能正确取消；追兵攻击前摇/落空/冷却全对 | P1+P2 | — | `[ ]` |
+| PB-19 | **【延后】普通史莱姆之间不做碰撞**：`ASlimeNormal` 胶囊把 `SlimeFusion` 通道设为 `Ignore`，消除"配对取消后恢复碰撞 / 胶囊长大后裹住邻居"造成的 20~60cm 深度穿插与永久卡死（详见 PhaseB-Plan §11 已知问题 1） | P1 | CP-2 后 | `[ ]` |
+| PB-20 | **【延后】融合配对距离上限**：新增 `FusionMaxPairDistance`，不再出现"隔着 4~5 米配对上、接近 2 秒空转"（实测 gap 496cm / closest 499cm） | P1 | CP-2 后 | `[ ]` |
+| PB-21 | **【延后】接近空转即时取消 + 移动结果诊断**：连续若干帧重下移动请求仍无位移就立刻换目标（不再等满 `AIApproachTimeout`）；超时日志补充 `MoveTo` 返回值（`Failed/AlreadyAtGoal/RequestSuccessful`）与移动目标 | P1 | CP-2 后 | `[ ]` |
+
+> **PB-19 ~ PB-21 是 CP-2 之后才考虑的延后项**（2026-10-06 实机反馈登记），**不阻塞 CP-2**。
+> 三条的根因、证据与建议做法见 `Docs/PhaseB/PhaseB-Plan.md` → §11 已知问题与后续改进。
+
+> **Phase B 实现注记（2026-10-06）**
+> - 代码侧已完成并**编译通过**（`SlimeWarEditor Win64 Development`，0 error / 0 warning）；
+>   `[~]` = 代码就位，等编辑器步骤（见 `Docs/PhaseB/PhaseB-Checklist.md`）与 CP-2 实机验收。
+> - **新增类 `USlimeFusionComponent`**（`Public/Enemy/`，只挂在 `ASlimeNormal` 上；追兵没有该组件）。
+>   配对是**双向握手**（请求 → 接受/拒绝）：任一方已配对就拒绝，这正是 PB-15"三只只融合两只、
+>   同一只不参与两次"的实现手段，不依赖额外的仲裁器。
+> - **为将来多方融合留的口子**：`ResolvePairing()` 写成对 `Participants` 的折叠（求体量和当前/最大生命），
+>   `FusionMaxParticipants` 已进 `DA_RunConfig`。将来只改"放开上限 + 一条仲裁规则"，
+>   StateTree 任务、敌人 API 与 `IBattleDirector` 都不动。
+> - **StateTree 只改 2 条转换**：`Wander → Hold`、`Pause → Hold`，条件 `Slime: Has Fusion Target`（**不勾 Invert**），
+>   且**必须排在该状态其它转换之前**（被动方在游走中被接受配对后要能自己走进融合状态）。
+>   `Hold` 状态结构与节点显示名都不动，接近/接触/结算全在 `Slime: Hold Position` 的 C++ 实现里。
+> - **`Slime: Has Fusion Target` 语义扩展**：不再读 pawn 上的 `FusionTarget` 镜像，而是问组件
+>   "是否处于 Approaching / Contacting / Cooling"，因此 `Hold` 顺带覆盖了"融合后等待 1s"，
+>   不需要新增 Cooldown 状态。
+> - **`Hold` 任务永远返回 `Running`**（Phase A 亦然），靠 Condition 转换离开；不要给它接
+>   `On State Completed`，否则引擎会因"未接续完成转换"把整棵树打回根状态。
+> - **新增碰撞通道 `SlimeFusion`**（`Config/DefaultEngine.ini`，`ECC_GameTraceChannel1`，对象通道）：
+>   `ASlimeNormal` 胶囊改用它，默认与所有通道 Block；配对期间只用 `IgnoreActorWhenMoving` 放开这一对
+>   （PB-10/PB-11），世界/玩家/追兵/武器射线照旧阻挡（PB-16、PB-14 的"融合中仍可被射"）。
+>   ⚠️ **任何按对象类型查敌人的代码都必须补上这个通道**——本项目只有辅助瞄准一处，已同步修改。
+> - **契约扩展（走 §7.4）**：`USlimeHealthComponent::InitializeHealth(MaxHealth, HealthFraction = 1)` 与
+>   `ASlimeEnemyBase::ApplyStatRow(NewMass, HealthFraction = 1)` 各加一个带默认值的参数，用于 PB-12 的
+>   "按剩余生命比例继承"；默认 1.0 保证 Phase C 回池复位与追兵生成仍是满血。`IBattleDirector` 未改。
+> - **PA-10 的"终局"半边推到 Phase D**：Phase B 只接"死亡 → `CancelAllAbilities`（含取消换弹）→ 禁止射击"；
+>   `State.Player.Result` 的接线依赖 `URunSubsystem`，留给 Phase C/D。
+> - **偏差说明**：`FSlimeSTTaskHoldPosition` 的 `DisplayName` 保持 `Slime: Hold Position` 不变（避免动 `.uasset`
+>   里的节点引用）；它现在就是融合接近任务，以代码注释与本文档为准。
+> - **新增调试**：CVar `Slime.Debug.DrawFusion`；控制台命令 `SlimeSpawnNormalAtMass` / `SlimeSetMass` / `SlimeForceFuse`。
+> - **修正（2026-10-06，实机反馈）**：`AIApproachTimeout` 原被实现成"配对后 2 秒内必须到达"，
+>   导致隔得较远的两只在全程稳定靠近的情况下也反复 `ApproachTimeout` 取消。现改为策划案 4.6.2 的
+>   **"连续 2 秒没有继续靠近"**（间隔缩小量 ≥ 到达半径即重置计时）；移动请求带上紧到达半径
+>   （`FusionContactTolerance`）并在会合点不可达时退化为 `MoveToActor(对方)`；超时日志补充
+>   间隔/接触阈值/最近间隔/移动状态四项诊断信息。
+> - **修正 2（2026-10-06，第二次实机反馈）**：`AAIController::MoveToLocation` 的到达判定默认
+>   **加算胶囊半径**（`FAIMoveRequest::bReachTestIncludesAgentRadius`），使"到达 10cm 会合点"实际
+>   变成"到达 ~50cm"，两只间距 1m 时 `MoveTo` 直接返回 `AlreadyAtGoal`，谁都不动（日志表现：
+>   `gap` 恒定 + `move status 0`）。现改用 `FAIMoveRequest` 关闭该加算，按**圆心对圆心**判定，
+>   会合点不可达时退化为直接朝对方移动。另：玩家胶囊对 `SlimeFusion` 通道改为 **Overlap**，
+>   消除"玩家撞上史莱姆把它挤飞"的互相推挤（追兵仍 Block，PB-16 不受影响）。
+>   仅玩家一侧不够：史莱姆自身移动扫掠仍会把玩家当阻挡物而被弹出，故史莱姆胶囊另对玩家做
+>   `IgnoreActorWhenMoving`（`ASlimeEnemyBase::IgnorePlayerForMovement`，4 处刷新）。
+> - **修正 3（2026-10-06，第三次实机反馈）**：
+>   ① 史莱姆胶囊对 `ECC_Camera` 改为 Ignore —— 弹簧臂探针默认被 Pawn 胶囊挡住，玩家钻进史莱姆时
+>   镜头会被拉进身体；
+>   ② `Slime: Chase Player` 增加"移动 Idle 且玩家在攻击范围外就重新寻路"的自愈逻辑，消除
+>   `is stuck and failed to move!` 后原地磨蹭；
+>   ③ `USlimeCombatSubsystem::ApplyDamageTo` 对无受击路径的静物不再打 Warning（仅 CombatLog 打开时记 Log）；
+>   ④ `ASlimeWarGameMode::OnEnemyKilled` 显式忽略 `Kind != Normal`，保证攻击性个体永不计分（策划案 4.6.3）。
+> - **修正 4（2026-10-06，第四次实机反馈）**：
+>   ① **体量表口径修正**：设计给的是**直径**（0.4m~1.2m），CSV 却按半径填了 40~120，导致 mass 6~8 的半径
+>   超过胶囊半高 96，`UCapsuleComponent::SetCapsuleSize` 把半高强行撑到半径、胶囊下沉约 24~30cm 卡进地板
+>   （日志 `stuck ... Actor:Floor_0 PenetrationDepth:29.85`）。CSV 改为真半径 `20 / 25.5 / 31.5 / 37 / 43 /
+>   48.5 / 54.5 / 60`（追兵 30），并新增 `ApplyBodyRadius()`：改半径后半高若被动变高就同步抬高角色，
+>   保证脚不离地；`SlimeSpawnNormalAtMass` 的间距也改为按体量自适应。**需要 Reimport 两张 CSV。**
+>   ② **新增 Detour Crowd 寻路**：`ASlimeAIController` 改用 `UCrowdFollowingComponent`，追兵开启避让、
+>   普通史莱姆仅作为障碍（保持可重叠以完成融合）；`DefaultEngine.ini` 增 `CrowdManager.MaxAgents=100`。
+>   ③ **新增 `Slime.Debug.DrawAggroPath`**（默认开）：青色画追兵的计划 NavMesh 路径、橙色渐变画过去
+>   约 8 秒真实轨迹、头顶标签显示移动状态与速度，用于判断避让是否真的绕开了阻挡物。
+> - **延后项登记（2026-10-06）**：CP-2 之后再考虑的三项——**PB-19** 普通史莱姆互不碰撞（消除 20~60cm
+>   深度穿插造成的永久卡死）、**PB-20** 融合配对距离上限（消除 4~5 米远距离配对空转）、
+>   **PB-21** 接近空转即时取消 + 移动结果诊断。实机日志已确认 Detour Crowd 生效
+>   （`crowd: obstacle only` / `crowd: enabled`）。详细根因与建议见 `Docs/PhaseB/PhaseB-Plan.md` §11。
 
 ### 6.4 Phase C —— 生成点与单点闭环
 
@@ -875,6 +945,8 @@ public:
 | Q10 | **`UAbilitySystemGlobals::InitGlobalData()` 在你们 UE 5.5 分支的调用时机**（是否已随模块自动执行） | GAS-03 | 先按"自动"实现；若出现 TargetData/标签异常，再在 `USlimeAbilitySystemGlobals` 里显式调用。**需按实际引擎源码核对一次** |
 | Q11 | 玩家弹匣余量的**唯一归属**（AttributeSet `MagazineAmmo` 还是 `USlimeWeaponComponent`） | PA-14 | 建议：**AttributeSet 只存"容量/换弹时长"等配置值；"当前余弹"放 `WeaponComponent`**（每帧变化的临时状态不宜进 AttributeSet） |
 | Q12 | 实验用蓝图 GE 是否需要（铁律 5 的例外额度） | GAS-04 | 默认 **0 个**；策划确需试参数时才开，且上限 2 个并登记 |
+| Q13 | 攻击性个体的**攻击伤害**（策划案未给） | PB-04/PB-07 | 20（Phase A 已按占位值落表，须策划确认） |
+| Q14 | 融合**接触容差**与**最大参与者数**（Phase B 新增字段） | PB-10/PB-11 | 容差 10cm、上限 2（`DA_RunConfig` 的 `AI\|Fusion`，须策划确认） |
 
 > ⚠️ **GAS 方案带来的额外待办（不是缺陷，是选择代价）**：玩家与敌人从此有**两条承伤路径**。
 > 若最终发现不需要 GAS 的扩展收益，回退成本 = 删除玩家侧 `ASC`/`AttributeSet`/`GA`/`GE`，把玩家承伤改回 `HealthComponent` 权威——**因为对外只有 `OnDeath` → `IBattleDirector`，回退不会波及敌人侧与 Flow/UI**。这是分层方案刻意保留的"可退路"。
@@ -924,3 +996,12 @@ public:
   - §5.1 契约 C1~C12 → **C1~C18**；§5.2 新增 GAS 通信约定；**§5.3 新增"未来扩展不改契约"对照表**
   - §6.1 新增 `M0-15~17` 与 **`GAS-01~GAS-08`**；§6.2 `PA-04~PA-08` 改为 GAS 实现口径，新增 `PA-14~PA-16`；§6.3 `PA-10/PA-11` 改为 GAS 口径
   - §6.7 任务量重算（P1 47 项 / P2 37 项）；§8 新增 `Q10~Q12` 与"可回退性"说明
+- `2026-10-06`：**Phase B 落地（融合）**。变更范围：
+  - §6.3 Phase B 全部任务 → `[~]`（代码完成并编译通过，等编辑器步骤与 CP-2 实机验收），并新增"Phase B 实现注记"
+  - 新增 `USlimeFusionComponent`（`Public/Enemy/`）；`ASlimeNormal` 新增该组件与 `SlimeFusion` 对象通道
+  - `Slime: Hold Position` 升级为融合接近任务（PB-10~PB-13）；`Slime: Has Fusion Target` 语义改为"组件是否 engaged"；
+    `Slime: Select Fusion Target` 改为走双向握手
+  - `USlimeHealthComponent::InitializeHealth` / `ASlimeEnemyBase::ApplyStatRow` 各新增带默认值的 `HealthFraction`
+  - `GA_Die` 落地（PA-11）与 `USlimeWarCharacter::ApplyDeathEffects`（PA-10 死亡半边）；辅助瞄准补查新碰撞通道
+  - 新增 CVar `Slime.Debug.DrawFusion` 与 3 条融合调试命令；§8 新增 `Q13`/`Q14`
+  - 新增文档 `Docs/PhaseB/PhaseB-Plan.md`、`Docs/PhaseB/PhaseB-Checklist.md`

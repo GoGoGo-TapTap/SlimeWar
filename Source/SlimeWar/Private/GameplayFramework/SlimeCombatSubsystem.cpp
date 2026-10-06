@@ -86,6 +86,12 @@ void USlimeCombatSubsystem::ApplyDamageTo(AActor* Target, float Amount, AActor* 
 		return;
 	}
 
-	UE_LOG(LogSlimeWar, Warning, TEXT("ApplyDamageTo: %s is neither an ability system actor nor does it have a ")
-		TEXT("USlimeHealthComponent, damage was dropped."), *GetNameSafe(Target));
+	// Neither path applies: this is scenery (floor, static meshes, props). Shooting the world is a
+	// normal thing to do, so do not warn about it - only surface it when the combat log is on.
+	if (SlimeCVars::DebugCombatLog != 0)
+	{
+		UE_LOG(LogSlimeWar, Log,
+			TEXT("ApplyDamageTo: %s has no damage path (no ASC, no USlimeHealthComponent), %.2f damage dropped."),
+			*GetNameSafe(Target), Amount);
+	}
 }

@@ -2,6 +2,7 @@
 
 #include "Debug/SlimeHUD.h"
 
+#include "AIController.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeStateComponent.h"
 #include "Core/SlimeWarCVars.h"
@@ -12,9 +13,11 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Enemy/SlimeEnemyBase.h"
+#include "Enemy/SlimeFusionComponent.h"
 #include "GameplayFramework/SlimeRunConfig.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "GameplayTagContainer.h"
+#include "Navigation/PathFollowingComponent.h"
 
 namespace
 {
@@ -23,7 +26,52 @@ namespace
 	constexpr float CrosshairLength = 10.f;
 	constexpr float CrosshairThickness = 1.5f;
 	constexpr float EnemyLabelHeight = 120.f;
+	/** Fusion labels sit lower so they do not cover the enemy state label. */
+	constexpr float FusionLabelHeight = 60.f;
 	constexpr int32 ActivityCircleSegments = 24;
+	constexpr int32 ContactCircleSegments = 20;
+
+	/** Aggro chase debug (Slime.Debug.DrawAggroPath). All debug-only, not gameplay values. */
+	constexpr float TrailSampleInterval = 0.1f;
+	constexpr int32 TrailMaxPoints = 80;
+	constexpr float TrailThickness = 2.f;
+	constexpr float PathThickness = 1.5f;
+	constexpr float PathPointRadius = 12.f;
+	constexpr float AggroPathLabelHeight = 90.f;
+
+	FString MoveStatusName(const EPathFollowingStatus::Type Status)
+	{
+		switch (Status)
+		{
+		case EPathFollowingStatus::Idle:	return TEXT("Idle");
+		case EPathFollowingStatus::Waiting:	return TEXT("Waiting");
+		case EPathFollowingStatus::Paused:	return TEXT("Paused");
+		case EPathFollowingStatus::Moving:	return TEXT("Moving");
+		default:							return TEXT("?");
+		}
+	}
+
+	FString FusionStateName(const ESlimeFusionState State)
+	{
+		switch (State)
+		{
+		case ESlimeFusionState::Approaching: return TEXT("Approaching");
+		case ESlimeFusionState::Contacting:  return TEXT("Contacting");
+		case ESlimeFusionState::Cooling:     return TEXT("Cooling");
+		default:                             return TEXT("Idle");
+		}
+	}
+
+	FColor FusionStateColor(const ESlimeFusionState State)
+	{
+		switch (State)
+		{
+		case ESlimeFusionState::Approaching: return FColor(80, 180, 255);
+		case ESlimeFusionState::Contacting:  return FColor(255, 210, 60);
+		case ESlimeFusionState::Cooling:     return FColor(160, 160, 160);
+		default:                             return FColor::White;
+		}
+	}
 }
 
 void ASlimeHUD::DrawHUD()
@@ -43,6 +91,199 @@ void ASlimeHUD::DrawHUD()
 	if (SlimeCVars::DebugDrawEnemyState != 0)
 	{
 		DrawEnemyStateDebug();
+	}
+
+	if (SlimeCVars::DebugDrawFusion != 0)
+	{
+		DrawFusionDebug();
+	}
+
+	if (SlimeCVars::DebugDrawAggroPath != 0)
+	{
+		DrawAggroPathDebug();
+	}
+}
+
+void ASlimeHUD::DrawAggroPathDebug()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	PruneTrails();
+
+	const float Now = World->GetTimeSeconds();
+
+	for (TActorIterator<ASlimeEnemyBase> It(World); It; ++It)
+	{
+		ASlimeEnemyBase* Enemy = *It;
+		if (!Enemy || !Enemy->IsAggressive())
+		{
+			continue;
+		}
+
+		const USlimeHealthComponent* Health = Enemy->GetHealthComponent();
+		if (Health && Health->IsDead())
+		{
+			continue;
+		}
+
+		// -- the trail it actually walked: crowd avoidance never shows up in the nav path, so this
+		//    is the only thing that answers "did it go around or grind in place?" --
+		if (FSlimeTrail* Trail = FindOrAddTrail(*Enemy))
+		{
+			if (Now >= Trail->NextSampleTime)
+			{
+				Trail->Points.Add(Enemy->GetActorLocation());
+				Trail->NextSampleTime = Now + TrailSampleInterval;
+
+				if (Trail->Points.Num() > TrailMaxPoints)
+				{
+					Trail->Points.RemoveAt(0, Trail->Points.Num() - TrailMaxPoints, EAllowShrinking::No);
+				}
+			}
+
+			// Oldest = dark grey, newest = orange.
+			for (int32 Index = 1; Index < Trail->Points.Num(); ++Index)
+			{
+				const float Alpha = static_cast<float>(Index) / static_cast<float>(Trail->Points.Num());
+				const FColor Color = FLinearColor::LerpUsingHSV(
+					FLinearColor(0.15f, 0.15f, 0.15f), FLinearColor(1.f, 0.45f, 0.05f), Alpha).ToFColor(true);
+
+				DrawDebugLine(World, Trail->Points[Index - 1], Trail->Points[Index],
+					Color, false, -1.f, 0, TrailThickness);
+			}
+		}
+
+		// -- the path it plans to walk (cyan): compare it with the trail above --
+		const AAIController* Controller = Cast<AAIController>(Enemy->GetController());
+		const UPathFollowingComponent* PathFollowing = Controller ? Controller->GetPathFollowingComponent() : nullptr;
+		if (!PathFollowing)
+		{
+			continue;
+		}
+
+		const FNavPathSharedPtr Path = PathFollowing->GetPath();
+		if (Path.IsValid())
+		{
+			const TArray<FNavPathPoint>& PathPoints = Path->GetPathPoints();
+			for (int32 Index = 0; Index < PathPoints.Num(); ++Index)
+			{
+				DrawDebugSphere(World, PathPoints[Index].Location, PathPointRadius, 8,
+					FColor::Cyan, false, -1.f, 0, 1.f);
+
+				if (Index > 0)
+				{
+					DrawDebugLine(World, PathPoints[Index - 1].Location, PathPoints[Index].Location,
+						FColor::Cyan, false, -1.f, 0, PathThickness);
+				}
+			}
+		}
+
+		// -- label: the move status is what separates "no path" from "following one" --
+		const FVector Screen = Project(
+			Enemy->GetActorLocation() + FVector(0.f, 0.f, AggroPathLabelHeight), /*bClampToZeroPlane*/ false);
+		if (Screen.Z > 0.f)
+		{
+			const FString Label = FString::Printf(TEXT("%s   %s   %.0fcm/s"),
+				*GetNameSafe(Enemy), *MoveStatusName(PathFollowing->GetStatus()), Enemy->GetVelocity().Size2D());
+
+			DrawText(Label, FLinearColor(FColor::Cyan), Screen.X, Screen.Y, nullptr, 1.f);
+		}
+	}
+}
+
+ASlimeHUD::FSlimeTrail* ASlimeHUD::FindOrAddTrail(AActor& Actor)
+{
+	const TWeakObjectPtr<AActor> Weak(&Actor);
+	if (!Weak.IsValid())
+	{
+		return nullptr;
+	}
+
+	for (FSlimeTrail& Trail : Trails)
+	{
+		if (Trail.Actor == Weak)
+		{
+			return &Trail;
+		}
+	}
+
+	FSlimeTrail& NewTrail = Trails.AddDefaulted_GetRef();
+	NewTrail.Actor = Weak;
+	return &NewTrail;
+}
+
+void ASlimeHUD::PruneTrails()
+{
+	Trails.RemoveAll([](const FSlimeTrail& Trail) { return !Trail.Actor.IsValid(); });
+}
+
+void ASlimeHUD::DrawFusionDebug()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (TActorIterator<ASlimeEnemyBase> It(World); It; ++It)
+	{
+		ASlimeEnemyBase* Enemy = *It;
+		if (!Enemy || Enemy->IsAggressive())
+		{
+			continue;
+		}
+
+		const USlimeFusionComponent* Fusion = Enemy->GetFusionComponent();
+		if (!Fusion || !Fusion->IsEngaged())
+		{
+			continue;
+		}
+
+		const ESlimeFusionState State = Fusion->GetState();
+		const FColor Color = FusionStateColor(State);
+		const FVector Location = Enemy->GetActorLocation();
+		const ASlimeEnemyBase* Partner = Fusion->GetPartner();
+
+		// Meeting point both slimes walk to (shared by the pair, so only draw it once per pair).
+		const FVector MeetingPoint = Fusion->GetMeetingPoint();
+		if (!MeetingPoint.IsNearlyZero() && (!Partner || Enemy->GetUniqueID() < Partner->GetUniqueID()))
+		{
+			DrawDebugSphere(World, MeetingPoint, 30.f, 8, Color, false, -1.f, 0, 2.f);
+		}
+
+		if (Partner)
+		{
+			DrawDebugLine(World, Location, Partner->GetActorLocation(), Color, false, -1.f, 0, 3.f);
+
+			// Contact ring: how close the two capsule centres have to get.
+			DrawDebugSphere(World, Location, Fusion->GetContactDistance(Partner), ContactCircleSegments,
+				Color, false, -1.f, 0, 1.f);
+		}
+
+		const FVector WorldLabel = Location + FVector(0.f, 0.f, FusionLabelHeight);
+		const FVector Screen = Project(WorldLabel, /*bClampToZeroPlane*/ false);
+		if (Screen.Z <= 0.f)
+		{
+			continue;
+		}
+
+		FString Label = FString::Printf(TEXT("fusion %s   contact %.0f%%"),
+			*FusionStateName(State), Fusion->GetContactAlpha() * 100.f);
+
+		if (State == ESlimeFusionState::Cooling)
+		{
+			Label += FString::Printf(TEXT("   retry in %.2fs"), Fusion->GetCooldownRemaining());
+		}
+		else if (Partner)
+		{
+			Label += FString::Printf(TEXT("   dist %.0fcm"), FVector::Dist(Location, Partner->GetActorLocation()));
+		}
+
+		DrawText(Label, FLinearColor(Color), Screen.X, Screen.Y, nullptr, 1.f);
 	}
 }
 

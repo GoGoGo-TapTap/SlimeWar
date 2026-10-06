@@ -32,4 +32,19 @@ namespace SlimeCVars
 		DebugDrawAimAssist,
 		TEXT("Draw the camera ray, the assisted fire ray and the target aim assist pulled toward."),
 		ECVF_Cheat);
+
+	int32 DebugDrawFusion = 0;
+	static FAutoConsoleVariableRef CVarDebugDrawFusion(
+		TEXT("Slime.Debug.DrawFusion"),
+		DebugDrawFusion,
+		TEXT("Draw fusion pairs (colour = state), contact progress, meeting points and cooldowns."),
+		ECVF_Cheat);
+
+	int32 DebugDrawAggroPath = 1;
+	static FAutoConsoleVariableRef CVarDebugDrawAggroPath(
+		TEXT("Slime.Debug.DrawAggroPath"),
+		DebugDrawAggroPath,
+		TEXT("Draw aggro slimes: cyan = planned nav path, orange trail = where it actually went, ")
+		TEXT("plus a label with move status and speed."),
+		ECVF_Cheat);
 }

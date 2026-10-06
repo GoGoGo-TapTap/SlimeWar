@@ -9,10 +9,10 @@ USlimeHealthComponent::USlimeHealthComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void USlimeHealthComponent::InitializeHealth(float InMaxHealth)
+void USlimeHealthComponent::InitializeHealth(float InMaxHealth, float HealthFraction)
 {
 	MaxHealth = FMath::Max(0.f, InMaxHealth);
-	Health = MaxHealth;
+	Health = MaxHealth * FMath::Clamp(HealthFraction, 0.f, 1.f);
 	bDead = false;
 	OnHealthChanged.Broadcast(Health, MaxHealth);
 }

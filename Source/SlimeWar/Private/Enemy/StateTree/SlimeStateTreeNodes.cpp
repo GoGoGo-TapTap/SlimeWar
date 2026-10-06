@@ -11,6 +11,7 @@
 #include "Core/SlimeWarCVars.h"
 #include "Core/SlimeWarLog.h"
 #include "Enemy/SlimeEnemyBase.h"
+#include "Enemy/SlimeFusionComponent.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -112,6 +113,58 @@ namespace
 			}
 		}
 	}
+
+	/**
+	 * Walks this slime to the shared meeting point.
+	 *
+	 * Two details matter here (both were wrong in the first Phase B cut and made untroubled pairs
+	 * cancel with "could not reach the partner"):
+	 *  - FAIMoveRequest defaults to a reach test that adds the agent radius (and the goal radius
+	 *    for actor goals). With a 10 cm acceptance radius that becomes ~50-60 cm - already half
+	 *    the gap between two slimes standing 1 m apart - so AAIController::MoveTo returns
+	 *    "already at goal", nobody moves and the pair times out with a constant gap and an Idle
+	 *    move status. The fusion handshake has to measure centre to centre.
+	 *  - If the shared point cannot be pathed to (off the navmesh, blocked), fall back to walking
+	 *    straight at the partner instead of standing still until the timeout.
+	 */
+	EPathFollowingRequestResult::Type RequestFusionMove(AAIController& Controller, USlimeFusionComponent& Fusion)
+	{
+		const float AcceptanceRadius = Fusion.GetApproachAcceptanceRadius();
+
+		const auto ConfigureReachTest = [AcceptanceRadius](FAIMoveRequest& MoveRequest)
+		{
+			MoveRequest.SetAcceptanceRadius(AcceptanceRadius);
+			MoveRequest.SetReachTestIncludesAgentRadius(false);
+			MoveRequest.SetReachTestIncludesGoalRadius(false);
+			MoveRequest.SetUsePathfinding(true);
+			MoveRequest.SetAllowPartialPath(true);
+		};
+
+		// Primary: the shared open space point, so neither slime paths into a wall.
+		const FVector MeetingPoint = Fusion.GetMeetingPoint();
+		if (!MeetingPoint.IsNearlyZero())
+		{
+			FAIMoveRequest MoveRequest(MeetingPoint);
+			ConfigureReachTest(MoveRequest);
+			MoveRequest.SetProjectGoalLocation(true);
+
+			const FPathFollowingRequestResult MoveResult = Controller.MoveTo(MoveRequest);
+			if (MoveResult.Code != EPathFollowingRequestResult::Failed)
+			{
+				return MoveResult.Code;
+			}
+		}
+
+		// Fallback: walk straight at the partner (the shared point may be off the navmesh).
+		if (ASlimeEnemyBase* Partner = Fusion.GetPartner())
+		{
+			FAIMoveRequest MoveRequest(Partner);
+			ConfigureReachTest(MoveRequest);
+			return Controller.MoveTo(MoveRequest).Code;
+		}
+
+		return EPathFollowingRequestResult::Failed;
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -147,8 +200,14 @@ EStateTreeRunStatus FSlimeSTTaskWanderStep::EnterState(FStateTreeExecutionContex
 	AAIController* Controller = GetSlimeController(Context);
 	const USlimeRunConfig* Config = GetSlimeConfig(Context);
 
-	SetStateTag(Enemy, TAG_State_Enemy_Normal_Fusing, false);
-	SetStateTag(Enemy, TAG_State_Enemy_Normal_Idle, true);
+	// Do not report "idle" while a fusion request was already accepted: the condition transition
+	// is about to move this slime into the fusion state, so flipping the tag here would flicker.
+	const bool bAlreadyFusing = Enemy && Enemy->GetFusionComponent() && Enemy->GetFusionComponent()->IsEngaged();
+	if (!bAlreadyFusing)
+	{
+		SetStateTag(Enemy, TAG_State_Enemy_Normal_Fusing, false);
+		SetStateTag(Enemy, TAG_State_Enemy_Normal_Idle, true);
+	}
 
 	if (!Enemy || !Controller || !Config)
 	{
@@ -217,8 +276,13 @@ EStateTreeRunStatus FSlimeSTTaskWanderPause::EnterState(FStateTreeExecutionConte
 
 	InstanceData.RemainingTime = FMath::FRandRange(Min, Max);
 
-	SetStateTag(GetSlimeEnemy(Context), TAG_State_Enemy_Normal_Fusing, false);
-	SetStateTag(GetSlimeEnemy(Context), TAG_State_Enemy_Normal_Idle, true);
+	ASlimeEnemyBase* Enemy = GetSlimeEnemy(Context);
+	const bool bAlreadyFusing = Enemy && Enemy->GetFusionComponent() && Enemy->GetFusionComponent()->IsEngaged();
+	if (!bAlreadyFusing)
+	{
+		SetStateTag(Enemy, TAG_State_Enemy_Normal_Fusing, false);
+		SetStateTag(Enemy, TAG_State_Enemy_Normal_Idle, true);
+	}
 
 	return InstanceData.RemainingTime > 0.f ? EStateTreeRunStatus::Running : EStateTreeRunStatus::Succeeded;
 }
@@ -239,6 +303,20 @@ EStateTreeRunStatus FSlimeSTTaskSelectFusionTarget::EnterState(FStateTreeExecuti
 	if (!Enemy || !Config || !Context.GetWorld())
 	{
 		return EStateTreeRunStatus::Failed;
+	}
+
+	USlimeFusionComponent* Fusion = Enemy->GetFusionComponent();
+	if (!Fusion)
+	{
+		// Aggressive slimes never reach this task; a normal slime without the component is a bug.
+		return EStateTreeRunStatus::Failed;
+	}
+
+	// The request this slime accepted while it was still wandering already reserved it. Its own
+	// state chain only has to reach "Hold" now; the fusion state itself is owned by the component.
+	if (Fusion->IsEngaged())
+	{
+		return EStateTreeRunStatus::Succeeded;
 	}
 
 	const int32 MassCap = Config->AIFusionMassCap;
@@ -267,8 +345,9 @@ EStateTreeRunStatus FSlimeSTTaskSelectFusionTarget::EnterState(FStateTreeExecuti
 			continue;
 		}
 
-		// Already pairing with someone else.
-		if (Other->GetFusionTarget() != nullptr)
+		// Already pairing (or waiting out a fusion cooldown).
+		const USlimeFusionComponent* OtherFusion = Other->GetFusionComponent();
+		if (!OtherFusion || OtherFusion->IsEngaged())
 		{
 			continue;
 		}
@@ -296,13 +375,22 @@ EStateTreeRunStatus FSlimeSTTaskSelectFusionTarget::EnterState(FStateTreeExecuti
 		return EStateTreeRunStatus::Failed;
 	}
 
-	Enemy->SetFusionTarget(BestTarget);
-	SetStateTag(Enemy, TAG_State_Enemy_Normal_Idle, false);
-	SetStateTag(Enemy, TAG_State_Enemy_Normal_Fusing, true);
+	// PB-09: the pairwise handshake replaces the Phase A "I picked you" write. The target has to
+	// agree; if it accepted someone else a moment earlier this fails and we try again later.
+	if (!Fusion->BeginPairing(BestTarget))
+	{
+		if (SlimeCVars::DebugCombatLog != 0)
+		{
+			UE_LOG(LogSlimeWar, Log, TEXT("[%s] fusion request to %s was rejected (already engaged)."),
+				*GetNameSafe(Enemy), *GetNameSafe(BestTarget));
+		}
+
+		return EStateTreeRunStatus::Failed;
+	}
 
 	if (SlimeCVars::DebugCombatLog != 0)
 	{
-		UE_LOG(LogSlimeWar, Log, TEXT("[%s] fusion target selected: %s (mass %d + %d, cap %d)"),
+		UE_LOG(LogSlimeWar, Log, TEXT("[%s] fusion pairing accepted by %s (mass %d + %d, cap %d)"),
 			*GetNameSafe(Enemy), *GetNameSafe(BestTarget), Enemy->GetMass(), BestTarget->GetMass(), MassCap);
 	}
 
@@ -311,21 +399,100 @@ EStateTreeRunStatus FSlimeSTTaskSelectFusionTarget::EnterState(FStateTreeExecuti
 
 EStateTreeRunStatus FSlimeSTTaskHoldPosition::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
-	if (AAIController* Controller = GetSlimeController(Context))
+	AAIController* Controller = GetSlimeController(Context);
+	ASlimeEnemyBase* Enemy = GetSlimeEnemy(Context);
+	USlimeFusionComponent* Fusion = Enemy ? Enemy->GetFusionComponent() : nullptr;
+
+	// Phase B: this state is the fusion approach. The pair is already accepted here; all that is
+	// left is walking to the shared meeting point, holding contact for FusionContactTime and then
+	// letting the component resolve (PB-10 ~ PB-13). The state always reports Running and leaves
+	// through its condition transition, exactly like in Phase A - a task that "completes" would
+	// have no completion transition and would make the engine jump back to the root state.
+	if (!Fusion || !Fusion->IsEngaged())
 	{
-		Controller->StopMovement();
+		if (Controller)
+		{
+			Controller->StopMovement();
+		}
+
+		return EStateTreeRunStatus::Running;
 	}
 
-	// Phase A ends here: the partner is stored and tagged. Phase B adds the approach,
-	// the handshake and the 0.4 s contact check (PB-09 ~ PB-11).
+	if (Controller)
+	{
+		const EPathFollowingRequestResult::Type Result = RequestFusionMove(*Controller, *Fusion);
+		if (Result == EPathFollowingRequestResult::Failed && SlimeCVars::DebugCombatLog != 0)
+		{
+			UE_LOG(LogSlimeWar, Warning,
+				TEXT("[%s] fusion: could not start a move towards the partner (navmesh missing or point unreachable)."),
+				*GetNameSafe(Enemy));
+		}
+	}
+
+	return EStateTreeRunStatus::Running;
+}
+
+EStateTreeRunStatus FSlimeSTTaskHoldPosition::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
+{
+	ASlimeEnemyBase* Enemy = GetSlimeEnemy(Context);
+	AAIController* Controller = GetSlimeController(Context);
+	USlimeFusionComponent* Fusion = Enemy ? Enemy->GetFusionComponent() : nullptr;
+
+	if (!Fusion || !Fusion->IsEngaged())
+	{
+		if (Controller)
+		{
+			Controller->StopMovement();
+		}
+
+		return EStateTreeRunStatus::Running;
+	}
+
+	Fusion->AdvanceApproach(DeltaTime);
+
+	if (Controller)
+	{
+		if (Fusion->GetState() == ESlimeFusionState::Approaching)
+		{
+			// Re-issue the move if the pawn stopped short (blocked, path ended, ...).
+			if (Controller->GetMoveStatus() != EPathFollowingStatus::Moving)
+			{
+				const float AcceptanceRadius = Fusion->GetApproachAcceptanceRadius();
+				if (FVector::Dist(Enemy->GetActorLocation(), Fusion->GetMeetingPoint()) > AcceptanceRadius)
+				{
+					RequestFusionMove(*Controller, *Fusion);
+				}
+			}
+		}
+		else
+		{
+			// Contacting or cooling down: stand still.
+			Controller->StopMovement();
+		}
+	}
+
 	return EStateTreeRunStatus::Running;
 }
 
 void FSlimeSTTaskHoldPosition::ExitState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
+	if (AAIController* Controller = GetSlimeController(Context))
+	{
+		Controller->StopMovement();
+	}
+
 	ASlimeEnemyBase* Enemy = GetSlimeEnemy(Context);
 	if (Enemy)
 	{
+		// Defensive: never leave the state with a half registered pair (collision ignore, tags).
+		if (USlimeFusionComponent* Fusion = Enemy->GetFusionComponent())
+		{
+			if (Fusion->IsPaired())
+			{
+				Fusion->CancelPairing(ESlimeFusionCancelReason::PartnerLost);
+			}
+		}
+
 		Enemy->SetFusionTarget(nullptr);
 	}
 
@@ -348,6 +515,12 @@ EStateTreeRunStatus FSlimeSTTaskChasePlayer::EnterState(FStateTreeExecutionConte
 	SetStateTag(Enemy, TAG_State_Enemy_Aggro_Cooling, false);
 	SetStateTag(Enemy, TAG_State_Enemy_Aggro_Chasing, true);
 
+	// Refresh in case the player pawn was respawned since this slime was spawned.
+	if (Enemy)
+	{
+		Enemy->IgnorePlayerForMovement();
+	}
+
 	if (!Controller || !Enemy || !IsAlive(Player))
 	{
 		return EStateTreeRunStatus::Succeeded;
@@ -360,7 +533,33 @@ EStateTreeRunStatus FSlimeSTTaskChasePlayer::EnterState(FStateTreeExecutionConte
 
 EStateTreeRunStatus FSlimeSTTaskChasePlayer::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
 {
-	return IsAlive(GetPlayerPawnFor(Context)) ? EStateTreeRunStatus::Running : EStateTreeRunStatus::Succeeded;
+	APawn* Player = GetPlayerPawnFor(Context);
+	if (!IsAlive(Player))
+	{
+		return EStateTreeRunStatus::Succeeded;
+	}
+
+	AAIController* Controller = GetSlimeController(Context);
+	ASlimeEnemyBase* Enemy = GetSlimeEnemy(Context);
+
+	// Self healing repath. When the path following gives up (blocked by another slime, stale path)
+	// the move goes Idle while this task keeps Running, which used to leave the slime grinding in
+	// place ("is stuck and failed to move!"). Design 4.6.4 asks for "wait and try again", so
+	// re-issue the chase whenever nothing is moving and the player is still out of attack range.
+	if (Controller && Enemy && Controller->GetMoveStatus() == EPathFollowingStatus::Idle)
+	{
+		FSlimeAggroStatRow Row;
+		const float AttackRange = GetSlimeAggroRow(Context, Row) ? Row.AttackRange : 0.f;
+		const bool bOutOfAttackRange =
+			FVector::Dist(Enemy->GetActorLocation(), Player->GetActorLocation()) > AttackRange;
+
+		if (bOutOfAttackRange)
+		{
+			Controller->MoveToActor(Player);
+		}
+	}
+
+	return EStateTreeRunStatus::Running;
 }
 
 void FSlimeSTTaskChasePlayer::ExitState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
@@ -530,8 +729,12 @@ bool FSlimeSTCondHasFusionTarget::TestCondition(FStateTreeExecutionContext& Cont
 		return false ^ bInvert;
 	}
 
-	ASlimeEnemyBase* Target = Enemy->GetFusionTarget();
-	return (Target != nullptr && IsAlive(Target)) ^ bInvert;
+	// Phase B: ask the fusion component instead of the mirrored pawn field. "Has a fusion target"
+	// now means approaching, contacting or cooling down, so the Hold state also covers the
+	// post-fusion 1 s wait (design 4.4) without an extra StateTree state.
+	const USlimeFusionComponent* Fusion = Enemy->GetFusionComponent();
+	const bool bEngaged = Fusion != nullptr && Fusion->IsEngaged();
+	return bEngaged ^ bInvert;
 }
 
 bool FSlimeSTCondPlayerAlive::TestCondition(FStateTreeExecutionContext& Context) const

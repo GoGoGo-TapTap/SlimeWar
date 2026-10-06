@@ -7,6 +7,7 @@
 #include "SlimeAIController.generated.h"
 
 class USlimeStateTreeAIComponent;
+class ASlimeEnemyBase;
 
 /**
  * Runs the enemy StateTree. The tree asset comes from the possessed pawn
@@ -18,11 +19,18 @@ class ASlimeAIController : public AAIController
 	GENERATED_BODY()
 
 public:
-	ASlimeAIController();
+	ASlimeAIController(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
+
+	/**
+	 * Per slime type Detour Crowd setup (see the implementation for the exact flags).
+	 * Aggro slimes steer around blockers; normal slimes only act as obstacles for others so that
+	 * two of them can still walk into each other and fuse.
+	 */
+	void ConfigureCrowdBehaviour(const ASlimeEnemyBase& Enemy);
 
 	UFUNCTION()
 	void HandleEnemyDied(AActor* Enemy);

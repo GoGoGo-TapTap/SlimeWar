@@ -102,8 +102,11 @@ struct FSlimeSTTaskWanderPause : public FStateTreeAIActionTaskBase
 
 /**
  * PB-03 target selection: same point, not already pairing, mass sum <= AIFusionMassCap,
- * nearest first. On success the partner is stored on the enemy and State.Enemy.Normal.Fusing
- * is set. Phase B (PB-09~PB-11) takes over from here.
+ * nearest first.
+ *
+ * Phase B: the result goes through USlimeFusionComponent::BeginPairing, so the target has to
+ * agree (mutual handshake). A slime that accepted someone else's request in the meantime is
+ * skipped here and rejected there, which is what keeps "three touching" at exactly one pair.
  */
 USTRUCT(meta = (DisplayName = "Slime: Select Fusion Target"))
 struct FSlimeSTTaskSelectFusionTarget : public FStateTreeAIActionTaskBase
@@ -116,7 +119,16 @@ struct FSlimeSTTaskSelectFusionTarget : public FStateTreeAIActionTaskBase
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const override;
 };
 
-/** Stops moving and keeps the current tag state forever (end of the Phase A chain). */
+/**
+ * The fusion state (PB-10 ~ PB-13).
+ *
+ * Phase A stopped here; Phase B runs the whole approach inside it: walk to the shared meeting
+ * point, hold contact for FusionContactTime, then let USlimeFusionComponent resolve and wait
+ * out the post-fusion delay. It always returns Running and leaves through the state's condition
+ * transition, so the StateTree asset needs no new states - only a "Has Fusion Target" condition
+ * transition on Wander/Pause, so a slime that accepted a request while wandering walks into
+ * this state on its own.
+ */
 USTRUCT(meta = (DisplayName = "Slime: Hold Position"))
 struct FSlimeSTTaskHoldPosition : public FStateTreeAIActionTaskBase
 {
@@ -126,6 +138,7 @@ struct FSlimeSTTaskHoldPosition : public FStateTreeAIActionTaskBase
 
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const override;
+	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 	virtual void ExitState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const override;
 };
 
@@ -240,7 +253,10 @@ struct FSlimeSTTaskStop : public FStateTreeAIActionTaskBase
 // Conditions
 // ---------------------------------------------------------------------------
 
-/** True while the stored fusion partner is still alive. Tick Invert to test "has none". */
+/**
+ * True while the slime is inside a fusion (approaching / contacting / cooling down).
+ * Tick Invert to test "is free to look for a partner". Backed by USlimeFusionComponent.
+ */
 USTRUCT(meta = (DisplayName = "Slime: Has Fusion Target"))
 struct FSlimeSTCondHasFusionTarget : public FStateTreeAIConditionBase
 {

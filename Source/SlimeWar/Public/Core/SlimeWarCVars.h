@@ -18,4 +18,14 @@ namespace SlimeCVars
 
 	/** 0 = off, 1 = draw the camera ray / assisted ray / picked target (Slime.Debug.DrawAimAssist). */
 	extern int32 DebugDrawAimAssist;
+
+	/** 0 = off, 1 = draw fusion pairs, contact progress and meeting points (Slime.Debug.DrawFusion). */
+	extern int32 DebugDrawFusion;
+
+	/**
+	 * 0 = off, 1 = draw each aggro slime's planned nav path plus the trail it actually walked
+	 * (Slime.Debug.DrawAggroPath). Default on: the planned path cannot show crowd avoidance, the
+	 * trail is what makes "did it route around?" readable.
+	 */
+	extern int32 DebugDrawAggroPath;
 }

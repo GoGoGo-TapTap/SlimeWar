@@ -27,6 +27,15 @@ ASlimeWarGameMode::ASlimeWarGameMode()
 
 void ASlimeWarGameMode::OnEnemyKilled(ETargetKind Kind, int32 Mass)
 {
+	// Design 4.6.3: aggressive individuals never award score. The filter lives in the single
+	// scoring entry point, so Phase C's score subsystem cannot pick them up by accident.
+	if (Kind != ETargetKind::Normal)
+	{
+		UE_LOG(LogSlimeWar, Verbose,
+			TEXT("[BattleDirector] OnEnemyKilled: aggressive target (mass %d), no score."), Mass);
+		return;
+	}
+
 	// TODO(Phase C): forward to UScoreSubsystem. Phase 0 only logs so the path is verifiable.
 	UE_LOG(LogSlimeWar, Log, TEXT("[BattleDirector] OnEnemyKilled: Kind=%d Mass=%d (scoring not implemented yet)"),
 		static_cast<int32>(Kind), Mass);

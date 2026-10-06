@@ -70,6 +70,17 @@ public:
 	/** Called by USlimePlayerAttributeSet when a damage effect lands. Sets the direction hook. */
 	void NotifyDamagedFrom(AActor* Causer);
 
+	/**
+	 * PA-10 / PA-11 death effects: loose State.Player.Dead, movement lock and
+	 * IBattleDirector::OnPlayerDied. Called by UGA_Die, or directly as the fallback when the
+	 * death ability is not on the ASC.
+	 *
+	 * @param bCancelAbilities  true on the fallback path (nobody cancelled the running
+	 *                          abilities yet); false when UGA_Die already did it, because
+	 *                          cancelling from inside the death ability would end it mid-call.
+	 */
+	void ApplyDeathEffects(bool bCancelAbilities = false);
+
 	/** Directional damage hint for Phase D UI. Does not move the aim centre (design 8.2). */
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
 	FSlimePlayerDamagedSignature OnPlayerDamaged;
@@ -159,4 +170,7 @@ protected:
 	/** Previous mirrored health, used to detect "just took damage" for hit protection. */
 	float LastMirroredHealth = 0.f;
 	bool bHasMirroredHealth = false;
+
+	/** Guard so the death sequence (ability + fallback) only ever runs once. */
+	bool bDeathHandled = false;
 };

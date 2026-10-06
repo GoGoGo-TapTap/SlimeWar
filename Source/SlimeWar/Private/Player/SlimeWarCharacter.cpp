@@ -8,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Core/SlimeGameplayTags.h"
 #include "Core/SlimeHealthComponent.h"
+#include "Core/SlimeWarCollisionChannels.h"
 #include "Core/SlimeWarCVars.h"
 #include "Core/SlimeWarLog.h"
 #include "DrawDebugHelpers.h"
@@ -25,6 +26,7 @@
 #include "GameplayFramework/SlimeWarGameMode.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "InputActionValue.h"
+#include "Player/Abilities/GA_Die.h"
 #include "Player/Abilities/GA_Fire.h"
 #include "Player/Abilities/GA_HitProtection.h"
 #include "Player/Abilities/GA_Reload.h"
@@ -38,6 +40,13 @@ ASlimeWarCharacter::ASlimeWarCharacter()
 
 	// Capsule stays at the template size; Phase A only moves the tuning values into data.
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+
+	// Normal slimes sit on their own object channel and the player *overlaps* them instead of
+	// blocking. Blocking two capsules makes the player's sweeps push the slime out of the way
+	// ("kicked across the arena"), which can also break a fusion that is being set up; nothing in
+	// the design knocks slimes back. Aggro slimes keep blocking each other and normal slimes
+	// (PB-16) because they stay on ECC_Pawn and keep the default Block response.
+	GetCapsuleComponent()->SetCollisionResponseToChannel(SlimeCollisionChannels::Fusion, ECR_Overlap);
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -113,6 +122,9 @@ void ASlimeWarCharacter::InitAbilitySystem()
 
 	// Hit protection is triggered by code, not by an input.
 	AbilitySystem->GiveAbility(FGameplayAbilitySpec(UGA_HitProtection::StaticClass(), 1, INDEX_NONE));
+
+	// PA-11: death runs as an ability so it can cancel the others before the Dead tag goes up.
+	AbilitySystem->GiveAbility(FGameplayAbilitySpec(UGA_Die::StaticClass(), 1, INDEX_NONE));
 }
 
 const USlimeRunConfig* ASlimeWarCharacter::GetRunConfig() const
@@ -237,25 +249,50 @@ void ASlimeWarCharacter::NotifyDamagedFrom(AActor* Causer)
 
 void ASlimeWarCharacter::HandleMirrorDeath()
 {
+	if (bDeathHandled)
+	{
+		return;
+	}
+	bDeathHandled = true;
+
 	UE_LOG(LogSlimeWar, Log, TEXT("ASlimeWarCharacter: player died."));
 
+	// PA-11: the death ability owns "cancel the rest -> tag Dead -> report". If it is missing
+	// (misconfigured ASC) fall back to the inline Phase A path so death still works.
+	const bool bAbilityStarted = AbilitySystem
+		&& AbilitySystem->TryActivateAbilityByClass(UGA_Die::StaticClass());
+
+	if (!bAbilityStarted)
+	{
+		ApplyDeathEffects(/*bCancelAbilities=*/true);
+	}
+}
+
+void ASlimeWarCharacter::ApplyDeathEffects(bool bCancelAbilities)
+{
 	if (AbilitySystem)
 	{
+		if (bCancelAbilities)
+		{
+			AbilitySystem->CancelAllAbilities();
+		}
+
+		// Loose tags: the dead state must outlive the ability that set it.
 		AbilitySystem->RemoveLooseGameplayTag(TAG_State_Player_Controllable);
 		AbilitySystem->AddLooseGameplayTag(TAG_State_Player_Dead);
-		AbilitySystem->CancelAbilities();
 	}
 
 	bWantsToFire = false;
 	bIsAiming = false;
 
-	// Death locks movement (design 3.1). Phase B adds GA_Die on top of this fallback.
+	// Death locks movement (design 3.1).
 	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
 	{
 		Movement->StopMovementImmediately();
 		Movement->DisableMovement();
 	}
 
+	// The only death exit point the rest of the project sees (plan rule 6).
 	if (ASlimeWarGameMode* GameMode = GetSlimeGameMode(this))
 	{
 		GameMode->OnPlayerDied();
@@ -529,6 +566,9 @@ FVector ASlimeWarCharacter::GetAimDirectionWithAssist(const FVector& CameraLocat
 
 	FCollisionObjectQueryParams ObjectParams;
 	ObjectParams.AddObjectTypesToQuery(ECC_Pawn);
+	// Normal slimes sit on their own object channel (Config/DefaultEngine.ini "SlimeFusion");
+	// without this the assist cone would silently stop seeing them.
+	ObjectParams.AddObjectTypesToQuery(SlimeCollisionChannels::Fusion);
 	FCollisionQueryParams Params(FName(TEXT("SlimeAimAssist")), false, this);
 
 	TArray<FOverlapResult> Overlaps;
