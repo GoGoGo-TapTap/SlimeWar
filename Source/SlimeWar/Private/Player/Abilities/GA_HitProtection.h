@@ -7,8 +7,9 @@
 #include "GA_HitProtection.generated.h"
 
 /**
- * Hit protection ability skeleton. Applies GE_Invulnerable for the duration taken from
- * DA_RunConfig (design: 0.6s). Implemented in Phase A (PA-07).
+ * PA-07: opens the post-hit protection window by applying GE_Invulnerable with
+ * Data.HitProtectionDuration (design 0.6 s). Triggered by code when the mirrored
+ * health drops, never by an input.
  */
 UCLASS()
 class UGA_HitProtection : public UGameplayAbility
@@ -17,4 +18,11 @@ class UGA_HitProtection : public UGameplayAbility
 
 public:
 	UGA_HitProtection();
+
+protected:
+	virtual void ActivateAbility(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData) override;
 };

@@ -13,16 +13,22 @@ class UInputAction;
 class UInputMappingContext;
 class USlimeHealthComponent;
 class USlimePlayerAttributeSet;
+class USlimeRunConfig;
 class USlimeWeaponComponent;
 class USpringArmComponent;
 struct FInputActionValue;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimePlayerDamagedSignature, FVector, DamageDirection);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSlimePauseRequestedSignature);
 
 /**
  * Player character. GAS is fully enabled on this actor only (plan decision: layered GAS).
  *
  * Health ownership: the AttributeSet is authoritative, USlimeHealthComponent runs in proxy
  * mode and mirrors it. OnDeath is therefore the one and only death signal the rest of the
- * project ever sees. Jump was removed on purpose (out of scope for this project).
+ * project ever sees.
+ *
+ * Phase A: TPS shoulder camera, aim assist, hold-to-fire, magazine + reload, hit protection.
  */
 UCLASS(config = Game)
 class ASlimeWarCharacter : public ACharacter, public IAbilitySystemInterface
@@ -33,6 +39,7 @@ public:
 	ASlimeWarCharacter();
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** Returns CameraBoom subobject. */
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -45,6 +52,62 @@ public:
 
 	FORCEINLINE USlimeWeaponComponent* GetWeaponComponent() const { return Weapon; }
 
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	bool IsAiming() const { return bIsAiming; }
+
+	/**
+	 * Camera-space fire direction after aim assist. OutAssistTarget is set to the actor
+	 * aim assist pulled toward, or null when it did nothing. Used by PerformShot and by the
+	 * Slime.Debug.DrawAimAssist visualisation.
+	 */
+	FVector ComputeAimDirection(AActor*& OutAssistTarget) const;
+
+	/**
+	 * One shot: aim assist, camera trace, muzzle occlusion check, then damage through
+	 * USlimeCombatSubsystem. Always consumes the round; reports miss through OutHitActor == null.
+	 */
+	bool PerformShot(FVector& OutImpactPoint, AActor*& OutHitActor);
+
+	/** Called by USlimePlayerAttributeSet when a damage effect lands. Sets the direction hook. */
+	void NotifyDamagedFrom(AActor* Causer);
+
+	/**
+	 * PA-10 / PA-11 death effects: loose State.Player.Dead, movement lock and
+	 * IBattleDirector::OnPlayerDied. Called by UGA_Die, or directly as the fallback when the
+	 * death ability is not on the ASC.
+	 *
+	 * @param bCancelAbilities  true on the fallback path (nobody cancelled the running
+	 *                          abilities yet); false when UGA_Die already did it, because
+	 *                          cancelling from inside the death ability would end it mid-call.
+	 */
+	void ApplyDeathEffects(bool bCancelAbilities = false);
+
+	/** Directional damage hint for Phase D UI. Does not move the aim centre (design 8.2). */
+	UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
+	FSlimePlayerDamagedSignature OnPlayerDamaged;
+
+	/**
+	 * Phase D: lock movement / aiming / firing for Idle, Deploying, Result and Ended.
+	 *
+	 * The input component stays enabled on purpose - the pause key has to keep working while the
+	 * run is frozen - so the gate lives in the input handlers and in Tick's hold-to-fire.
+	 */
+	void SetRunInputBlocked(bool bBlocked);
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	bool IsRunInputBlocked() const { return bInputBlocked; }
+
+	/**
+	 * Phase D: the run is over. Cancels the running abilities (that is PA-10's run-end half:
+	 * a reload in flight must not survive into the settlement screen), drops Controllable and
+	 * raises State.Player.Result so every ActivationBlockedTags gate closes at once.
+	 */
+	void EnterResultState();
+
+	/** The pause key was pressed. The UI layer owns what "pause" means (Phase D / PD-13). */
+	UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
+	FSlimePauseRequestedSignature OnPauseRequested;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void NotifyControllerChanged() override;
@@ -54,7 +117,7 @@ protected:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
-	/** Stub: routes the ability input actions to the ASC once Phase A creates the assets. */
+	/** Routes the ability input actions to the ASC (Phase A: Fire / Reload / Aim / Pause). */
 	void BindAbilityActions(UInputComponent* PlayerInputComponent);
 
 	UFUNCTION() void OnFirePressed();
@@ -70,6 +133,13 @@ protected:
 	void SyncHealthMirror();
 
 	UFUNCTION() void HandleMirrorDeath();
+
+	/** Aim assist cone search; returns CameraForward unchanged when not aiming or nothing is close. */
+	FVector GetAimDirectionWithAssist(const FVector& CameraLocation, const FVector& CameraForward, float MaxRange, AActor** OutAssistTarget = nullptr) const;
+
+	bool HasClearShot(const FVector& From, const AActor* Target) const;
+
+	const USlimeRunConfig* GetRunConfig() const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystem;
@@ -90,7 +160,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 
-	// -- Input (template mapping context, still leading with Move / Look only) --
+	// -- Input (mapping context + move/look; ability actions are filled in the Blueprint) --
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
 
@@ -100,7 +170,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
-	// -- Ability input stubs (assets are created in Phase A) --
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Ability", meta = (AllowPrivateAccess = "true"))
 	UInputAction* FireAction;
 
@@ -112,4 +181,22 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Ability", meta = (AllowPrivateAccess = "true"))
 	UInputAction* PauseAction;
+
+	// -- Phase A runtime state --
+
+	/** True between Fire pressed and released; re-triggers the ability while the cooldown allows. */
+	bool bWantsToFire = false;
+
+	/** Right mouse held: enables aim assist and strafe facing. */
+	bool bIsAiming = false;
+
+	/** Previous mirrored health, used to detect "just took damage" for hit protection. */
+	float LastMirroredHealth = 0.f;
+	bool bHasMirroredHealth = false;
+
+	/** Guard so the death sequence (ability + fallback) only ever runs once. */
+	bool bDeathHandled = false;
+
+	/** True while the run is not in Running (Phase D). Gates the input handlers, not the component. */
+	bool bInputBlocked = false;
 };

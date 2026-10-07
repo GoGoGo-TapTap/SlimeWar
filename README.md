@@ -1,366 +1,434 @@
-# SlimeWar（粘液城市）· 工程 README
+# SlimeWar（粘液城市）
 
-> 一句话：UE 5.5 单机 TPS Game Jam 项目——玩家拿枪打史莱姆，史莱姆会两两融合变大变强，
-> 180 秒内在 3 个生成点上刷分。**无网络、无存档、无商店、无技能树**。
+UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变强，180 秒内在生成点上刷分。
+
+> **本文是当前可玩版本的使用说明**，面向策划与程序。
+> 数值全部来自 `DA_RunConfig` / DataTable / `DA_SpawnLayout`——**调数值不需要改代码**（项目铁律 5）。
 >
-> 本文定位：**工程计划导读 + 仓库现状核对 + 问题清单 + Phase 0 实施状态**。
-> 计划正文已随 Phase 0 一起入库：`Docs/ProgramTaskList.md`（原先在仓库外，见 §10）。
+> 进度：Phase 0 / A / B / C / D **代码侧**已完成并编译通过。
+> ⚠️ **Phase D 的界面与演出资产还没做**（4 个 WBP + 3 条 Level Sequence + 俯瞰贴图），
+> 所以准备页 / HUD / 结算页 / 暂停菜单都不会显示——**请用控制台命令开局**，见第 1 节。
+> 当前工作分支 `Program-Update`。
 
 ---
 
-## 0. 30 秒速览
+## 1. 快速开始：现在怎么玩
 
-| 项 | 值 |
+### 1.1 当前版本能玩到什么
+
+| 已经能玩 | 还差什么（Phase D 的资产，做法见 `Docs/PhaseD/PhaseD-AssetGuide.md`） |
 |---|---|
-| 引擎 | UE **5.5**（`SlimeWar.uproject` → `EngineAssociation: "5.5"`） |
-| 仓库根 | `SlimeWar\SlimeWar\`（注意：`策划案\` 和 `.dsh\plan\` 在它的**上一层**） |
-| 远端 | GitHub `GoGoGo-TapTap/SlimeWar`；当前分支 `Program-Update`，`main` 与之同点 |
-| 模块 | 单个 `SlimeWar`（Runtime / Default） |
-| C++ 现状 | **仍是第三人称模板**：`SlimeWarCharacter` / `SlimeWarGameMode` / `SlimeWar.cpp`，无 `Public/Private` 分层 |
-| 依赖现状 | `Core, CoreUObject, Engine, InputCore, EnhancedInput`——**GAS 三个模块都没加，插件也没启用** |
-| 默认地图 | `ThirdPersonMap`；GameMode 指向蓝图 `BP_ThirdPersonCharacter` |
-| 交付范围 | 玩家 TPS（移动/瞄准/射击/换弹/生命）、史莱姆（融合 + 追兵 + 批量生成）、计分/倒计时/点位、单层白盒、投放→局内→结算三段演出 |
-| 明确不做 | 网络同步、存档、货币商店、技能树、跳跃/冲刺/翻滚、主动技能、特殊敌人、多关卡 |
+| 单人 TPS：移动 / 瞄准 / 射击 / 换弹 / 受击保护 / 死亡 | 准备页与选落点界面（`WBP_SlimePreparation`） |
+| 史莱姆批量生成、6 批节奏、融合、追兵追打 | 局内 HUD、结算页、暂停菜单（另外 3 个 WBP） |
+| 计分 / 倒计时 / 点位四状态 / 终局判定 | 投放与结算镜头（3 条 Level Sequence） |
+| 三点位、重试不残留、结算数据（代码侧已实现） | 准备页那张俯瞰贴图 |
 
-**结论：代码库里目前只有模板，计划里的框架一行都还没写。** 所以现在正是定接口的最佳时机，
-计划中"先框架、后并行"的节奏是对的。
+**最关键的一条**：因为准备页还没有界面，点 Play 之后游戏会停在"准备阶段"——
+**玩家不能动、屏幕上也没有东西可点**。这不是卡死，是**在等一个还没做出来的选择**。
+用下面的命令直接进局。
 
----
+### 1.2 三步启动
 
-## 1. 现状核对：计划 §2「基线」vs 实际仓库
+1. 双击 `SlimeWar.uproject`（提示重新编译模块时选 Yes；首次会多编译一个 `SlimeWarEditor` 编辑器工具模块）。
+2. 打开 `/Game/_SlimeWar/Maps/L_Sandbox_OnePoint`，点 **Play**。
+3. 按 `~` 打开控制台，敲下面任意一条**进局**：
 
-计划 §2 写于建仓之前，已经过期。逐条核对如下（✅ 与计划一致 / ⚠️ 与计划不符）：
+| 命令 | 效果 |
+|---|---|
+| **`SlimeRunStart`** | **沙盒里推荐用这条**：跳过投放，直接进局内拿控制权 |
+| `SlimeRunDeploy 0` | 走完整流程：投放（2 秒；没有序列就跳过）→ 进局内。`0` = 落点 D1 |
+| `SlimeRunDeploy 1` | 同上，用落点 D2 |
 
-| 计划 §2 的说法 | 实际 | 判定 |
-|---|---|---|
-| 引擎 5.5 | 一致 | ✅ |
-| 工程位置 `…\SlimeWar\SlimeWar\` | 一致 | ✅ |
-| 单模块 `SlimeWar` | 一致 | ✅ |
-| 源码是第三人称模板 | 一致（`SlimeWarCharacter` 含 Jump/CameraBoom/EnhancedInput） | ✅ |
-| 依赖未启用 GAS | 一致（`SlimeWar.Build.cs` 无 `GameplayAbilities/GameplayTags/GameplayTasks`） | ✅ |
-| **「❌ 无 `.git`、无 `vcs.md`」** | **仓库已存在**：GitHub 远端 + LFS + `.gitignore` + `Docs/Collaboration.md` | ⚠️ 过期 |
-| 现有资产 = 第三人称模板 | 实际还有 `Art / Characters / Player / StarterContent / LevelPrototyping / __ExternalActors__` | ⚠️ 低估 |
-| 版本库规则见 §7.1（`main/dev/feat` + `vcs.md`） | 实际用的是 `Docs/Collaboration.md`（**main 直推资产、无 `vcs.md`**） | ⚠️ 两套规则 |
+> ⚠️ `SlimeRunDeploy` 会把玩家**传送到 `DropPoints` 里配的坐标**。那两个坐标是按三点位白盒地图
+> （60×50m，D1=(800,800)、D2=(4500,3800)）设计的，**在 `L_Sandbox_OnePoint` 里不一定站在地上**。
+> 所以在沙盒里先用 `SlimeRunStart`；等白盒地图建好再用 `SlimeRunDeploy` 测投放。
 
-顺手确认过的两件好事（不用担心）：
+再敲两条让节奏快起来、看得清：
 
-- `.gitattributes` 的 LFS 规则**从首个 commit 就存在**，资产是以 131 字节指针入库的，没有"先提交后补 LFS"的历史灾难。
-- `Content\__ExternalActors__` 已存在，说明已经用上 **World Partition 外部 Actor**——正好是计划 §7.3 想要的"降低地图冲突面积"的方向，可以据此把地图锁协议写得更轻。
-
----
-
-## 2. 计划速览：6 个阶段 / 6 个检查点
-
-| 阶段 | 做什么 | 检查点（退出条件） |
-|---|---|---|
-| **Phase 0** 框架落地 | 目录、CoreTypes、`IBattleDirector`、数据表、原生标签、各空类 + GAS 骨架 | **CP-0** 两人本地编译通过、数据表能加载、沙盒地图能进、`showdebug abilitysystem` 有属性 |
-| **Phase A** 主链路 | 玩家射击/换弹/受击、敌人基类与死亡、追兵追打 | **CP-1** 能开枪打死史莱姆并计分；追兵能打到玩家（扣血 + 保护生效） |
-| **Phase B** 融合与追兵完整 | 两两融合握手/接触判定/结算/打断，追兵完整攻击态机 | **CP-2** 融合稳定且**不产生击杀分**；融合中被打死能取消；攻击可落空 |
-| **Phase C** 单点闭环 | 单生成点 6 批次、点位四状态机、对象池（峰值 180） | **CP-3** 一个点跑完 6 批并进入"已清空"，总分与手算一致 |
-| **Phase D** 整局闭环 | 扩到 3 点、180s 倒计时、终局判定、结算俯瞰、HUD | **CP-4** 一局完整跑通；连续重试 3 次无状态残留 |
-| **Phase E** 表现与提交 | 喷溅/染色/融合表现、性能压测、打包验证 | **CP-5** 干净机器能启动并完成一局 |
-
-演出三段固定：**投放 2s → 局内 180s → 结算俯瞰 2~3s**（投放期间世界暂停）。
-
----
-
-## 3. 模块分层与归属
-
-分层原则：**只允许依赖层号更小的模块；同层之间只走接口/委托**。GAS 不是一层，而是横切 L1（全局配置）+ L2-Player（全量实现）。
-
-```mermaid
-flowchart TD
-  L0["L0 Core · P1<br/>枚举 / IBattleDirector / 原生标签 / StateComponent"]
-  L1["L1 GameplayFramework · P1<br/>GameMode / StatTableProvider / AbilitySystemGlobals"]
-  LP["L2 Player · P2 · GAS 全量<br/>ASC / AttributeSet / 4×GA / 3×GE"]
-  LE["L2 Enemy · P1 · 不挂 ASC<br/>融合 / 追兵 / Health 权威"]
-  LF["L3 Flow · P1<br/>SpawnPoint / Run / Score / GameState"]
-  LU["L4 UI · P2<br/>HUD / 投放 / 结算"]
-  LD["L5 Debug · P1"]
-  L0 --> L1
-  L1 --> LP
-  L1 --> LE
-  LP --> LF
-  LE --> LF
-  LF --> LU
-  L0 --> LD
-  LF --> LD
+```text
+SlimeRunTimeScale 10      # 时间轴 10 倍速，约 10~20 秒跑完一局
+Slime.Debug.DrawRun 1     # 左上角运行 HUD：分数 / 倒计时 / 点位状态 / 存活数
 ```
 
-| 模块 | 层 | Owner | 主要内容 |
-|---|---|---|---|
-| `Core` | L0 | **P1** | 枚举、`FSlimeStatRow`、`IBattleDirector`、日志/CVar、`SlimeGameplayTags.h`、`USlimeStateComponent` |
-| `GameplayFramework` | L1 | **P1** | `ASlimeWarGameMode`（实现 `IBattleDirector`）、`UStatTableProvider`、`USlimeAbilitySystemGlobals` |
-| `Player` | L2 | **P2** | Character(+ASC)、PlayerController、Weapon、Health（代理）、AttributeSet、4×GA、3×GE |
-| `Enemy` | L2 | **P1** | `ASlimeEnemyBase`（不挂 ASC）、`ASlimeNormal`、`ASlimeAggro`、`USlimeFusionComponent` |
-| `Flow` | L3 | **P1** | `ASpawnPoint`、`URunSubsystem`、`UScoreSubsystem`、`ASlimeRunGameState` |
-| `UI` | L4 | **P2** | HUD（分/倒计时/血/弹匣/点位）、Deployment、Result |
-| `Debug` | L5 | **P1** | CheatManager、DebugDraw、CVar、`showdebug abilitysystem` 接线 |
-| `Content` | L6 | 分治 | 数据表、DA、蓝图、白盒地图 |
+> 如果 `DA_RunConfig` 的 **Auto Start Run** 还勾着，游戏会自己开局，就不需要上面三条命令了。
+> Phase D 的正确配置是**取消勾选**（详见 3.1）。
 
-> **P1 = 敌人/流程侧（Core、GameplayFramework、Enemy、Flow、Debug）**
-> **P2 = 玩家/UI 侧（Player、UI）**
+### 1.3 键位
 
-**红色禁区（违反即返工）**：Enemy→Player 的实现依赖、Player/Enemy→ScoreSubsystem 直连、
-Core 反向依赖上层、include 他人 `Private/` 头、`Public/Core/*` 出现 GAS 类型、`Public/*` 头 include GAS 头。
-
----
-
-## 4. 唯一的共同工作面：契约 C1~C18
-
-两人能把冲突压到最低，全靠这 18 条契约在 **Phase 0 一次性冻结**。归纳成 6 组：
-
-| 组 | 契约 | 内容 | 提供 → 消费 |
-|---|---|---|---|
-| ① 数据类型 | C1~C4 | `ETargetKind` / `ESpawnPointState` / `ERunEndReason` / `FSlimeStatRow` | P1 → 双方 |
-| ② 全局通信口 | C5~C8 | `IBattleDirector`：`OnEnemyKilled`（**唯一计分入口**）、`OnEnemyFused`、`OnPointStateChanged`、`OnPlayerDied` | P1 → Enemy + UI |
-| ③ 查表服务 | C9 | `UStatTableProvider::GetSlimeStat/GetWeaponStat`（找不到行 → 报错 + CDO 默认值降级） | P1 → 双方 |
-| ④ 伤害入口 | C10 / C16 | **两条承伤路径**：敌人 `HealthComponent` 权威；玩家 `GE_Damage → AttributeSet`，`HealthComponent` 只做只读代理 | P1（敌）/ P2（玩家） |
-| ⑤ 数据资产 | C11 / C12 | `DT_SlimeStats` / `DT_WeaponStats` / `DA_RunConfig` / `DA_SpawnLayout`；改值只改表 | P1 建 / 双方填 |
-| ⑥ 标签与状态 | C13~C18 | `TAG_State_*` 原生标签、`USlimeStateComponent`、`USlimePlayerAttributeSet`、GAS 隔离边界 | P1（标签/状态）/ P2（属性集） |
-
-配套铁律（计划 §1.2，共 6 条，重点两条）：
-
-- **铁律 5**：所有 `GameplayEffect` **只放结构不放数值**，数值一律来自 DataTable/DA；代码与蓝图禁止魔法数字。
-- **铁律 6**：`IBattleDirector` 是唯一对外契约，玩家/敌人的承伤差异必须关在 `USlimeHealthComponent` 内部，对外只有一个 `OnDeath`。
-
----
-
-## 5. 任务量与分工
-
-合计 **84 项**（P1 **47** / P2 **37**），每人每阶段都有活，理论上不空转。
-
-| 阶段 | P1 | P2 | 备注 |
-|---|---|---|---|
-| Phase 0 | 15 | 10 | P2 的增量主要来自 GAS 骨架（GAS-01~07） |
-| Phase A | 8 | 11 | P2 更重（射击/换弹/辅助瞄准） |
-| Phase B | 8 | 3 | P1 更重（融合 8 项） |
-| Phase C | 9 | 2 | 点位/批次/对象池几乎全在 P1 |
-| Phase D | 4 | 8 | UI 与演出几乎全在 P2 |
-| Phase E | 3 | 3 | 表现 + 压测 + 打包 |
-
-> 计划自评：GAS 分层方案的代价集中在 P2（Phase 0 +7 项），**估计比纯手写多约 1 天**；
-> 回退成本低（删玩家侧 ASC/AttributeSet/GA/GE，敌人与 Flow/UI 不受影响）。
-
----
-
-## 6. 待确认的数值（Q1~Q12）
-
-这些**不阻塞 Phase 0**（框架不写数值），但**阻塞 Phase A/B 的验收**。策划案第 4.5 节（体量与数值表）在源文档中确实整节缺失，第 8 章也标着"待填"。
-
-| # | 待确认 | 计划给的占位默认 |
-|---|---|---|
-| Q1 | 体量 1~8 的生命/速度/体积/分值 | 生命 = 20×体量、分值 = 10×体量 |
-| Q2 | 玩家最大生命 | 100 |
-| Q3 | 玩家移动速度 | 6 m/s |
-| Q4 | 弹匣容量 / 换弹时长 / 射速 | 8 发 / 1.0s / 10 发每秒 |
-| Q5 | 每发伤害 | 20 |
-| Q6 | 攻击性个体生命 | 60 |
-| Q7 | 体量对应的视觉/碰撞尺寸 | 体量 1 直径 0.4m，体量 8 直径 1.2m |
-| Q8 | "下一批提前 1s 提示"的形式 | 先出委托，UI 后挂 |
-| Q9 | 第 8 章表现 / 8.5 资源清单 / 9.2 分工 | 源文档"待填" |
-| Q10 | `InitGlobalData()` 调用时机 | 先按"自动"实现 ✅ **已核实，成立**（见问题清单 P-7） |
-| Q11 | 弹匣余量归属 | 建议放 `WeaponComponent`，AttributeSet 只放容量/时长 |
-| Q12 | 是否要实验用蓝图 GE | 默认 0 个，上限 2 个并登记 |
-
-> ⚠️ Q1/Q4/Q5/Q6 是**从策划案零散描述逆推**出来的，彼此耦合（伤害/血量/射速共同决定 TTK 与总分），
-> 不是策划确认值。别把它们当结论用，Phase A/B 验收前必须定稿。
-
----
-
-## 7. ⚠️ 问题清单
-
-按严重度排列。每条给出**证据 → 影响 → 建议**。
-
-### 🔴 会导致返工或阻塞
-
-**P-1 `USlimeHealthComponent` 的归属自相矛盾（最高优先级）**
-
-- 证据：§3.3 把它放在 `Public\Player\SlimeHealthComponent.h`，标注 **Player 是 P2 独占**；但
-  §3.1/§4 同时说 Enemy 侧用的是同一个 `HealthComponent(权威)`，`M0-09`（**P1**）要"创建 `ASlimeEnemyBase` + `USlimeHealthComponent`"，
-  `GAS-07`（**P2**）又要改它的"双层实现"。
-- 影响：① 一个类两个 Owner，谁改谁提交说不清；② Enemy 引用 Player 模块 = **同层实现依赖**，
-  直接踩计划自己的红色禁区"❌ Enemy → Player 的实现依赖"；③ P1/P2 会在同一个 .h 上对撞。
-- 建议：把 `USlimeHealthComponent` 移到 **L0 `Core`**（或单开一个 L1 `Shared` 模块），
-  由**一个人**独占；`OnDeath/OnHealthChanged` 委托定义也一并放这里。
-
-**P-2 伤害入口两处写法互斥，且对敌人不成立**
-
-- 证据：§3.4④ 与 C10 说"武器：唯一开火入口，**统一走 `ApplyDamage`**"；
-  但 `PA-05` 说"`GA_Fire` → `ApplyGameplayEffectToTarget`（**替代直接 `ApplyDamage`**）"。
-- 影响：**敌人不挂 ASC**，`ApplyGameplayEffectToTarget` 对敌人直接失效。按 PA-05 实现 = CP-1 打不出伤害。
-- 建议：明确写成——
-  `GA_Fire` 命中后按目标分流：目标**有 ASC**（玩家自己）走 GE；**无 ASC**（全部敌人）走
-  `UGameplayStatics::ApplyDamage` → `ASlimeEnemyBase::TakeDamage` → `HealthComponent`。
-  即"统一入口"应改成"统一入口函数 + 按目标能力分流"。
-
-**P-3 GE 的数值怎么进去，计划完全没写**
-
-- 证据：铁律 5 要求"GE 只放结构不放数值"，`GAS-03` 只说"从 DA/DT 读值写入 AttributeSet"，
-  但 `GE_Damage` 是**即时伤害**，它的 magnitude 从哪里来、以及敌人打玩家时"扣多少"如何传递，没有任何约定。
-- 影响：这是铁律 5 落地的关键一环，不写清楚，实现时一定有人在 GE 里硬编码数值，铁律当场作废。
-- 建议：Phase 0 明确二选一并写进契约——**(a) `SetByCaller` 标签传递伤害值**（推荐，简单），
-  或 **(b) `GameplayEffectExecutionCalculation`**（可扩但更重）。同时补一条"C16 玩家承伤路径的数值来源"。
-
-**P-4 ✅ 已修复：计划文档和策划案已入库**
-
-- 原问题：仓库根是 `SlimeWar\SlimeWar\`，而 `程序任务清单与模块框架.md` 在 `…\SlimeWar\.dsh\plan\`、
-  `策划案\` 在 `…\SlimeWar\策划案\`——**都在仓库外**，同事 clone 根本拿不到。
-- 已做的处理：移入 `Docs/ProgramTaskList.md`、`Docs/GameDesign/DesignDoc.md`（含 `Docs/GameDesign/Images/`）。
-- ⚠️ 复制时踩了一个新坑：**中文文件名会让 UE 构建崩溃**（UBT 解析 `git status` 的转义路径失败），
-  所以入库时改成了 ASCII 名。规则已写进 `Docs/Collaboration.md` §8。
-
-### 🟠 需要澄清才能并行
-
-**P-5 两套互相冲突的协作规则**
-
-- 证据：计划 §7.1 要求 `main / dev / feat/*` + `vcs.md`；
-  实际 `Docs/Collaboration.md` 写的是"**资产改动直接进 main**、源码走短命分支 + PR、无 `vcs.md`"。
-- 影响：两人按不同文档干活，等于没有规则；比如"要不要 dev 分支"上就会打架。
-- 建议：**保留 `Docs/Collaboration.md` 为唯一协作规范**（它更贴合 GitHub LFS 的实际限制），
-  把计划 §7.1~§7.4 改成"见 `Docs/Collaboration.md`"，只保留计划特有的部分（地图锁、接口变更流程）。
-
-**P-6 目录结构与契约冲突：AttributeSet 该放哪**
-
-- 证据：§3.3 把 `PlayerAttributeSet.h` 放在 `Private\Player\`；但 C15 的消费方写着"P2 **/ UI（只读）**"。
-  UI 不能 include 别人的 `Private/` 头（计划自己的禁忌）。
-- 影响：UI 想读属性时只能绕过契约，或者被迫把 Private 头公开——两种都不好。
-- 建议：属性集头放 `Public\Player\`，并在契约里写清 UI **只读哪些属性**；
-  或者干脆规定 UI 只通过 `USlimeHealthComponent` 代理读血量（与铁律 6 的隔离意图一致）。
-
-**P-7 Q10 已核实：`InitGlobalData()` 在 UE 5.5 是自动的**
-
-- 证据：`Engine\Plugins\Runtime\GameplayAbilities\...\GameplayAbilitiesModule.cpp` 的
-  `GetAbilitySystemGlobals()` 在首次创建 Globals 时调用 `AbilitySystemGlobals->InitGlobalData()`，
-  源码注释明确写着 "we call InitGlobalData automatically in UE5.3+"。
-- 影响：Q10 可以从"待确认"**降级为已确认**，`USlimeAbilitySystemGlobals` 里不需要再手动调用。
-- **但新增一个计划遗漏**：自定义 Globals 类必须**登记到配置**才生效——
-  在 `Config/DefaultGame.ini` 加：
-  ```ini
-  [/Script/GameplayAbilities.GameplayAbilitiesDeveloperSettings]
-  AbilitySystemGlobalsClassName=/Script/SlimeWar.SlimeAbilitySystemGlobals
-  ```
-  `M0-17` 目前只"创建类"，没有这一步，类不会被使用。
-
-**P-8 Phase 0 的口径自相矛盾**
-
-- 证据：§6.1 标题写"框架落地（**两人一起，别并行**）"，但表里 P1/P2 已经各自并行分工，
-  §6.7 又说"Phase 0 两人都不空转""推荐分工是……"。
-- 影响：新人读到会以为 Phase 0 必须两人结对，与"两人都不空转"的排期意图相反。
-- 建议：改成"**接口一起定（FZ-01），定完立刻分头并行**"，把 FZ-01 单独标成唯一的同步点。
-
-### 🟡 文档卫生 / 小问题
-
-**P-9 悬空交叉引用**
-
-- 证据：§3.4 里两处"见 §3.6"，但全文只有 §3.1~§3.4，**没有 §3.5/§3.6**；
-  §4.2 标题写"方案确认项 **Q2=A** 的落地"，而 §8 的 Q2 是"玩家最大生命"——两套 Q 编号撞车。
-- 建议：补上或删掉 §3.6 的引用；把"GAS 方案确认项"改成 A/B/C 命名，避免和 §8 的 Q1~Q12 冲突。
-
-**P-10 `.gitattributes` 注释与内容不符**
-
-- 证据：文件头注释写"UE 二进制资产：LFS + **文件锁（lockable）**"，但下面所有 `*.uasset/*.umap` 规则里
-  **没有 `lockable` 属性**（`Docs/Collaboration.md` 也说明 GitHub 不支持锁、故意不开）。
-- 影响：注释会误导新人以为锁是生效的。
-- 建议：把注释改成"LFS 跟踪；GitHub 无 Locking，靠约定/地图锁"。
-
-**P-11 `FSlimeStatRow.Mesh` 的类型与敌人基类不匹配**
-
-- 证据：`FSlimeStatRow` 的 `Mesh` 是 `TSoftObjectPtr<UStaticMesh>`，
-  而敌人基类 `ASlimeEnemyBase : public ACharacter` 用的是 SkeletalMesh + AnimBP。
-- 影响：数据表字段和实际资产对不上，融合时的"体型变化"也没说明改 Scale 还是换 Mesh。
-- 建议：确认史莱姆用静态网格还是骨骼网格；若走 `ACharacter` 但贴静态网格，需在计划里写明挂点与缩放规则。
-
-**P-12 `Docs/Collaboration.md` 提到 Plugins/Lyra 资产，但仓库里没有**
-
-- 证据：`Collaboration.md` §2 警告"别忽略整个 `Plugins/`，里面有 Lyra 系插件的资产"，
-  但仓库根**没有 `Plugins/` 目录**，`.uproject` 也只启用了 `ModelingToolsEditorMode`。
-- 影响：规则描述与实际不符，容易让人以为漏拉了东西。
-- 建议：删掉或改成"若以后引入插件……"。
-
-**P-13 任务编号口径**：§6.7 写"P1 Phase 0：15 项（`M0-01~17` + `GAS-08`）"，
-但 `M0-10~12` 属 P2，且 `M0-01~17` 是 17 个号——数字对得上（14+1=15），标签容易误读。
-建议写成 `M0-01~09,13~17 + GAS-08`。
-
----
-
-## 8. 建议的 Phase 0 起步顺序
-
-1. **FZ-01 接口冻结评审**（唯一必须两人同步的一步）：逐条过 C1~C18，特别是先解决上面 **P-1 / P-2 / P-3** 三条——
-   它们不解决，C10/C16 就是空的。
-2. **P1**：`Build.cs` + `uproject` 一次性加齐 GAS 依赖（含 `GameplayAbilities` 插件）→
-   `SlimeWarCoreTypes.h` → `BattleDirectorInterface.h` → `SlimeGameplayTags.h` → `USlimeStateComponent` →
-   `UStatTableProvider` + 三张空表 → `ASlimeWarGameMode`(空转发) → `USlimeAbilitySystemGlobals`(+ DefaultGame.ini 登记)。
-3. **P2**：`ASlimeWarCharacter` 删 Jump → `USlimeWeaponComponent` 空壳 → `ASlimeWarPlayerController` →
-   `USlimePlayerAttributeSet` → Character 接 ASC → 三个 GE / 四个 GA 空壳 → `HealthComponent` 双层。
-4. 两人本地编译 + 进沙盒地图 + `showdebug abilitysystem` → **CP-0**。
-
----
-
-## 9. 文档与路径
-
-| 文档 | 实际路径（相对仓库根的上一层） | 说明 |
-|---|---|---|
-| 程序计划 | `Docs\ProgramTaskList.md` | ✅ 已入库（原名 `程序任务清单与模块框架.md`），900 行 |
-| 策划案 | `Docs\GameDesign\DesignDoc.md` | ✅ 已入库；4.5 节缺失、第 8 章"待填" |
-| 策划案图片 | `Docs\GameDesign\Images\Image*.png` | 流程图 / 局内循环 / 敌人行为（含全部 AI 数值）/ 刷新逻辑 / 白盒 |
-| Phase 0 编辑器步骤 | `Docs\Phase0\CP0-Checklist.md` | 导入数据表、建 DA、建沙盒地图、跑 CP-0 |
-| 协作规范 | `Docs\Collaboration.md` | ✅ 已入库，GitHub + LFS 的实际规则 |
-| 版本库 | `origin` → `https://github.com/GoGoGo-TapTap/SlimeWar.git` | 分支：`main` / `Program-Update` |
-
-计划 §9 规定：任务状态在 §6 表格里就地更新（`[ ] / [~] / [x] / [!]`），不另建进度文档。
-——这条本身没问题，前提是先把 P-4 修掉，否则进度更新无法共享。
-
----
-
-## 10. Phase 0 实施状态（2026-10-04）
-
-**代码骨架已落地并通过编译**：`SlimeWar Win64 Development` 构建 0 error / 0 warning，
-UHT 解析 49 个文件全通过。模块现在是 `Public/{Core,GameplayFramework,Player,Enemy,Flow,UI,Debug}`
-与 `Private/...` 的分层结构，模板文件已迁入对应功能目录。
-
-| 计划任务 | 状态 | 说明 |
-|---|---|---|
-| M0-01 仓库 / 分支 / LFS | ✅ | 已切到 `main` 并提交 `7736789`；补了《仓库路径必须 ASCII》硬规则（见下） |
-| M0-02 目录骨架 + 模板迁移 | ✅ | `Public/Private` 分层，`SlimeWarCharacter`/`SlimeWarGameMode` 已迁入 |
-| M0-03 Build.cs + uproject | ✅ | `GameplayAbilities/GameplayTags/GameplayTasks/DeveloperSettings` + 编辑器侧 `GameplayAbilitiesEditor` |
-| M0-04 `SlimeWarCoreTypes.h` | ✅ | C1~C4，并补齐计划漏掉的 `FWeaponStatRow`、`FSlimeSpawnSlot`、`USlimeSpawnLayout` |
-| M0-05 `BattleDirectorInterface.h` | ✅ | 含 `GetSlimeGameMode()` 访问器（带日志，不崩） |
-| M0-06 Log + CVars | ✅ | `LogSlimeWar`；`Slime.Debug.CombatLog` / `Slime.Debug.DrawEnemyState` |
-| M0-07 Provider + 数据表 | 🔶 | Provider 代码 + 两份 CSV 已就位；**表资产要在编辑器导入** |
-| M0-08 GameMode 实现 `IBattleDirector` | ✅ | Phase 0 只打日志，逻辑留给 Phase C 的 Subsystem |
-| M0-09 EnemyBase + HealthComponent | ✅ | HealthComponent 放 L0 Core（修订 2） |
-| M0-10~12 Character / Weapon / Controller | ✅ | Jump 已删；ASC 接入；`CheatClass` 已接线 |
-| M0-13 沙盒地图 | ⏳ | 只能在编辑器里建，步骤见 `Docs/Phase0/CP0-Checklist.md` |
-| M0-14 CheatManager | ✅ | `SlimeDumpTables` / `SlimeReloadTables` / `SlimeDamageNearestEnemy` |
-| M0-15 原生标签 | ✅ | `.h` 用 `UE_DECLARE_GAMEPLAY_TAG_EXTERN` + `.cpp` 定义（原计划写法编译不过，修订 1） |
-| M0-16 `SlimeStateComponent` | ✅ | 轻量标签状态，非 GAS |
-| M0-17 `SlimeAbilitySystemGlobals` | ✅ | 空类 + `DefaultGame.ini` 登记（4.2 节已核实 `InitGlobalData` 自动调用） |
-| GAS-01~07 | ✅ | AttributeSet / 3×GE / 4×GA / 输入桩 / 血量镜像 |
-| GAS-08 架构自查 | ✅ | 4 条静态检查全过，见下 |
-
-### 已通过的验证
-
-| 验证 | 结果 |
+| 按键 | 作用 |
 |---|---|
-| 编译（Game target） | ✅ 0 error / 0 warning（warnings-as-errors） |
-| UHT 反射生成 | ✅ 49 个文件，无错误 |
-| `Core/Enemy/Flow/UI` 无 GAS 类型 | ✅ 仅注释提及 |
-| `Public/Core` 无 GAS 类型 | ✅ 仅注释提及 |
-| `Public/` 下的 GAS 头 include | ✅ 只有 `SlimeAbilitySystemGlobals.h`（L1，按修订后的 C18 允许）+ `SlimeWarCharacter.h` 的轻量接口 `AbilitySystemInterface.h` |
-| 数值纪律（代码内无血量/伤害数字） | ✅ 无命中 |
+| `W A S D` | 移动 |
+| 鼠标 | 转动视角 |
+| **鼠标左键** | 射击（**可按住**连发） |
+| **鼠标右键** | 辅助瞄准（不加伤害、不减速） |
+| `R` | 换弹（换弹期间**可以移动和瞄准**，只是不能开枪） |
+| `P` | 暂停 / 继续。**只在局内有效**；因为暂停菜单还没做，按下去只冻结世界、**再按一次 P 恢复** |
 
-### 还差三件编辑器工作（CP-0 才算完）
+> ⚠️ 设计案 3.1 写的是 **Esc** 暂停，但 `IMC_SlimeWar` 里 `IA_Pause` 实际绑的是 **P**，目前以 P 为准。
 
-1. 导入 `DT_SlimeStats` / `DT_WeaponStats`（CSV 已放在 `Content/_SlimeWar/Core/Data/`）。
-2. 建 `DA_RunConfig` / `DA_SpawnLayout`（`DefaultGame.ini` 已写好软引用路径）。
-3. 建 `L_Sandbox_OnePoint`，放一个 `SlimeEnemyBase` 实例用于验证承伤链路。
+### 1.4 一局的最短验证脚本
 
-完整步骤 + 控制台验证命令：`Docs/Phase0/CP0-Checklist.md`。
+```text
+Slime.Debug.DrawRun 1        # 打开运行 HUD
+SlimeRunDeploy 0             # 进局内（或 SlimeRunStart 跳过投放）
+SlimeRunTimeScale 10         # 加速到 10 倍
+SlimeRunStatus               # 随时打印全套数字：每体量得分明细 / 点位状态 / 存活与峰值
+SlimeRunSetTime 10           # 跳到只剩 10 秒，测"最后 15 秒"提示与收尾
+SlimeKillPlayer              # 或：走真实伤害链直接死，测死亡终局
+SlimeRunResult               # 结束后打印结算数据（得分/目标/最佳/击杀/清空点位/是否过关）
+SlimeRetry                   # 走真实的重试路径（重载关卡、沿用同一个落点）
+```
 
-### 本轮新增的两条计划修订（在原 6 条之外）
+**进 PIE 前先看 Output Log**：若出现 `Spawn point N is OUT OF SYNC with DA_SpawnLayout ...`，
+说明你在关卡里改了生成点却没导出，游戏会用资产里的旧数据。
 
-7. **`PlayerAttributeSet.h` → `SlimePlayerAttributeSet.h`**：UHT 要求头文件名 = 类名去掉前缀，原计划文件名会让编译失败。
-8. **UE 5.5 不再定义 `ATTRIBUTE_ACCESSORS`**：`AttributeSet.h` 只在注释里演示这个宏，引擎实际只提供四个 `GAMEPLAYATTRIBUTE_*` 子宏；已在属性集头里自定义 `SLIME_ATTRIBUTE_ACCESSORS`。
-9. **`FGameplayTagContainer::AddTag` 返回 `void`**（不是 `bool`），状态组件改成先 `HasTag` 再 `AddTag`。
-10. **仓库路径必须 ASCII**：UBT 会因 git 转义的中文路径崩溃，规则已写进 `Docs/Collaboration.md` §8。
+---
+
+## 2. 生成点系统
+
+### 2.1 锚点即点位
+
+关卡里放的 `SpawnPoint` Actor 就是点位本身：
+
+| 锚点负责 | 数据资产负责 |
+|---|---|
+| 点位中心（活动圈圆心）、朝向、`Point Id` | 每个槽位的相对坐标、活动半径 |
+
+- **移动/旋转锚点 = 移动/旋转整组槽位**，不用改任何数据。
+- 槽位坐标是**锚点局部坐标**（含旋转），转锚点时整组跟着转。
+- **槽位的 Z 不作数**：运行时只看 X/Y，向下打射线找地面，把史莱姆放在正下方的地面上。
+  把箭头拖到空中也没关系；`Snap To Ground` 只是让视口好看。
+
+### 2.2 批量与节奏（全部来自 `DA_RunConfig`）
+
+局内时间轴从"玩家获得控制"起算：
+
+| 时刻 | 事件 |
+|---|---|
+| t=0 | 第 1 批：每个点位 8 普通 + 2 追兵 |
+| 19s / 39s / 59s / 79s / 99s | 提前 1 秒广播"下一批即将到来"（第 1 批不提示） |
+| 20s / 40s / 60s / 80s / 100s | 第 2~6 批 |
+| 180s | 倒计时归零 → 终局（时间到） |
+
+每个点位总量 = 6 批 ×（8 普通 + 2 追兵）= **48 普通 + 12 追兵**，这是硬上限
+（融合会减少实体数，但不会因此补发）。
+
+### 2.3 出生位校验与备用位
+
+每个槽位在生成前要过四关，顺序判定：
+
+1. 落在 **NavMesh** 上（否则 AI 走不动）
+2. 正下方有地面
+3. 地面上方 1m 处没有静态遮挡
+4. 与玩家距离 ≥ `Spawn Player Min Distance`（默认 3m）
+
+不过关 → 依次试该点位的 **Fallback Slots** → 仍不过关则进入 **2 秒重试窗口**（每 0.25s 重试一次）
+→ 超时**取消这一只，不补发**。取消日志会**逐个候选位**写清原因：
+`off the navmesh` / `no ground under the slot` / `blocked by static geometry` / `too close to the player`。
+
+### 2.4 点位状态与"已清空"
+
+```
+等待投放 AwaitingDeploy → 生成中 Spawning → 耗尽未清 DepletedNotCleared → 已清空 Cleared
+```
+
+- 第 6 批（含其延迟重试）处理完后进入"耗尽未清"。
+- **只有普通史莱姆参与清空判定**：杀光本点位普通目标即 `Cleared`，**存活追兵不阻止清空**
+  （它们可能已经追着玩家离开点位，也不会因原点位清空而消失）。
+
+### 2.5 活动圈（普通史莱姆只在本点位活动）
+
+- 半径取该点位的 `Activity Radius`；填 0 则回退 `DA_RunConfig → AI Activity Radius`（当前 600cm）。
+- AI 真实受其约束：游走目标会被夹回圈内；万一漂到圈外（长距离融合寻路、被推挤），下一次决策会先走回圈内。
+- 追兵**不受**活动圈限制（可以跨区追击玩家）。
+- `Slime.Debug.DrawEnemyState 1` 可在视口里看到活动圈与中心。
+
+---
+
+## 3. 配置数据
+
+数据入口：**Project Settings → Game → Slime War → Run Config** 指向 `DA_RunConfig`。
+
+### 3.1 `DA_RunConfig`（`/Game/_SlimeWar/Core/Data/DA_RunConfig`）
+
+**Run（局内流程）**
+
+| 字段 | 说明 |
+|---|---|
+| Run Duration | 局内秒数（180） |
+| Target Score | 过关最低分（300）；**达标不会提前结束** |
+| Auto Start Run | 进关即开跑。**Phase D 应为「关」**（投放流程已接进来）；关掉后需要走投放流程进局，界面还没做时用 `SlimeRunDeploy` / `SlimeRunStart` |
+| Deploy Duration / Result Orbit Duration | 投放演出 / 结算俯瞰时长，Phase D 使用 |
+
+**Spawn（Phase C 生成点）**
+
+| 字段 | 说明 |
+|---|---|
+| Spawn Batch Count | 每个点位的批次数（6） |
+| Spawn Batch Interval | 批次间隔秒（20）；第 1 批固定 t=0 |
+| Spawn Normal Per Batch | 每批普通数（8） |
+| Spawn Aggro Per Batch | 每批追兵数（2） |
+| Spawn Player Min Distance | 出生位与玩家的最小距离，cm（300） |
+| Spawn Retry Window | 出生位不可用时的最长延迟，秒（2） |
+| Spawn Retry Interval | 延迟重试的节流间隔，秒（0.25） |
+| Spawn Batch Warning Lead | 下一批提前提示的秒数（1） |
+
+> ⚠️ 这几个数的 C++ 默认值是 0；**不填会拒绝开局并报错**，不会用代码里的魔法数字兜底。
+
+**AI | Normal（普通史莱姆）**
+
+| 字段 | 说明 |
+|---|---|
+| AI Spawn Wait Time | 出生后多久开始找融合对象，秒（2） |
+| AI Activity Radius | 全局活动半径，cm（600）；点位半径填 0 时用它 |
+| AI Wander Radius | 找不到对象时的游走步长上限，cm（300） |
+| AI Wander Pause Min / Max | 游走间隙，秒（0.5 / 1.5） |
+| AI Approach Timeout | 融合接近"连续多久没继续靠近"就放弃，秒（2） |
+| AI Fusion Mass Cap | 融合体量上限（8） |
+
+**AI | Fusion（融合）**
+
+| 字段 | 说明 |
+|---|---|
+| Fusion Contact Time | 持续接触多久才融合，秒（0.4） |
+| Fusion Contact Tolerance | 接触容差，cm（10） |
+| Fusion Post Fusion Delay | 融合后多久才能再融合，秒（1） |
+| Fusion Retry Delay | 取消 / 靠近失败后多久再找对象，秒（1） |
+| Fusion Max Participants | 参与融合的个体数（2） |
+
+**Player / Camera / Weapon / Data**：玩家生命与移动、TPS 相机与瞄准辅助、三张表与默认武器 Id（`Rifle`）。
+
+### 3.2 `DA_SpawnLayout`（`/Game/_SlimeWar/Core/Data/DA_SpawnLayout`）
+
+> 槽位（Normal / Aggro / Fallback Slots）正常**不要手填**——用第 4 节的生成点编辑器摆位后导出。
+> 但 **`Drop Points` 只能手填**（编辑器工具不管它）。
+
+每个点位一条 `FSlimeSpawnPointDef`：
+
+| 字段 | 说明 |
+|---|---|
+| Point Id | 必须与关卡里锚点的 `Point Id` 一致 |
+| Activity Radius | 该点位活动半径，cm；0 = 用全局值 |
+| Normal Slots | 8 条，每条 `RelativeLocation` + `RelativeRotation` |
+| Aggro Slots | 2 条 |
+| Fallback Slots | 备用位若干（3~4 条比较稳） |
+
+外加一份**玩家落点**（不属于某个点位，是全场的）：
+
+| 字段 | 说明 |
+|---|---|
+| Drop Points | **玩家落点 D1 / D2**，世界坐标、**单位 cm**。下标就是落点序号：`0`=D1、`1`=D2——`SlimeRunDeploy 0/1`、准备页标记、投放序列 `DeploySequences` 全用同一个下标。设计坐标 D1(8,8) / D2(45,38) 写的是**米**，要 ×100 填成 `(800, 800, 0)` / `(4500, 3800, 0)`；Z 填 0 即可（进局时会把玩家抬到落点上方 150cm 再落地） |
+
+### 3.3 数值表
+
+| 表 | 路径 | 内容 |
+|---|---|---|
+| `DT_SlimeStats` | `Content/_SlimeWar/Core/Data/` | 体量 1~8 的生命 / 速度 / 半径 / **分值**（同目录有 CSV，可在编辑器里 Reimport） |
+| `DT_WeaponStats` | 同上 | 武器伤害 / 射速 / 弹匣 / 换弹 / 射程 / 瞄准辅助 |
+| `DT_AggroStats` | `Content/_SlimeWar/Enemy/Data/` | 追兵生命 / 速度 / 攻击范围 / 伤害 / 前摇 / 收势 / 冷却 |
+
+**当前值**：体量 1~8 生命 20~160、**分值 10~80（= 10 × 体量）**；追兵 60 血 / 4.8 m/s / 单次攻击 20 伤害；
+步枪 20 伤害 / 10 发每秒 / 8 发弹匣 / 1.0s 换弹 / 射程 18m。
+
+---
+
+## 4. 生成点编辑器
+
+有了它，**不用打开数据资产手填坐标**：在视口里直接摆，再一键写回。
+
+### 4.1 摆一个点位
+
+1. Place Actors → 搜 `SpawnPoint` → 拖到想要的位置；Details 里设 `Point Id`（每个点位唯一）。
+2. 选中锚点 → Details 出现 **Spawn Point Editor** 分类：
+   - **Create Default Slots**：按 `DA_RunConfig` 的每批数量生成 8 普通（绿）+ 2 追兵（红）+ 3 备用（黄）；
+   - 在视口里**直接拖拽 / 旋转**每个箭头（箭头不能被框选，请单击选中，或在 World Outliner 里选）；
+   - 选中单个手柄后可在它自己的 Details 里改 `Role`（改角色会换颜色）、`Slot Index`，或 **Remove Slot**；
+   - 想加就点 `+ Normal` / `+ Aggro` / `+ Fallback`。
+3. **Validate Layout**：在 Output Log 里逐个槽位打印 `OK / BAD` 与原因，**修到没有 BAD**。
+4. **Export To Data Asset**：把本点位写进 `DA_SpawnLayout`；面板顶部状态会从 `OUT OF SYNC` 变成 `in sync`。
+5. 保存关卡与数据资产（Save All）。
+
+其他按钮：`Snap To Ground`（把手柄 Z 贴到地面，纯视觉）、`Import From Data Asset`（用资产数据重建手柄）、
+`Export All Points In Level`（多点位一起导出，Phase D 用）。
+
+### 4.2 视口里能看到什么
+
+- 青色大箭头 = 锚点（点位中心与朝向）。选中它或其任一槽位，会画出**活动圈**、锚点到各槽位的连线，
+  以及 HUD 标签（含 `Point Id` 与同步状态）。
+- 绿 / 红 / 黄小箭头 = 普通 / 追兵 / 备用槽位；箭头方向就是该槽位的出生朝向
+  （史莱姆一开始移动就会转向移动方向）。
+
+### 4.3 数据流向（重要）
+
+- **导出**：视口手柄 → `Export To Data Asset` → 写进 `DA_SpawnLayout`。
+- **运行时**：生成点**只读 `DA_SpawnLayout`**；视口手柄是编辑期代理，打包时被剥离，运行时零成本。
+- **反向**：`Import From Data Asset` 用资产数据重建手柄（换机器、误删手柄时用）。
+- 改完手柄**必须导出**，否则游戏用旧数据；忘了导出的话，进 Play 前会收到 `OUT OF SYNC` 警告。
+
+---
+
+## 5. 局内规则速查
+
+### 5.1 计分
+
+- **只有普通史莱姆计分**，分值 = `DT_SlimeStats` 的 `KillScore`（当前 10 × 体量）；追兵击杀**永远 0 分**。
+- 融合**不计分**，只做统计与表现；融合体按"剩余生命比例继承"。
+- 达标（300 分）只表示"过关"，**不会提前结束**。
+- **最佳分**只在"时间到且分数 ≥ 目标分"时刷新；玩家死亡或未达标**不会**覆盖它。
+  最佳分存在内存里（GameInstance），重试保留、不写盘。
+
+### 5.2 终局
+
+只有两种情况结束：**玩家生命耗尽** 或 **180 秒倒计时归零**。
+结束后立即停止生成、禁止新增得分，**敌人与玩家被冻结**，随后播放结算俯瞰（`ResultOrbitDuration`），
+镜头放完才出现结算页（Phase D 代码侧已实现，界面/序列资产未做）。
+
+### 5.3 结算会用到的数据
+
+实际得分、最低目标、普通击杀数、清空点位数、是否过关——`ASlimeRunGameState` 已全部暴露，UI 直接绑。
+
+---
+
+## 6. 调试：HUD、CVar 与控制台命令
+
+### 6.1 调试 HUD
+
+`ASlimeHUD` 全部是 C++ 绘制，不需要任何 UMG 资产：
+
+| CVar | 默认 | 作用 |
+|---|---|---|
+| `Slime.Debug.DrawRun` | 1 | **Phase C 运行 HUD**：总分 / 目标 / 最佳分、倒计时、点位状态、每点位已生成 / 存活 / 待生成、场上存活与峰值 |
+| `Slime.Debug.Crosshair` | 1 | 准星占位 |
+| `Slime.Debug.DrawEnemyState` | 0 | 敌人状态标签、**活动圈与中心** |
+| `Slime.Debug.DrawFusion` | 0 | 融合配对、接触进度、会合点、冷却 |
+| `Slime.Debug.DrawAggroPath` | 1 | 追兵的计划路径（青）与真实轨迹（橙） |
+| `Slime.Debug.DrawAimAssist` | 0 | 相机射线 / 辅助射线 / 吸附目标 |
+| `Slime.Debug.CombatLog` | 0 | 每次伤害与死亡的详细日志 |
+| `Slime.Run.TimeScale` | 1 | **时间轴倍速**：`10` 快进、`0` 冻结（只影响时间轴，不改任何数值） |
+
+### 6.2 控制台命令
+
+| 命令 | 作用 |
+|---|---|
+| `SlimeRunStart` | 立刻开始（或重开）本局 |
+| `SlimeRunEnd` | 以"时间到"结束本局 |
+| `SlimeRunTimeScale 10` | 时间轴 10 倍速 |
+| `SlimeRunStatus` | **CP-3 全套数字**：每体量击杀明细与得分、总分与 per-mass 合计、目标分、最佳分、击杀数、清空点数、融合次数、存活 / 峰值，以及每个点位的状态与计数 |
+| `SlimeRunDeploy [Index]` | **跳过准备页直接投放**（`0` = D1，`1` = D2）。界面还没做时的主要进局方式 |
+| `SlimeRunSetTime [秒]` | 把倒计时跳到指定剩余时间（测最后 15 秒提示、时间到终局） |
+| `SlimeRunAddScore [分]` | 直接加分（测"跨过 300 分不会提前结束"） |
+| `SlimeRunResult` | **打印结算数据**：得分 / 目标 / 最佳 / 普通击杀 / 清空点位 / 是否过关 / 结束原因 |
+| `SlimeRetry` | 走真实的重试路径：重载关卡 + 沿用同一个落点（测"重试不残留"） |
+| `SlimePause` | 开 / 关暂停（等价于按 P） |
+| `SlimeKillPlayer` | 走真实伤害链杀死玩家（验证死亡终局） |
+| `SlimeClearEnemies` | 清空场上敌人（配合检查清空判定） |
+| `SlimeSpawnNormal [N]` / `SlimeSpawnAggro [N]` | 在玩家面前生成 N 只（调试用） |
+| `SlimeSpawnNormalAtMass [Mass] [N]` | 生成指定体量的普通史莱姆（测融合） |
+| `SlimeSetMass [Mass]` | 把最近的普通史莱姆改成指定体量 |
+| `SlimeForceFuse` | 强制最近的同点位两只融合（测取消 / 打断） |
+| `SlimeDamageNearestEnemy [Amount]` | 对最近的敌人走一次统一伤害入口 |
+| `SlimeDumpTables` / `SlimeReloadTables` | 打印 / 重载数据表（改完 CSV 或 DA 后使用） |
+
+### 6.3 排查手册
+
+| 现象 | 原因与处理 |
+|---|---|
+| **Play 之后玩家动不了、屏幕上什么都没有** | **正常现象**：游戏停在准备阶段，而准备页 WBP 还没做。控制台敲 `SlimeRunStart` 进局（沙盒里别用 `SlimeRunDeploy`，理由见 1.2） |
+| 日志 `... widget class could not be loaded (...)` | UI 资产还没建，或路径不对。括号里会写明是"没配"还是"配了但资产不存在"；缺哪个界面就跳过哪个，不影响玩法 |
+| 日志 `no preparation screen, so a drop point cannot be chosen` | 准备页缺失时的自动降级：自动部署到落点 0。不是错误 |
+| 日志 `drop point N is out of range (DA_SpawnLayout has 0)` | `DA_SpawnLayout::DropPoints` 空着或不够。填法见 3.2 |
+| 控制台里 `Slime*` 命令补全不出来 | 编辑器还在用旧 DLL：关掉编辑器重新打开（它会自动重编模块） |
+| 一个史莱姆都不出 | ① `DA_RunConfig` 的 Spawn 字段没填（日志会报错）② 关卡里没有 `SpawnPoint` 锚点（`no ASpawnPoint anchor was found`）③ 锚点 `Point Id` 在 `DA_SpawnLayout` 里没有对应定义（日志会点名） |
+| 日志 `blocked by static geometry` | 该候选位地面上方 1m 有静态物。日志会逐个候选位给出原因与坐标，据此挪槽位或补 Fallback Slots |
+| 日志 `off the navmesh` | 槽位不在导航网格上：补 `NavMeshBoundsVolume` 或挪位置 |
+| 日志 `too close to the player` | 出生位离玩家太近（默认 3m）：把点位挪远，或调 `Spawn Player Min Distance` |
+| 进 Play 前 `OUT OF SYNC` | 视口手柄与数据资产不一致：选中锚点 → `Export To Data Asset` → Save All |
+| 改了数值没生效 | 数据表用 `SlimeReloadTables`；`DA_*` 改完保存即可。代码里没有数值可改（都在数据里） |
+| 史莱姆半埋 / 卡住 | 运行时按"地面 + 胶囊半高"生成，不应再出现；若复现请附 `SlimeRunStatus` 与日志 |
+
+---
+
+## 7. 面向程序
+
+### 7.1 模块与目录
+
+| 模块 | 类型 | 内容 |
+|---|---|---|
+| `SlimeWar` | Runtime | 游戏全部逻辑：`Public/Core` 类型与接口、`Public/Flow` 流程与生成点、`Public/UI` 界面基类与演出导演 |
+| `SlimeWarEditor` | Editor | **只有编辑器工具**：生成点编辑器（视口可视化 + 详情面板 + DA 往返 + PIE 前检查）；打包不参与 |
+
+代码分层：`L0 Core`（类型 / 接口 / 纯函数）→ `L1 GameplayFramework` → `L2 Player / Enemy` → `L3 Flow` → `L4 UI` → `L5 Debug`。
+只允许依赖层号更小的模块；`Public/Core/*` 不出现任何 GAS 类型（红线 C18）。
+
+### 7.2 关键类
+
+| 类 | 职责 |
+|---|---|
+| `ASpawnPoint` | 锚点即点位：批次执行、延迟重试、存活计数、四状态 |
+| `URunSubsystem` | 时间轴权威：倒计时、批次、提前提示、终局；订阅 Director 事件 |
+| `UScoreSubsystem` | GameInstance 级：总分、按体量明细、击杀数、清空点数、最佳分 |
+| `ASlimeRunGameState` | 分数 / 时间 / 点位状态的**只读镜像**，UI 唯一绑定面 |
+| `USlimeEnemyManagerSubsystem` | 唯一生成入口 + 存活 / 峰值统计 |
+| `SlimeSlotResolver` | 出生位解析（NavMesh → 地面 → 遮挡 → 玩家距离）与生成 Z；**运行时与编辑器共用** |
+| `SlimeActivityArea` | 活动圈的"是否在内 / 夹回"纯函数；AI 与 HUD 共用 |
+| `SlimeSpawnLayoutEdit` | 手柄 → 三数组的纯函数（排序 / 往返 / 重复检测） |
+| `USlimeSpawnSlotMarker` / `USlimeSpawnPointAnchor` | 编辑期手柄（`bIsEditorOnly`，运行时被剥离） |
+
+**Phase D（整局闭环）新增**：
+
+| 类 | 职责 |
+|---|---|
+| `URunSubsystem`（扩展） | 运行阶段机 `Idle → Deploying → Running → Result → Ended`；`BeginDeployment` / `ConfirmDeployment` 是进局唯一入口；终局时冻结敌人并驱动结算 |
+| `USlimeSessionSubsystem` | GameInstance 级：跨关卡重载记住"落点 + 是否重试"，让重试天然无残留 |
+| `FSlimeRunResult` | 结算数据（得分/目标/最佳/击杀/清空点位/结束原因/是否过关）。`bPassed = 时间到 且 分数 ≥ 目标`，**死亡即失败** |
+| `USlimeUISubsystem` | 4 个界面的创建与切换、输入模式与光标、暂停开关。放在 UI 层，因为只有它能同时依赖 Flow 与 Player |
+| `USlimeHUDWidget` / `SlimePreparationWidget` / `SlimeResultWidget` / `SlimePauseWidget` | 界面 C++ 基类：只负责"什么时候调用、数据是多少"，排版与动画在 WBP 里用 BlueprintImplementableEvent 实现 |
+| `USlimePresentationDirector` | 播放投放 / 结算的 Level Sequence；**时长以 DA 为准**，序列缺失就跳过 |
+
+> **缺资产不等于崩**：WBP / Sequence 缺失只会打警告并跳过对应界面。
+> 唯一例外已处理——准备页是进局唯一入口，所以它缺失时会自动降级到"部署到落点 0"。
+
+### 7.3 跨模块契约（不要随手改）
+
+- `IBattleDirector` 是**唯一的跨模块通信口**：敌人与武器不认识计分系统。GameMode 只做广播，Flow 侧订阅。
+- **两条承伤路径**收在 `USlimeCombatSubsystem`：目标有 ASC（玩家）走 `GE_Damage`，没有（敌人）走 `HealthComponent`；
+  对外只有一个 `OnDeath`。
+- 改 `Public/Core/*` 或跨模块接口要单独提交并登记（计划 §7.4）。
+
+### 7.4 自动化测试
+
+编辑器里：`Tools → Session Frontend → Automation`，过滤 `SlimeWar.`（当前 **11 个，全绿**）。
+
+```
+SlimeWar.Flow.RunSchedule / ScoringRules / PointState / SpawnSupply
+SlimeWar.Flow.RunPhase / RunResult / DropPointSelection        (Phase D 新增)
+SlimeWar.Spawn.LayoutArrays / DuplicateSlots / AnchorSpace
+SlimeWar.Enemy.ActivityArea
+```
+
+也可以不开编辑器直接跑：
+
+```powershell
+UnrealEditor-Cmd.exe "<...>\SlimeWar.uproject" -ExecCmds="Automation RunTests SlimeWar" -unattended -nopause -nullrhi -testexit="Automation Test Queue Empty"
+```
+
+---
+
+## 8. 文档索引
+
+| 文档 | 内容 |
+|---|---|
+| `Docs/ProgramTaskList.md` | 程序任务清单与模块框架（各 Phase 实现注记、契约表、变更记录） |
+| `Docs/PhaseD/PhaseD-OperationGuide.md` | **Phase D 操作指南**：从编译到资产到验收的线性流程（想知道"下一步做什么"看这份） |
+| `Docs/PhaseD/PhaseD-AssetGuide.md` | 俯瞰贴图 / 4 个 WBP / 3 条 Level Sequence 怎么做（逐步操作） |
+| `Docs/PhaseD/PhaseD-Checklist.md` | Phase D 编辑器步骤与 CP-4 实机验收清单 |
+| `Docs/PhaseD/PhaseD-Plan.md` | Phase D 设计与接口变更（含与任务清单的差异登记） |
+| `Docs/PhaseC/PhaseC-Plan.md` | Phase C 设计与决策（v1.1：锚点即点位 + 生成点编辑器） |
+| `Docs/PhaseC/PhaseC-Checklist.md` | Phase C 编辑器步骤与 CP-3 实机验收清单 |
+| `Docs/PhaseB/PhaseB-Plan.md` / `PhaseB-Checklist.md` | 融合（PB-09~PB-21）设计与验收 |
+| `Docs/PhaseA/PhaseA-Checklist.md` | 玩家主链路与敌人 AI 的编辑器步骤 |
+| `Docs/GameDesign/DesignDoc.md` | 策划案（规则与体验的唯一来源） |
+| `Docs/Collaboration.md` | 版本库与协作规范（Git LFS 等） |
+
+> 待确认数值见 `Docs/ProgramTaskList.md` §8（Q1~Q14）：体量表、玩家生命 / 速度、弹匣 / 射速 / 伤害等仍是占位值，
+> Phase A/B 验收前需要策划定稿。

@@ -27,9 +27,16 @@ class USlimeHealthComponent : public UActorComponent
 public:
 	USlimeHealthComponent();
 
-	/** Set max health and start at full. Numbers come from DataTable / DataAsset, never from code. */
+	/**
+	 * Set max health and start at MaxHealth * HealthFraction.
+	 * Numbers come from DataTable / DataAsset, never from code.
+	 *
+	 * HealthFraction exists for PB-12: a fused slime inherits the pooled remaining-health ratio
+	 * of its parents instead of healing to full. The default (1.0) keeps the Phase C pool reset
+	 * and every aggro spawn at full health.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Health")
-	void InitializeHealth(float InMaxHealth);
+	void InitializeHealth(float InMaxHealth, float HealthFraction = 1.f);
 
 	/** Authoritative damage entry. No-op in proxy mode. */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Health")

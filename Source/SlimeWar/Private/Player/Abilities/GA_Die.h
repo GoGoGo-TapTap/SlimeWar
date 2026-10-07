@@ -7,8 +7,11 @@
 #include "GA_Die.generated.h"
 
 /**
- * Death ability skeleton. Adds State.Player.Dead, cancels every other ability and reports
- * IBattleDirector::OnPlayerDied. Implemented in Phase B (PA-11).
+ * PA-11: the player death sequence.
+ *
+ * Cancels everything that is still running (an in-flight reload included), applies the death
+ * effects on the character (loose State.Player.Dead + movement lock) and reports
+ * IBattleDirector::OnPlayerDied. Triggered by code when the mirrored health reaches zero.
  */
 UCLASS()
 class UGA_Die : public UGameplayAbility
@@ -17,4 +20,11 @@ class UGA_Die : public UGameplayAbility
 
 public:
 	UGA_Die();
+
+protected:
+	virtual void ActivateAbility(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData) override;
 };

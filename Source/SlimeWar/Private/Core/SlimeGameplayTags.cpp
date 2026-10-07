@@ -9,6 +9,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_State_Player_Dead, "State.Player.Dead");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Player_Result, "State.Player.Result");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Player_Invulnerable, "State.Player.Invulnerable");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Weapon_Reloading, "State.Weapon.Reloading");
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Weapon_Cooldown, "State.Weapon.Cooldown");
 
 // Enemy AI state
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Normal_Idle, "State.Enemy.Normal.Idle");

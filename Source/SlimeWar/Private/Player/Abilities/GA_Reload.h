@@ -7,8 +7,8 @@
 #include "GA_Reload.generated.h"
 
 /**
- * Reload ability skeleton. Owning State.Weapon.Reloading blocks firing. The actual refill and
- * the AbilityTask_WaitDelay come in Phase A (PA-06). Move / aim stay allowed while reloading.
+ * PA-06: refills the magazine after ReloadDuration.
+ * Owning State.Weapon.Reloading is what blocks GA_Fire, while movement and aiming stay free.
  */
 UCLASS()
 class UGA_Reload : public UGameplayAbility
@@ -17,4 +17,14 @@ class UGA_Reload : public UGameplayAbility
 
 public:
 	UGA_Reload();
+
+protected:
+	virtual void ActivateAbility(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData) override;
+
+	UFUNCTION()
+	void HandleReloadFinished();
 };

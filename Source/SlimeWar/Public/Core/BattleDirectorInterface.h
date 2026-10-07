@@ -26,8 +26,13 @@ public:
 	/** A normal target died. The only scoring entry point. */
 	virtual void OnEnemyKilled(ETargetKind Kind, int32 Mass) = 0;
 
-	/** Two slimes fused successfully. Statistics / presentation only, never score. */
-	virtual void OnEnemyFused(int32 ResultMass) = 0;
+	/**
+	 * Two slimes fused successfully. Statistics / presentation only, never score.
+	 *
+	 * Location is where the fused body ended up. Phase D adds it for the "first fusion nearby"
+	 * tutorial hint (design 7.5); the score path never reads it.
+	 */
+	virtual void OnEnemyFused(int32 ResultMass, const FVector& Location) = 0;
 
 	/** A spawn point changed state. Drives HUD markers. */
 	virtual void OnPointStateChanged(int32 PointId, ESpawnPointState NewState) = 0;
