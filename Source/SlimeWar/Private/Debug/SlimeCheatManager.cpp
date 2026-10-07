@@ -21,6 +21,7 @@
 #include "GameplayFramework/SlimeCombatSubsystem.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "Math/NumericLimits.h"
+#include "UI/SlimeUISubsystem.h"
 
 namespace
 {
@@ -473,4 +474,85 @@ void USlimeCheatManager::SlimeRunStatus()
 	}
 
 	UE_LOG(LogSlimeWar, Log, TEXT("=== end of run status ==="));
+}
+
+void USlimeCheatManager::SlimeRunDeploy(int32 DropPointIndex)
+{
+	URunSubsystem* Run = URunSubsystem::Get(this);
+	if (!Run)
+	{
+		UE_LOG(LogSlimeWar, Error, TEXT("SlimeRunDeploy: the run subsystem is unavailable."));
+		return;
+	}
+
+	if (!Run->BeginDeployment(DropPointIndex))
+	{
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("SlimeRunDeploy: could not deploy (phase %s, index %d)."),
+			SlimeFlowNames::RunState(Run->GetRunState()), DropPointIndex);
+	}
+}
+
+void USlimeCheatManager::SlimeRunResult()
+{
+	const URunSubsystem* Run = URunSubsystem::Get(this);
+	if (!Run)
+	{
+		UE_LOG(LogSlimeWar, Error, TEXT("SlimeRunResult: the run subsystem is unavailable."));
+		return;
+	}
+
+	const FSlimeRunResult Result = Run->GetRunResult();
+
+	UE_LOG(LogSlimeWar, Log, TEXT("=== SlimeWar settlement (CP-4) ==="));
+	UE_LOG(LogSlimeWar, Log, TEXT("phase %s   end reason %s   drop point %d"),
+		SlimeFlowNames::RunState(Run->GetRunState()),
+		SlimeFlowNames::EndReason(Result.EndReason),
+		Run->GetSelectedDropPoint());
+	UE_LOG(LogSlimeWar, Log, TEXT("score %d / target %d   best %d   passed %s"),
+		Result.Score, Result.TargetScore, Result.BestScore,
+		Result.bPassed ? TEXT("yes") : TEXT("no"));
+	UE_LOG(LogSlimeWar, Log, TEXT("normal kills %d   cleared points %d"),
+		Result.NormalKills, Result.ClearedPoints);
+	UE_LOG(LogSlimeWar, Log, TEXT("=== end of settlement ==="));
+}
+
+void USlimeCheatManager::SlimeRetry()
+{
+	URunSubsystem* Run = URunSubsystem::Get(this);
+	if (!Run)
+	{
+		UE_LOG(LogSlimeWar, Error, TEXT("SlimeRetry: the run subsystem is unavailable."));
+		return;
+	}
+
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeRetry: reloading the level (drop point %d)."), Run->GetSelectedDropPoint());
+	Run->RequestRetry(/*bReselectDropPoint=*/false);
+}
+
+void USlimeCheatManager::SlimeRunSetTime(float SecondsRemaining)
+{
+	if (URunSubsystem* Run = URunSubsystem::Get(this))
+	{
+		Run->DebugSetRemainingSeconds(SecondsRemaining);
+	}
+}
+
+void USlimeCheatManager::SlimeRunAddScore(int32 Points)
+{
+	if (UScoreSubsystem* Score = UScoreSubsystem::Get(this))
+	{
+		Score->DebugAddScore(Points);
+	}
+}
+
+void USlimeCheatManager::SlimePause()
+{
+	if (USlimeUISubsystem* UI = USlimeUISubsystem::Get(this))
+	{
+		UI->TogglePause();
+		return;
+	}
+
+	UE_LOG(LogSlimeWar, Error, TEXT("SlimePause: the UI subsystem is unavailable."));
 }

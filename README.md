@@ -2,18 +2,82 @@
 
 UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变强，180 秒内在生成点上刷分。
 
-> **本文是 Phase C（生成点与单点闭环）的使用说明**，面向策划与程序。
+> **本文是当前可玩版本的使用说明**，面向策划与程序。
 > 数值全部来自 `DA_RunConfig` / DataTable / `DA_SpawnLayout`——**调数值不需要改代码**（项目铁律 5）。
 >
-> 进度：Phase 0 / A / B / C 代码侧已完成并编译通过；当前工作分支 `Program-Update`。
+> 进度：Phase 0 / A / B / C / D **代码侧**已完成并编译通过。
+> ⚠️ **Phase D 的界面与演出资产还没做**（4 个 WBP + 3 条 Level Sequence + 俯瞰贴图），
+> 所以准备页 / HUD / 结算页 / 暂停菜单都不会显示——**请用控制台命令开局**，见第 1 节。
+> 当前工作分支 `Program-Update`。
 
 ---
 
-## 1. 快速开始
+## 1. 快速开始：现在怎么玩
+
+### 1.1 当前版本能玩到什么
+
+| 已经能玩 | 还差什么（Phase D 的资产，做法见 `Docs/PhaseD/PhaseD-AssetGuide.md`） |
+|---|---|
+| 单人 TPS：移动 / 瞄准 / 射击 / 换弹 / 受击保护 / 死亡 | 准备页与选落点界面（`WBP_SlimePreparation`） |
+| 史莱姆批量生成、6 批节奏、融合、追兵追打 | 局内 HUD、结算页、暂停菜单（另外 3 个 WBP） |
+| 计分 / 倒计时 / 点位四状态 / 终局判定 | 投放与结算镜头（3 条 Level Sequence） |
+| 三点位、重试不残留、结算数据（代码侧已实现） | 准备页那张俯瞰贴图 |
+
+**最关键的一条**：因为准备页还没有界面，点 Play 之后游戏会停在"准备阶段"——
+**玩家不能动、屏幕上也没有东西可点**。这不是卡死，是**在等一个还没做出来的选择**。
+用下面的命令直接进局。
+
+### 1.2 三步启动
 
 1. 双击 `SlimeWar.uproject`（提示重新编译模块时选 Yes；首次会多编译一个 `SlimeWarEditor` 编辑器工具模块）。
-2. 打开 `/Game/_SlimeWar/Maps/L_Sandbox_OnePoint`，点 Play。
-3. 控制台（`~`）敲 `SlimeRunTimeScale 10`——时间轴 10 倍速，约 10 秒就能跑完一整局。
+2. 打开 `/Game/_SlimeWar/Maps/L_Sandbox_OnePoint`，点 **Play**。
+3. 按 `~` 打开控制台，敲下面任意一条**进局**：
+
+| 命令 | 效果 |
+|---|---|
+| **`SlimeRunStart`** | **沙盒里推荐用这条**：跳过投放，直接进局内拿控制权 |
+| `SlimeRunDeploy 0` | 走完整流程：投放（2 秒；没有序列就跳过）→ 进局内。`0` = 落点 D1 |
+| `SlimeRunDeploy 1` | 同上，用落点 D2 |
+
+> ⚠️ `SlimeRunDeploy` 会把玩家**传送到 `DropPoints` 里配的坐标**。那两个坐标是按三点位白盒地图
+> （60×50m，D1=(800,800)、D2=(4500,3800)）设计的，**在 `L_Sandbox_OnePoint` 里不一定站在地上**。
+> 所以在沙盒里先用 `SlimeRunStart`；等白盒地图建好再用 `SlimeRunDeploy` 测投放。
+
+再敲两条让节奏快起来、看得清：
+
+```text
+SlimeRunTimeScale 10      # 时间轴 10 倍速，约 10~20 秒跑完一局
+Slime.Debug.DrawRun 1     # 左上角运行 HUD：分数 / 倒计时 / 点位状态 / 存活数
+```
+
+> 如果 `DA_RunConfig` 的 **Auto Start Run** 还勾着，游戏会自己开局，就不需要上面三条命令了。
+> Phase D 的正确配置是**取消勾选**（详见 3.1）。
+
+### 1.3 键位
+
+| 按键 | 作用 |
+|---|---|
+| `W A S D` | 移动 |
+| 鼠标 | 转动视角 |
+| **鼠标左键** | 射击（**可按住**连发） |
+| **鼠标右键** | 辅助瞄准（不加伤害、不减速） |
+| `R` | 换弹（换弹期间**可以移动和瞄准**，只是不能开枪） |
+| `P` | 暂停 / 继续。**只在局内有效**；因为暂停菜单还没做，按下去只冻结世界、**再按一次 P 恢复** |
+
+> ⚠️ 设计案 3.1 写的是 **Esc** 暂停，但 `IMC_SlimeWar` 里 `IA_Pause` 实际绑的是 **P**，目前以 P 为准。
+
+### 1.4 一局的最短验证脚本
+
+```text
+Slime.Debug.DrawRun 1        # 打开运行 HUD
+SlimeRunDeploy 0             # 进局内（或 SlimeRunStart 跳过投放）
+SlimeRunTimeScale 10         # 加速到 10 倍
+SlimeRunStatus               # 随时打印全套数字：每体量得分明细 / 点位状态 / 存活与峰值
+SlimeRunSetTime 10           # 跳到只剩 10 秒，测"最后 15 秒"提示与收尾
+SlimeKillPlayer              # 或：走真实伤害链直接死，测死亡终局
+SlimeRunResult               # 结束后打印结算数据（得分/目标/最佳/击杀/清空点位/是否过关）
+SlimeRetry                   # 走真实的重试路径（重载关卡、沿用同一个落点）
+```
 
 **进 PIE 前先看 Output Log**：若出现 `Spawn point N is OUT OF SYNC with DA_SpawnLayout ...`，
 说明你在关卡里改了生成点却没导出，游戏会用资产里的旧数据。
@@ -93,7 +157,7 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 |---|---|
 | Run Duration | 局内秒数（180） |
 | Target Score | 过关最低分（300）；**达标不会提前结束** |
-| Auto Start Run | 进关即开跑（沙盒用；投放流程接进来后关掉） |
+| Auto Start Run | 进关即开跑。**Phase D 应为「关」**（投放流程已接进来）；关掉后需要走投放流程进局，界面还没做时用 `SlimeRunDeploy` / `SlimeRunStart` |
 | Deploy Duration / Result Orbit Duration | 投放演出 / 结算俯瞰时长，Phase D 使用 |
 
 **Spawn（Phase C 生成点）**
@@ -136,7 +200,8 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 
 ### 3.2 `DA_SpawnLayout`（`/Game/_SlimeWar/Core/Data/DA_SpawnLayout`）
 
-> 正常**不要手填**——用第 4 节的生成点编辑器摆位后导出。
+> 槽位（Normal / Aggro / Fallback Slots）正常**不要手填**——用第 4 节的生成点编辑器摆位后导出。
+> 但 **`Drop Points` 只能手填**（编辑器工具不管它）。
 
 每个点位一条 `FSlimeSpawnPointDef`：
 
@@ -147,6 +212,12 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 | Normal Slots | 8 条，每条 `RelativeLocation` + `RelativeRotation` |
 | Aggro Slots | 2 条 |
 | Fallback Slots | 备用位若干（3~4 条比较稳） |
+
+外加一份**玩家落点**（不属于某个点位，是全场的）：
+
+| 字段 | 说明 |
+|---|---|
+| Drop Points | **玩家落点 D1 / D2**，世界坐标、**单位 cm**。下标就是落点序号：`0`=D1、`1`=D2——`SlimeRunDeploy 0/1`、准备页标记、投放序列 `DeploySequences` 全用同一个下标。设计坐标 D1(8,8) / D2(45,38) 写的是**米**，要 ×100 填成 `(800, 800, 0)` / `(4500, 3800, 0)`；Z 填 0 即可（进局时会把玩家抬到落点上方 150cm 再落地） |
 
 ### 3.3 数值表
 
@@ -209,7 +280,8 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 ### 5.2 终局
 
 只有两种情况结束：**玩家生命耗尽** 或 **180 秒倒计时归零**。
-结束后立即停止生成、禁止新增得分；敌人与玩家的冻结、结算俯瞰属于 Phase D。
+结束后立即停止生成、禁止新增得分，**敌人与玩家被冻结**，随后播放结算俯瞰（`ResultOrbitDuration`），
+镜头放完才出现结算页（Phase D 代码侧已实现，界面/序列资产未做）。
 
 ### 5.3 结算会用到的数据
 
@@ -242,6 +314,12 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 | `SlimeRunEnd` | 以"时间到"结束本局 |
 | `SlimeRunTimeScale 10` | 时间轴 10 倍速 |
 | `SlimeRunStatus` | **CP-3 全套数字**：每体量击杀明细与得分、总分与 per-mass 合计、目标分、最佳分、击杀数、清空点数、融合次数、存活 / 峰值，以及每个点位的状态与计数 |
+| `SlimeRunDeploy [Index]` | **跳过准备页直接投放**（`0` = D1，`1` = D2）。界面还没做时的主要进局方式 |
+| `SlimeRunSetTime [秒]` | 把倒计时跳到指定剩余时间（测最后 15 秒提示、时间到终局） |
+| `SlimeRunAddScore [分]` | 直接加分（测"跨过 300 分不会提前结束"） |
+| `SlimeRunResult` | **打印结算数据**：得分 / 目标 / 最佳 / 普通击杀 / 清空点位 / 是否过关 / 结束原因 |
+| `SlimeRetry` | 走真实的重试路径：重载关卡 + 沿用同一个落点（测"重试不残留"） |
+| `SlimePause` | 开 / 关暂停（等价于按 P） |
 | `SlimeKillPlayer` | 走真实伤害链杀死玩家（验证死亡终局） |
 | `SlimeClearEnemies` | 清空场上敌人（配合检查清空判定） |
 | `SlimeSpawnNormal [N]` / `SlimeSpawnAggro [N]` | 在玩家面前生成 N 只（调试用） |
@@ -255,6 +333,11 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 
 | 现象 | 原因与处理 |
 |---|---|
+| **Play 之后玩家动不了、屏幕上什么都没有** | **正常现象**：游戏停在准备阶段，而准备页 WBP 还没做。控制台敲 `SlimeRunStart` 进局（沙盒里别用 `SlimeRunDeploy`，理由见 1.2） |
+| 日志 `... widget class could not be loaded (...)` | UI 资产还没建，或路径不对。括号里会写明是"没配"还是"配了但资产不存在"；缺哪个界面就跳过哪个，不影响玩法 |
+| 日志 `no preparation screen, so a drop point cannot be chosen` | 准备页缺失时的自动降级：自动部署到落点 0。不是错误 |
+| 日志 `drop point N is out of range (DA_SpawnLayout has 0)` | `DA_SpawnLayout::DropPoints` 空着或不够。填法见 3.2 |
+| 控制台里 `Slime*` 命令补全不出来 | 编辑器还在用旧 DLL：关掉编辑器重新打开（它会自动重编模块） |
 | 一个史莱姆都不出 | ① `DA_RunConfig` 的 Spawn 字段没填（日志会报错）② 关卡里没有 `SpawnPoint` 锚点（`no ASpawnPoint anchor was found`）③ 锚点 `Point Id` 在 `DA_SpawnLayout` 里没有对应定义（日志会点名） |
 | 日志 `blocked by static geometry` | 该候选位地面上方 1m 有静态物。日志会逐个候选位给出原因与坐标，据此挪槽位或补 Fallback Slots |
 | 日志 `off the navmesh` | 槽位不在导航网格上：补 `NavMeshBoundsVolume` 或挪位置 |
@@ -271,13 +354,13 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 
 | 模块 | 类型 | 内容 |
 |---|---|---|
-| `SlimeWar` | Runtime | 游戏全部逻辑；`Public/Flow/` 是 Phase C 的流程与生成点 |
+| `SlimeWar` | Runtime | 游戏全部逻辑：`Public/Core` 类型与接口、`Public/Flow` 流程与生成点、`Public/UI` 界面基类与演出导演 |
 | `SlimeWarEditor` | Editor | **只有编辑器工具**：生成点编辑器（视口可视化 + 详情面板 + DA 往返 + PIE 前检查）；打包不参与 |
 
 代码分层：`L0 Core`（类型 / 接口 / 纯函数）→ `L1 GameplayFramework` → `L2 Player / Enemy` → `L3 Flow` → `L4 UI` → `L5 Debug`。
 只允许依赖层号更小的模块；`Public/Core/*` 不出现任何 GAS 类型（红线 C18）。
 
-### 7.2 Phase C 的关键类
+### 7.2 关键类
 
 | 类 | 职责 |
 |---|---|
@@ -291,6 +374,20 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 | `SlimeSpawnLayoutEdit` | 手柄 → 三数组的纯函数（排序 / 往返 / 重复检测） |
 | `USlimeSpawnSlotMarker` / `USlimeSpawnPointAnchor` | 编辑期手柄（`bIsEditorOnly`，运行时被剥离） |
 
+**Phase D（整局闭环）新增**：
+
+| 类 | 职责 |
+|---|---|
+| `URunSubsystem`（扩展） | 运行阶段机 `Idle → Deploying → Running → Result → Ended`；`BeginDeployment` / `ConfirmDeployment` 是进局唯一入口；终局时冻结敌人并驱动结算 |
+| `USlimeSessionSubsystem` | GameInstance 级：跨关卡重载记住"落点 + 是否重试"，让重试天然无残留 |
+| `FSlimeRunResult` | 结算数据（得分/目标/最佳/击杀/清空点位/结束原因/是否过关）。`bPassed = 时间到 且 分数 ≥ 目标`，**死亡即失败** |
+| `USlimeUISubsystem` | 4 个界面的创建与切换、输入模式与光标、暂停开关。放在 UI 层，因为只有它能同时依赖 Flow 与 Player |
+| `USlimeHUDWidget` / `SlimePreparationWidget` / `SlimeResultWidget` / `SlimePauseWidget` | 界面 C++ 基类：只负责"什么时候调用、数据是多少"，排版与动画在 WBP 里用 BlueprintImplementableEvent 实现 |
+| `USlimePresentationDirector` | 播放投放 / 结算的 Level Sequence；**时长以 DA 为准**，序列缺失就跳过 |
+
+> **缺资产不等于崩**：WBP / Sequence 缺失只会打警告并跳过对应界面。
+> 唯一例外已处理——准备页是进局唯一入口，所以它缺失时会自动降级到"部署到落点 0"。
+
 ### 7.3 跨模块契约（不要随手改）
 
 - `IBattleDirector` 是**唯一的跨模块通信口**：敌人与武器不认识计分系统。GameMode 只做广播，Flow 侧订阅。
@@ -300,10 +397,11 @@ UE 5.5 单机 TPS：玩家拿枪打史莱姆，史莱姆会两两融合变大变
 
 ### 7.4 自动化测试
 
-编辑器里：`Tools → Session Frontend → Automation`，过滤 `SlimeWar.`（当前 8 个，全绿）。
+编辑器里：`Tools → Session Frontend → Automation`，过滤 `SlimeWar.`（当前 **11 个，全绿**）。
 
 ```
 SlimeWar.Flow.RunSchedule / ScoringRules / PointState / SpawnSupply
+SlimeWar.Flow.RunPhase / RunResult / DropPointSelection        (Phase D 新增)
 SlimeWar.Spawn.LayoutArrays / DuplicateSlots / AnchorSpace
 SlimeWar.Enemy.ActivityArea
 ```
@@ -321,6 +419,10 @@ UnrealEditor-Cmd.exe "<...>\SlimeWar.uproject" -ExecCmds="Automation RunTests Sl
 | 文档 | 内容 |
 |---|---|
 | `Docs/ProgramTaskList.md` | 程序任务清单与模块框架（各 Phase 实现注记、契约表、变更记录） |
+| `Docs/PhaseD/PhaseD-OperationGuide.md` | **Phase D 操作指南**：从编译到资产到验收的线性流程（想知道"下一步做什么"看这份） |
+| `Docs/PhaseD/PhaseD-AssetGuide.md` | 俯瞰贴图 / 4 个 WBP / 3 条 Level Sequence 怎么做（逐步操作） |
+| `Docs/PhaseD/PhaseD-Checklist.md` | Phase D 编辑器步骤与 CP-4 实机验收清单 |
+| `Docs/PhaseD/PhaseD-Plan.md` | Phase D 设计与接口变更（含与任务清单的差异登记） |
 | `Docs/PhaseC/PhaseC-Plan.md` | Phase C 设计与决策（v1.1：锚点即点位 + 生成点编辑器） |
 | `Docs/PhaseC/PhaseC-Checklist.md` | Phase C 编辑器步骤与 CP-3 实机验收清单 |
 | `Docs/PhaseB/PhaseB-Plan.md` / `PhaseB-Checklist.md` | 融合（PB-09~PB-21）设计与验收 |

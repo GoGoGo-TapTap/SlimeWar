@@ -513,7 +513,8 @@ void USlimeFusionComponent::ResolvePairing()
 	// Fusing is not a kill: statistics only, never score (IBattleDirector::OnEnemyFused).
 	if (ASlimeWarGameMode* GameMode = GetSlimeGameMode(Survivor))
 	{
-		GameMode->OnEnemyFused(Survivor->GetMass());
+		// The location rides along for the Phase D "first fusion nearby" hint (design 7.5).
+		GameMode->OnEnemyFused(Survivor->GetMass(), Survivor->GetActorLocation());
 	}
 
 	StartCooldown(ESlimeFusionCancelReason::None, PostFusionDelay);

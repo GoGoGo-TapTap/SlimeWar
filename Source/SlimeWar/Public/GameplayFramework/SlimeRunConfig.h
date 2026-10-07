@@ -46,6 +46,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Run")
 	bool bAutoStartRun = true;
 
+	// -- Tutorial (Phase D, PD-12) --
+
+	/**
+	 * Radius in cm for the "first fusion nearby" hint (design 7.5).
+	 * 0 means "no range limit": the hint then fires on the first fusion anywhere in the run.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tutorial")
+	float TutorialFusionProximity = 0.f;
+
 	// -- Player --
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player")

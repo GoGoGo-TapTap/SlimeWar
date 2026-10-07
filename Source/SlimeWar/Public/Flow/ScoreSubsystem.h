@@ -40,6 +40,14 @@ public:
 	/** No further score can be earned this run (design 5.6: 结束关卡后停止新增得分). */
 	void LockScoring() { bScoreLocked = true; }
 
+	/**
+	 * Debug / CP-4 only: add score directly, bypassing the mass table.
+	 *
+	 * Used to check that crossing the target score does NOT end the run early. Kill counts are
+	 * deliberately untouched, so the per-mass breakdown stays honest.
+	 */
+	void DebugAddScore(int32 Points);
+
 	/** Fold the finished run into the best score. Only a cleared run refreshes it. */
 	void ResolveBestScore(ERunEndReason Reason);
 

@@ -26,7 +26,14 @@ public class SlimeWar : ModuleRules
 			"NavigationSystem",
 			// Phase A 敌人 AI：StateTree（StateTreeModule 为核心，GameplayStateTree 提供 AI Component）
 			"StateTreeModule",
-			"GameplayStateTreeModule"
+			"GameplayStateTreeModule",
+			// Phase D UI：UUserWidget 基类 + ULocalPlayerSubsystem
+			"UMG",
+			"Slate",
+			"SlateCore",
+			// Phase D 演出：投放 / 结算的 Level Sequence 播放
+			"LevelSequence",
+			"MovieScene"
 		});
 
 		if (Target.bBuildEditor)

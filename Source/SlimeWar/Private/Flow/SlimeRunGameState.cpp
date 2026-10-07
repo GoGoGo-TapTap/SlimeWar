@@ -29,6 +29,7 @@ void ASlimeRunGameState::PullSnapshot()
 	{
 		RunState = Run->GetRunState();
 		RemainingSeconds = Run->GetRemainingSeconds();
+		SelectedDropPoint = Run->GetSelectedDropPoint();
 		Run->GetPointSnapshot(PointIds, PointStates);
 	}
 
@@ -53,6 +54,7 @@ void ASlimeRunGameState::BindSubsystems()
 		Run->OnTimeChanged.AddUObject(this, &ASlimeRunGameState::HandleTimeChanged);
 		Run->OnPointStateChanged.AddUObject(this, &ASlimeRunGameState::HandlePointStateChanged);
 		Run->OnBatchIncoming.AddUObject(this, &ASlimeRunGameState::HandleBatchIncoming);
+		Run->OnFusionHint.AddUObject(this, &ASlimeRunGameState::HandleFusionHint);
 		BoundRunSubsystem = Run;
 	}
 
@@ -75,6 +77,7 @@ void ASlimeRunGameState::UnbindSubsystems()
 		Run->OnTimeChanged.RemoveAll(this);
 		Run->OnPointStateChanged.RemoveAll(this);
 		Run->OnBatchIncoming.RemoveAll(this);
+		Run->OnFusionHint.RemoveAll(this);
 	}
 	BoundRunSubsystem.Reset();
 
@@ -127,6 +130,13 @@ void ASlimeRunGameState::HandlePointStateChanged(int32 PointId, ESpawnPointState
 void ASlimeRunGameState::HandleRunStateChanged(ESlimeRunState NewState)
 {
 	RunState = NewState;
+
+	// The drop point is decided during the Idle -> Deploying move.
+	if (const URunSubsystem* Run = URunSubsystem::Get(this))
+	{
+		SelectedDropPoint = Run->GetSelectedDropPoint();
+	}
+
 	OnRunStateChanged.Broadcast(RunState);
 }
 
@@ -142,6 +152,23 @@ void ASlimeRunGameState::HandleRunEnded(ERunEndReason Reason)
 void ASlimeRunGameState::HandleBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn)
 {
 	OnBatchIncoming.Broadcast(BatchIndex, SecondsUntilSpawn);
+}
+
+void ASlimeRunGameState::HandleFusionHint(FVector Location)
+{
+	OnFusionHint.Broadcast(Location);
+}
+
+FSlimeRunResult ASlimeRunGameState::GetRunResult() const
+{
+	if (const URunSubsystem* Run = URunSubsystem::Get(this))
+	{
+		return Run->GetRunResult();
+	}
+
+	FSlimeRunResult Empty;
+	Empty.EndReason = EndReason;
+	return Empty;
 }
 
 void ASlimeRunGameState::SetPointState(int32 PointId, ESpawnPointState NewState)

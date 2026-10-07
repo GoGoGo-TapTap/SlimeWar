@@ -57,12 +57,13 @@ void ASlimeWarGameMode::OnEnemyKilled(ETargetKind Kind, int32 Mass)
 	OnEnemyKilledEvent.Broadcast(Kind, Mass);
 }
 
-void ASlimeWarGameMode::OnEnemyFused(int32 ResultMass)
+void ASlimeWarGameMode::OnEnemyFused(int32 ResultMass, const FVector& Location)
 {
-	UE_LOG(LogSlimeWar, Verbose, TEXT("[BattleDirector] OnEnemyFused: ResultMass=%d (statistics only, never score)."),
-		ResultMass);
+	UE_LOG(LogSlimeWar, Verbose,
+		TEXT("[BattleDirector] OnEnemyFused: ResultMass=%d at %s (statistics only, never score)."),
+		ResultMass, *Location.ToCompactString());
 
-	OnEnemyFusedEvent.Broadcast(ResultMass);
+	OnEnemyFusedEvent.Broadcast(ResultMass, Location);
 }
 
 void ASlimeWarGameMode::OnPointStateChanged(int32 PointId, ESpawnPointState NewState)

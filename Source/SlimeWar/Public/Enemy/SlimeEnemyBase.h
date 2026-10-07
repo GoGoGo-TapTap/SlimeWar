@@ -140,6 +140,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
 	void IgnorePlayerForMovement();
 
+	/**
+	 * Phase D: freeze everything this actor drives, without touching the run flow.
+	 *
+	 * The result camera needs the enemies to stand still for a couple of seconds (design 2.6), and
+	 * Flow is the one that knows the run just ended - so Flow pushes this down (plan decision D4).
+	 * A global time dilation or an engine pause would also stop the Level Sequence camera and the
+	 * UI, which is why this is an explicit, per-actor freeze.
+	 *
+	 * Freezing also drops any fusion pairing: a pair that was mid-approach must not survive into
+	 * the settlement screen with a stale partner reference.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
+	void SetRunFrozen(bool bFrozen);
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
+	bool IsRunFrozen() const { return bRunFrozen; }
+
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Enemy")
 	FSlimeEnemyDiedSignature OnEnemyDied;
 
@@ -194,4 +211,7 @@ protected:
 	/** Partner chosen by the target selection task. Cleared on death / target loss. */
 	UPROPERTY(Transient)
 	TObjectPtr<ASlimeEnemyBase> FusionTarget = nullptr;
+
+	/** True while the result camera / a frozen world owns this actor (Phase D). */
+	bool bRunFrozen = false;
 };

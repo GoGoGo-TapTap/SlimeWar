@@ -1,6 +1,8 @@
 # Phase D 实现计划 —— 整局闭环
 
-> 状态：**实现计划 v1.0（决策已定稿，尚未开工）**。本文覆盖 v0.1 初步规划，同一目标只保留这一份文件。
+> 状态：**代码侧已落地并编译通过**（`SlimeWarEditor Win64 Development`，0 error；自动化测试 11 项全绿）。
+> 剩下的全是编辑器资产与 CP-4 实机验收，见 [PhaseD-Checklist.md](PhaseD-Checklist.md)。
+> 本文覆盖 v0.1 初步规划，同一目标只保留这一份文件。
 > 依据：`Docs/ProgramTaskList.md` §6.5（PD-01~PD-12 / CP-4）+ `Docs/GameDesign/DesignDoc.md` 第二、五、六、七、八章。
 > 铁律不变：数值只来自 `DA_RunConfig` / DataTable（铁律 5）；`Core/Flow/UI` 内不出现 GAS 类型（C18）；`IBattleDirector` 是唯一跨模块契约（铁律 6）。
 >
@@ -294,5 +296,6 @@ SlimePause               # 打开/关闭暂停菜单
 ## 10. 下一步
 
 1. **提交/合并 Phase C**（当前仍是未提交的工作树改动），再动 Phase D 的任何资产。
-2. 写 `Docs/PhaseD/PhaseD-Checklist.md`（编辑器步骤 + CP-4 完整清单，格式对齐 `PhaseC-Checklist.md`）。
-3. 按依赖顺序开工：**PD-01 地图 / PD-07·PD-11 序列**在最长的关键路径上，建议先认领；代码侧从 PD-02 阶段机开始，UI 侧从 PD-08 入口与 PD-05/06 准备页开始。
+2. 按 [PhaseD-Checklist.md](PhaseD-Checklist.md) 做编辑器步骤：填 `DA_RunConfig`（**先取消 Auto Start Run**）→ 建白盒地图 → 摆点位并导出 `DA_SpawnLayout` → 做 3 条序列与 4 个 WBP。
+3. 按 §9 把差异回填 `Docs/ProgramTaskList.md`（尤其 PD-13 与两处契约变更）。
+4. 跑 CP-4 实机验收（Checklist §8 的 12 条）。

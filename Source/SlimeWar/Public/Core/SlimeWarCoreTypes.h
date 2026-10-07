@@ -54,17 +54,28 @@ enum class ESlimeSlotRole : uint8
 };
 
 /**
- * High level run state (Phase C).
+ * High level run phase (Phase C, extended in Phase D).
  *
- * Idle  -> the world is up but the run has not started (Phase D: during deployment).
- * Running -> batches are being driven and score can still be earned.
- * Ended -> terminal. Spawning stops and the score is locked (design 5.6).
+ * The five values are in lifecycle order and the run only ever moves forward through them:
+ *
+ *   Idle      -> the world is up and the run has not started. This IS the preparation phase
+ *                (drop point selection); there is deliberately no separate "Preparing" value.
+ *   Deploying -> the deployment cinematic is playing. Nothing has spawned, the countdown has not
+ *                started and the player cannot act, because URunSubsystem::StartRun has not run.
+ *   Running   -> batches are being driven and score can still be earned.
+ *   Result    -> the run ended and the result camera is playing. Enemies and the player are frozen
+ *                (design 5.6), the score is locked, and the settlement screen is not up yet.
+ *   Ended     -> terminal. The settlement screen is up; only the retry / reselect / quit actions
+ *                are still meaningful. Retrying reloads the level, so this state is never left
+ *                in place.
  */
 UENUM(BlueprintType)
 enum class ESlimeRunState : uint8
 {
-	Idle		UMETA(DisplayName = "Idle"),
+	Idle		UMETA(DisplayName = "Idle (Preparation)"),
+	Deploying	UMETA(DisplayName = "Deploying"),
 	Running		UMETA(DisplayName = "Running"),
+	Result		UMETA(DisplayName = "Result"),
 	Ended		UMETA(DisplayName = "Ended")
 };
 

@@ -88,6 +88,21 @@ void UScoreSubsystem::AddClearedPoint()
 	OnClearedPointCountChanged.Broadcast(ClearedPointCount);
 }
 
+void UScoreSubsystem::DebugAddScore(int32 Points)
+{
+	if (bScoreLocked)
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("UScoreSubsystem::DebugAddScore: scoring is locked, ignored."));
+		return;
+	}
+
+	CurrentScore += FMath::Max(0, Points);
+	OnScoreChanged.Broadcast(CurrentScore);
+
+	UE_LOG(LogSlimeWar, Log, TEXT("UScoreSubsystem: debug score jump, now %d / %d."),
+		CurrentScore, TargetScore);
+}
+
 void UScoreSubsystem::ResolveBestScore(ERunEndReason Reason)
 {
 	if (!SlimeFlowMath::ShouldRefreshBestScore(Reason, CurrentScore, TargetScore))

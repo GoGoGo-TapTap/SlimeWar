@@ -13,7 +13,9 @@ namespace SlimeFlowNames
 		switch (State)
 		{
 		case ESlimeRunState::Idle:		return TEXT("Idle");
+		case ESlimeRunState::Deploying:	return TEXT("Deploying");
 		case ESlimeRunState::Running:	return TEXT("Running");
+		case ESlimeRunState::Result:	return TEXT("Result");
 		case ESlimeRunState::Ended:		return TEXT("Ended");
 		default:						return TEXT("?");
 		}

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/SlimeWarCoreTypes.h"
+#include "Flow/RunSubsystem.h"
 #include "GameFramework/GameStateBase.h"
 #include "SlimeRunGameState.generated.h"
 
@@ -12,6 +13,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateRunStateChanged, ESlimeRunSta
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateRunEnded, ERunEndReason /*Reason*/);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeGameStatePointChanged, int32 /*PointId*/, ESpawnPointState /*NewState*/);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeGameStateBatchIncoming, int32 /*BatchIndex*/, float /*SecondsUntilSpawn*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateFusionHint, FVector /*Location*/);
 
 /**
  * Read-only mirror of the run (PC-09).
@@ -60,6 +62,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Run")
 	bool IsTargetReached() const { return CurrentScore >= TargetScore; }
 
+	/** Settlement data (PD-03). Only meaningful once the phase reached Result / Ended. */
+	UFUNCTION(BlueprintPure, Category = "Slime|Run")
+	FSlimeRunResult GetRunResult() const;
+
+	/** Which drop point this attempt used, or INDEX_NONE while the player is still choosing. */
+	UFUNCTION(BlueprintPure, Category = "Slime|Run")
+	int32 GetSelectedDropPoint() const { return SelectedDropPoint; }
+
 	UFUNCTION(BlueprintPure, Category = "Slime|Run")
 	int32 GetPointCount() const { return PointIds.Num(); }
 
@@ -82,6 +92,9 @@ public:
 	FSlimeGameStateRunEnded OnRunEnded;
 	FSlimeGameStateBatchIncoming OnBatchIncoming;
 
+	/** Fires at most once per run: the first fusion close enough for the tutorial hint (PD-12). */
+	FSlimeGameStateFusionHint OnFusionHint;
+
 protected:
 	/** Read everything once, so a HUD that binds late still sees the current run. */
 	void PullSnapshot();
@@ -98,6 +111,7 @@ protected:
 	void HandleRunStateChanged(ESlimeRunState NewState);
 	void HandleRunEnded(ERunEndReason Reason);
 	void HandleBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn);
+	void HandleFusionHint(FVector Location);
 
 	void SetPointState(int32 PointId, ESpawnPointState NewState);
 
@@ -110,6 +124,7 @@ private:
 	int32 RemainingSeconds = 0;
 	int32 NormalKillCount = 0;
 	int32 ClearedPointCount = 0;
+	int32 SelectedDropPoint = INDEX_NONE;
 
 	TArray<int32> PointIds;
 	TArray<ESpawnPointState> PointStates;

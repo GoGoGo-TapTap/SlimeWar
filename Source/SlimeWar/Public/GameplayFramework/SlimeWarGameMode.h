@@ -17,7 +17,7 @@
  * (plan section 4.3, risk 7) instead of turning into the assembly point of the whole game.
  */
 DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeEnemyKilledEvent, ETargetKind /*Kind*/, int32 /*Mass*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeEnemyFusedEvent, int32 /*ResultMass*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeEnemyFusedEvent, int32 /*ResultMass*/, const FVector& /*Location*/);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimePointStateChangedEvent, int32 /*PointId*/, ESpawnPointState /*NewState*/);
 DECLARE_MULTICAST_DELEGATE(FSlimePlayerDiedEvent);
 
@@ -37,7 +37,7 @@ public:
 
 	//~ Begin IBattleDirector
 	virtual void OnEnemyKilled(ETargetKind Kind, int32 Mass) override;
-	virtual void OnEnemyFused(int32 ResultMass) override;
+	virtual void OnEnemyFused(int32 ResultMass, const FVector& Location) override;
 	virtual void OnPointStateChanged(int32 PointId, ESpawnPointState NewState) override;
 	virtual void OnPlayerDied() override;
 	//~ End IBattleDirector

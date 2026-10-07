@@ -110,8 +110,9 @@ void ASlimeWarCharacter::InitAbilitySystem()
 		Health->OnDeath.AddDynamic(this, &ASlimeWarCharacter::HandleMirrorDeath);
 	}
 
-	// Phase A player state machine: controllable from BeginPlay. Deploying / Result arrive
-	// with Phase D; the abilities already block on those tags (PA-15).
+	// Controllable by default: Phase D's URunSubsystem pushes the real state within a frame of
+	// world begin play (Idle / Deploying / Result all lock the player, Running unlocks it), and
+	// keeping the default unlocked means a map without a run subsystem still plays.
 	AbilitySystem->AddLooseGameplayTag(TAG_State_Player_Controllable);
 
 	// Input ids line up with EAbilityInputID so AbilityLocalInputPressed reaches them.
@@ -284,6 +285,7 @@ void ASlimeWarCharacter::ApplyDeathEffects(bool bCancelAbilities)
 
 	bWantsToFire = false;
 	bIsAiming = false;
+	bInputBlocked = true;
 
 	// Death locks movement (design 3.1).
 	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
@@ -299,13 +301,87 @@ void ASlimeWarCharacter::ApplyDeathEffects(bool bCancelAbilities)
 	}
 }
 
+void ASlimeWarCharacter::SetRunInputBlocked(bool bBlocked)
+{
+	// Death wins: the result push must never hand control back to a dead player.
+	if (!bBlocked && Health && Health->IsDead())
+	{
+		return;
+	}
+
+	if (bInputBlocked == bBlocked)
+	{
+		return;
+	}
+
+	bInputBlocked = bBlocked;
+
+	if (AbilitySystem)
+	{
+		if (bBlocked)
+		{
+			AbilitySystem->RemoveLooseGameplayTag(TAG_State_Player_Controllable);
+			AbilitySystem->AddLooseGameplayTag(TAG_State_Player_Deploying);
+		}
+		else
+		{
+			AbilitySystem->RemoveLooseGameplayTag(TAG_State_Player_Deploying);
+			AbilitySystem->RemoveLooseGameplayTag(TAG_State_Player_Result);
+			AbilitySystem->AddLooseGameplayTag(TAG_State_Player_Controllable);
+		}
+	}
+
+	if (bBlocked)
+	{
+		// Drop any input state that is still held down, so the lock cannot leave a latched shot
+		// or a strafe-facing character behind.
+		bWantsToFire = false;
+		bIsAiming = false;
+		bUseControllerRotationYaw = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+
+		if (AbilitySystem)
+		{
+			AbilitySystem->AbilityLocalInputReleased(static_cast<int32>(EAbilityInputID::Fire));
+			AbilitySystem->AbilityLocalInputReleased(static_cast<int32>(EAbilityInputID::Aim));
+		}
+
+		if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+		{
+			Movement->StopMovementImmediately();
+		}
+	}
+}
+
+void ASlimeWarCharacter::EnterResultState()
+{
+	bInputBlocked = true;
+	bWantsToFire = false;
+	bIsAiming = false;
+
+	if (AbilitySystem)
+	{
+		// PA-10 run-end half: a reload that is in flight must not survive the clock running out.
+		AbilitySystem->CancelAllAbilities();
+
+		AbilitySystem->RemoveLooseGameplayTag(TAG_State_Player_Controllable);
+		AbilitySystem->RemoveLooseGameplayTag(TAG_State_Player_Deploying);
+		AbilitySystem->AddLooseGameplayTag(TAG_State_Player_Result);
+	}
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+	}
+}
+
 void ASlimeWarCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
 	// Hold-to-fire: the cooldown GameplayEffect is what actually gates the rate, so simply
 	// asking again every frame is enough (a blocked activation is silently ignored).
-	if (bWantsToFire && AbilitySystem && Health && !Health->IsDead())
+	if (bWantsToFire && !bInputBlocked && AbilitySystem && Health && !Health->IsDead())
 	{
 		AbilitySystem->TryActivateAbilityByClass(UGA_Fire::StaticClass());
 	}
@@ -404,6 +480,11 @@ void ASlimeWarCharacter::BindAbilityActions(UInputComponent* PlayerInputComponen
 
 void ASlimeWarCharacter::OnFirePressed()
 {
+	if (bInputBlocked)
+	{
+		return;
+	}
+
 	bWantsToFire = true;
 
 	if (AbilitySystem)
@@ -424,6 +505,11 @@ void ASlimeWarCharacter::OnFireReleased()
 
 void ASlimeWarCharacter::OnReloadPressed()
 {
+	if (bInputBlocked)
+	{
+		return;
+	}
+
 	if (AbilitySystem)
 	{
 		AbilitySystem->AbilityLocalInputPressed(static_cast<int32>(EAbilityInputID::Reload));
@@ -432,6 +518,11 @@ void ASlimeWarCharacter::OnReloadPressed()
 
 void ASlimeWarCharacter::OnAimPressed()
 {
+	if (bInputBlocked)
+	{
+		return;
+	}
+
 	bIsAiming = true;
 
 	// While aiming the character faces the camera (strafe shooting) instead of its movement.
@@ -459,14 +550,19 @@ void ASlimeWarCharacter::OnAimReleased()
 
 void ASlimeWarCharacter::OnPausePressed()
 {
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		PlayerController->SetPause(!PlayerController->IsPaused());
-	}
+	// Phase D: the UI layer owns pausing (it has to show a menu and set the input mode, and an
+	// engine pause without that leaves the buttons unclickable). The character only reports the
+	// key, so the Player module never has to know a UI exists.
+	OnPauseRequested.Broadcast();
 }
 
 void ASlimeWarCharacter::Move(const FInputActionValue& Value)
 {
+	if (bInputBlocked)
+	{
+		return;
+	}
+
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
@@ -485,6 +581,11 @@ void ASlimeWarCharacter::Move(const FInputActionValue& Value)
 
 void ASlimeWarCharacter::Look(const FInputActionValue& Value)
 {
+	if (bInputBlocked)
+	{
+		return;
+	}
+
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 

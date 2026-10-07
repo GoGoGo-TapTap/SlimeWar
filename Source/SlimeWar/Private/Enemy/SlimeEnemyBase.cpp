@@ -144,6 +144,56 @@ void ASlimeEnemyBase::IgnorePlayerForMovement()
 	}
 }
 
+void ASlimeEnemyBase::SetRunFrozen(bool bFrozen)
+{
+	if (bRunFrozen == bFrozen)
+	{
+		return;
+	}
+
+	bRunFrozen = bFrozen;
+
+	// Drop the pairing first: CancelPairing notifies the partner and clears the ignore/collision
+	// state, and doing it before the movement is stopped keeps the log readable.
+	if (bFrozen)
+	{
+		if (Fusion && Fusion->IsEngaged())
+		{
+			Fusion->CancelPairing(ESlimeFusionCancelReason::ConditionsLost);
+		}
+
+		SetFusionTarget(nullptr);
+	}
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		if (bFrozen)
+		{
+			Movement->StopMovementImmediately();
+			Movement->DisableMovement();
+		}
+		else
+		{
+			Movement->SetMovementMode(MOVE_Walking);
+		}
+	}
+
+	// The StateTree ticks through the AI controller, so freezing the controller is what actually
+	// stops chasing, attacking and fusing. Both are restored together.
+	if (AController* OwningController = GetController())
+	{
+		OwningController->SetActorTickEnabled(!bFrozen);
+	}
+
+	SetActorTickEnabled(!bFrozen);
+
+	if (SlimeCVars::DebugCombatLog != 0)
+	{
+		UE_LOG(LogSlimeWar, Log, TEXT("ASlimeEnemyBase: %s run %s."),
+			*GetNameSafe(this), bFrozen ? TEXT("frozen") : TEXT("unfrozen"));
+	}
+}
+
 float ASlimeEnemyBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	const float Applied = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);

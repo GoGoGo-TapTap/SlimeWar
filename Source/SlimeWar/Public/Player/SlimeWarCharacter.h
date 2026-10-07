@@ -19,6 +19,7 @@ class USpringArmComponent;
 struct FInputActionValue;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimePlayerDamagedSignature, FVector, DamageDirection);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSlimePauseRequestedSignature);
 
 /**
  * Player character. GAS is fully enabled on this actor only (plan decision: layered GAS).
@@ -84,6 +85,28 @@ public:
 	/** Directional damage hint for Phase D UI. Does not move the aim centre (design 8.2). */
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
 	FSlimePlayerDamagedSignature OnPlayerDamaged;
+
+	/**
+	 * Phase D: lock movement / aiming / firing for Idle, Deploying, Result and Ended.
+	 *
+	 * The input component stays enabled on purpose - the pause key has to keep working while the
+	 * run is frozen - so the gate lives in the input handlers and in Tick's hold-to-fire.
+	 */
+	void SetRunInputBlocked(bool bBlocked);
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	bool IsRunInputBlocked() const { return bInputBlocked; }
+
+	/**
+	 * Phase D: the run is over. Cancels the running abilities (that is PA-10's run-end half:
+	 * a reload in flight must not survive into the settlement screen), drops Controllable and
+	 * raises State.Player.Result so every ActivationBlockedTags gate closes at once.
+	 */
+	void EnterResultState();
+
+	/** The pause key was pressed. The UI layer owns what "pause" means (Phase D / PD-13). */
+	UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
+	FSlimePauseRequestedSignature OnPauseRequested;
 
 protected:
 	virtual void BeginPlay() override;
@@ -173,4 +196,7 @@ protected:
 
 	/** Guard so the death sequence (ability + fallback) only ever runs once. */
 	bool bDeathHandled = false;
+
+	/** True while the run is not in Running (Phase D). Gates the input handlers, not the component. */
+	bool bInputBlocked = false;
 };

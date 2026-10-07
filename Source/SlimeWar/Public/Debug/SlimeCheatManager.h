@@ -77,4 +77,30 @@ public:
 	/** Print every number the CP-3 hand calculation needs (score per mass tier, point states). */
 	UFUNCTION(Exec)
 	void SlimeRunStatus();
+
+	// -- Phase D: full-run loop (PD-01 ~ PD-13 / CP-4) --
+
+	/** Skip the preparation screen and deploy to a drop point (0 = D1, 1 = D2). */
+	UFUNCTION(Exec)
+	void SlimeRunDeploy(int32 DropPointIndex);
+
+	/** Print the settlement data (score / target / best / kills / cleared points / passed). */
+	UFUNCTION(Exec)
+	void SlimeRunResult();
+
+	/** Walk the real PD-04 retry path: reload the level and reuse the current drop point. */
+	UFUNCTION(Exec)
+	void SlimeRetry();
+
+	/** Jump the countdown (last-15-seconds hint, time-up ending). */
+	UFUNCTION(Exec)
+	void SlimeRunSetTime(float SecondsRemaining);
+
+	/** Add score directly, to check that crossing the target does not end the run early. */
+	UFUNCTION(Exec)
+	void SlimeRunAddScore(int32 Points);
+
+	/** Toggle the pause menu through the same path the P key uses. */
+	UFUNCTION(Exec)
+	void SlimePause();
 };
