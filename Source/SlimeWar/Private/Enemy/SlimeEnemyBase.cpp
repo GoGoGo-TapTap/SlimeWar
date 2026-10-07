@@ -5,6 +5,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/SlimeActivityArea.h"
 #include "Core/SlimeGameplayTags.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeStateComponent.h"
@@ -86,13 +87,47 @@ void ASlimeEnemyBase::BeginPlay()
 	ApplyStatRow(Mass);
 }
 
-void ASlimeEnemyBase::InitializeFromSpawn(int32 InPointId, const FVector& InActivityCenter)
+namespace
+{
+	/**
+	 * Global fallback radius for slimes that were not placed by a spawn point (debug spawns,
+	 * hand-placed actors). Keeps "stay inside your point" true for them too.
+	 */
+	float GetConfiguredActivityRadius(const AActor* Context)
+	{
+		const UGameInstance* GameInstance = Context ? Context->GetGameInstance() : nullptr;
+		const UStatTableProvider* Provider =
+			GameInstance ? GameInstance->GetSubsystem<UStatTableProvider>() : nullptr;
+		const USlimeRunConfig* Config = Provider ? Provider->GetRunConfig() : nullptr;
+
+		return Config ? Config->AIActivityRadius : 0.f;
+	}
+}
+
+void ASlimeEnemyBase::InitializeFromSpawn(
+	int32 InPointId, const FVector& InActivityCenter, float InActivityRadius)
 {
 	PointId = InPointId;
 	ActivityCenter = InActivityCenter;
 
+	// The spawn point hands over its effective radius (per-point value, else the global one).
+	// Anything else falls back to the global value here, so those slimes are constrained too.
+	ActivityRadius = InActivityRadius > 0.f
+		? InActivityRadius
+		: GetConfiguredActivityRadius(this);
+
 	// The player definitely exists by the time anything spawns enemies at runtime.
 	IgnorePlayerForMovement();
+}
+
+bool ASlimeEnemyBase::IsInsideActivityArea(float SlackCm) const
+{
+	return SlimeActivityArea::IsInside(GetActorLocation(), ActivityCenter, ActivityRadius, SlackCm);
+}
+
+FVector ASlimeEnemyBase::ClampToActivityArea(const FVector& WorldLocation) const
+{
+	return SlimeActivityArea::Clamp(WorldLocation, ActivityCenter, ActivityRadius);
 }
 
 void ASlimeEnemyBase::IgnorePlayerForMovement()

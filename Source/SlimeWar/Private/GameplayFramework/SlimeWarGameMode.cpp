@@ -6,6 +6,9 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
+// TSoftClassPtr<AGameStateBase>::LoadSynchronous needs the complete type (GameModeBase.h only
+// forward declares it).
+#include "GameFramework/GameStateBase.h"
 #include "Player/SlimeWarPlayerController.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -25,6 +28,18 @@ ASlimeWarGameMode::ASlimeWarGameMode()
 	HUDClass = ASlimeHUD::StaticClass();
 }
 
+void ASlimeWarGameMode::PreInitializeComponents()
+{
+	// AGameModeBase spawns the GameState in this call and its GameStateClass is hardcoded in the base
+	// constructor, so a config driven override has to happen right here, before Super.
+	if (UClass* ConfiguredGameStateClass = RunGameStateClass.LoadSynchronous())
+	{
+		GameStateClass = ConfiguredGameStateClass;
+	}
+
+	Super::PreInitializeComponents();
+}
+
 void ASlimeWarGameMode::OnEnemyKilled(ETargetKind Kind, int32 Mass)
 {
 	// Design 4.6.3: aggressive individuals never award score. The filter lives in the single
@@ -36,25 +51,33 @@ void ASlimeWarGameMode::OnEnemyKilled(ETargetKind Kind, int32 Mass)
 		return;
 	}
 
-	// TODO(Phase C): forward to UScoreSubsystem. Phase 0 only logs so the path is verifiable.
-	UE_LOG(LogSlimeWar, Log, TEXT("[BattleDirector] OnEnemyKilled: Kind=%d Mass=%d (scoring not implemented yet)"),
+	UE_LOG(LogSlimeWar, Verbose, TEXT("[BattleDirector] OnEnemyKilled: Kind=%d Mass=%d."),
 		static_cast<int32>(Kind), Mass);
+
+	OnEnemyKilledEvent.Broadcast(Kind, Mass);
 }
 
 void ASlimeWarGameMode::OnEnemyFused(int32 ResultMass)
 {
-	UE_LOG(LogSlimeWar, Log, TEXT("[BattleDirector] OnEnemyFused: ResultMass=%d (statistics only, never score)"), ResultMass);
+	UE_LOG(LogSlimeWar, Verbose, TEXT("[BattleDirector] OnEnemyFused: ResultMass=%d (statistics only, never score)."),
+		ResultMass);
+
+	OnEnemyFusedEvent.Broadcast(ResultMass);
 }
 
 void ASlimeWarGameMode::OnPointStateChanged(int32 PointId, ESpawnPointState NewState)
 {
-	UE_LOG(LogSlimeWar, Log, TEXT("[BattleDirector] OnPointStateChanged: PointId=%d NewState=%d"),
+	UE_LOG(LogSlimeWar, Verbose, TEXT("[BattleDirector] OnPointStateChanged: PointId=%d NewState=%d."),
 		PointId, static_cast<int32>(NewState));
+
+	OnPointStateChangedEvent.Broadcast(PointId, NewState);
 }
 
 void ASlimeWarGameMode::OnPlayerDied()
 {
-	UE_LOG(LogSlimeWar, Log, TEXT("[BattleDirector] OnPlayerDied: run over (TimeUp=0, PlayerDied=1)"));
+	UE_LOG(LogSlimeWar, Log, TEXT("[BattleDirector] OnPlayerDied: the run ends now."));
+
+	OnPlayerDiedEvent.Broadcast();
 }
 
 ASlimeWarGameMode* GetSlimeGameMode(const UObject* WorldContextObject)

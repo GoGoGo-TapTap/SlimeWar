@@ -574,7 +574,7 @@ public:
 | C8 | `IBattleDirector::OnPlayerDied()` | 立即终局 | P1 | M2 | 中 |
 | C9 | `UStatTableProvider::GetSlimeStat(Mass, Out)` | 查表 | P1 | 双方 | 低 |
 | C10 | `TakeDamage/ApplyDamage` | 原生 | 引擎 | M2→M3 | 低 |
-| C11 | 数据资产路径 | 见 §3.3 | P1 | 双方 | 低 |
+| C11 | 数据资产路径 | 见 §3.3；**Phase C v1.0 `SpawnSlots` → `Points`；v1.1 删除 `FSlimeSpawnPointDef::Center`、槽位改为锚点局部坐标 `RelativeLocation`/`RelativeRotation`** | P1 | 双方 | 低 |
 | C12 | 委托广播 | `OnHealthChanged/OnDeath/OnAmmoChanged/OnScoreChanged/OnTimeChanged` | 各 Owner | 各 Owner | 中 |
 | C13 | 原生标签常量 | `TAG_State_*`（见 §3.4 ⑦） | P1 | 双方 | **中（Phase 0 全量定义含预留）** |
 | C14 | `USlimeStateComponent` | `Add/Remove/HasStateTag` + `OnStateTagChanged` | P1 | 双方 | 低 |
@@ -791,18 +791,77 @@ public:
 
 | # | 任务 | Owner | 依赖 | 状态 |
 |---|---|---|---|---|
-| PC-01 | `ASpawnPoint`：出生位（8 普通位 + 2 攻击位）、活动区、备用位数组 | P1 | CP-2 | `[ ]` |
-| PC-02 | 批次逻辑：**0/20/40/60/80/100s，共 6 批，每批 8 普通 + 2 攻击** | P1 | PC-01 | `[ ]` |
-| PC-03 | 出生点校验：可站立 且 **距玩家 ≥3m** → 否则备用位 → **最多延迟 2s** → 否则取消该只（**不补发**） | P1 | PC-02 | `[ ]` |
-| PC-04 | 后续批次**提前 1s 提示**（形式待定 → 先出委托，UI 再挂） | P1 | PC-02 | `[ ]` |
-| PC-05 | 点位四状态机：`等待投放→生成中→耗尽未清→已清空`；**清空判定只看普通目标，不含存活追兵** | P1 | PC-02 | `[ ]` |
-| PC-06 | `URunSubsystem`：开局启动三点、**180s 倒计时**、驱动批次 | P1 | PC-02 | `[ ]` |
-| PC-07 | `UScoreSubsystem`：按体量计分、总分、最佳分（失败成绩**不刷新最佳分**） | P1 | M0-05 | `[ ]` |
-| PC-08 | 敌人对象池：**峰值 180 只**，回池时 `ApplyStatRow` 还原到 CDO 参数 | P1 | PB-08 | `[ ]` |
-| PC-09 | `ASlimeRunGameState`：把分数/时间/点位状态暴露成只读状态 | P1 | PC-06 | `[ ]` |
-| PA-12 | 计分 UI 挂钩 + 粘液图标飞入动画（纯表现） | P2 | PC-07 | `[ ]` |
-| PA-13 | 交互式调试 HUD：显示当前体量/生命/状态（进 P1 的 Debug） | P2 | PC-09 | `[ ]` |
+| PC-01 | `ASpawnPoint`：出生位（8 普通位 + 2 攻击位）、活动区、备用位数组 | P1 | CP-2 | `[~]` |
+| PC-02 | 批次逻辑：**0/20/40/60/80/100s，共 6 批，每批 8 普通 + 2 攻击** | P1 | PC-01 | `[~]` |
+| PC-03 | 出生点校验：可站立 且 **距玩家 ≥3m** → 否则备用位 → **最多延迟 2s** → 否则取消该只（**不补发**） | P1 | PC-02 | `[~]` |
+| PC-04 | 后续批次**提前 1s 提示**（形式待定 → 先出委托，UI 再挂） | P1 | PC-02 | `[~]` |
+| PC-05 | 点位四状态机：`等待投放→生成中→耗尽未清→已清空`；**清空判定只看普通目标，不含存活追兵** | P1 | PC-02 | `[~]` |
+| PC-06 | `URunSubsystem`：开局启动三点、**180s 倒计时**、驱动批次 | P1 | PC-02 | `[~]` |
+| PC-07 | `UScoreSubsystem`：按体量计分、总分、最佳分（失败成绩**不刷新最佳分**） | P1 | M0-05 | `[~]` |
+| PC-08 | **【口径变更】不做 Actor 对象池**：改为 `USlimeEnemyManagerSubsystem` 轻量管理 + 存活/峰值统计（理由见 PhaseC-Plan §6） | P1 | PB-08 | `[~]` |
+| PC-09 | `ASlimeRunGameState`：把分数/时间/点位状态暴露成只读状态 | P1 | PC-06 | `[~]` |
+| PC-10 | **【v1.1 新增】生成点编辑器**：Editor 模块（视口手柄 + DA 往返 + 校验 + PIE 前一致性检查） | P1 | PC-01 | `[~]` |
+| PA-12 | 计分 UI 挂钩 + 粘液图标飞入动画（纯表现）**【延后到 Phase D/E】** | P2 | PC-07 | `[ ]` |
+| PA-13 | 交互式调试 HUD：显示当前体量/生命/状态（进 P1 的 Debug） | P2 | PC-09 | `[~]` |
 | **CP-3** | 单点跑完 6 批，正确进入"已清空"；总分与手算一致 | P1+P2 | — | `[ ]` |
+
+> **Phase C 实现注记（2026-10-07）**
+> - 代码侧已完成并**编译通过**（`SlimeWarEditor Win64 Development`，0 error / 0 warning）；
+>   `[~]` = 代码就位，等编辑器资产（见 `Docs/PhaseC/PhaseC-Checklist.md`）与 CP-3 实机验收。
+> - **新增类（全部在 `Source/SlimeWar/{Public,Private}/Flow/`）**：
+>   `ASpawnPoint`（PC-01~PC-05）、`URunSubsystem`（PC-02/06）、`UScoreSubsystem`（PC-07）、
+>   `ASlimeRunGameState`（PC-09）、`USlimeEnemyManagerSubsystem`（PC-08 降级形态）。
+> - **`ASlimeWarGameMode` 改为纯广播源**：四个 `IBattleDirector` 回调只做日志 + 广播（`OnEnemyKilledEvent`
+>   / `OnEnemyFusedEvent` / `OnPointStateChangedEvent` / `OnPlayerDiedEvent`），
+>   Flow 侧在 `OnWorldBeginPlay` 订阅。这样 GameMode 不 include 任何 Flow 头，L1→L3 的向上依赖被消除
+>   （决策 A，见 §7.4 记录）。GameMode 仍不持有任何局内逻辑。
+> - **GameState 用软类路径接线**：`AGameModeBase` 把 `GameStateClass` 写死在构造函数、并在
+>   `PreInitializeComponents()` 里生成 GameState，所以 `ASlimeWarGameMode` 在那里用
+>   `UPROPERTY(config) TSoftClassPtr<AGameStateBase> RunGameStateClass`（`DefaultGame.ini` 指向
+>   `/Script/SlimeWar.SlimeRunGameState`）覆盖，避免 include Flow 头。
+> - **`UWorldSubsystem::OnWorldBeginPlay` 早于 `GameMode::StartPlay()`**（已核对引擎源码
+>   `World.cpp`）：立即开跑会让 GameState / 生成点锚点错过首次广播，因此自动开跑被延后一帧，
+>   且 GameState 在 `BeginPlay` 先拉一次快照再订阅。
+> - **契约变更（走 §7.4）**：`USlimeSpawnLayout` 的 `TArray<FSlimeSpawnSlot> SpawnSlots`
+>   替换为 `TArray<FSlimeSpawnPointDef> Points`（C11 数据资产路径与字段）。改造前该字段全工程无人读取，
+>   因此没有兼容层；代价是 `DA_SpawnLayout` 需要在编辑器里重填（Checklist 步骤 3）。
+> - **数值纪律**：Phase C 的 8 个新数值（批次数/间隔/每批数量/最小距离/重试窗口/重试间隔/提示提前量/自动开跑）
+>   全部进 `USlimeRunConfig`，C++ 默认值故意留 0，**未填则拒绝开局并报错**，不会静默用魔法数字。
+> - **终局范围**：Phase C 只保证「停止生成 + 禁止新增得分 + 广播 `OnRunEnded`」；
+>   敌人/玩家的冻结与结算俯瞰仍属 Phase D（避免 Enemy→Flow 反向依赖）。
+> - **新增调试**：CVar `Slime.Debug.DrawRun`（默认开，HUD 显示分数/倒计时/点位状态/存活与峰值）、
+>   CVar `Slime.Run.TimeScale`；命令 `SlimeRunStart` / `SlimeRunEnd` / `SlimeRunTimeScale` / `SlimeRunStatus`。
+> - **新增自动化测试**：`Private/Tests/SlimeFlowMathTests.cpp`（4 个测试，覆盖批次时间表、计分与最佳分规则、
+>   点位状态机、供给与重试窗口），经 `SlimeFlowMath.h` 的纯函数驱动。
+
+> **Phase C v1.1 修订（2026-10-07）—— 锚点即点位 + 生成点编辑器**
+> - **背景**：v1.0 首次实机暴露三个缺陷——校验探针锚在"槽位填的 Z"上（Z 低于地面时探针扎进地板，必然报
+>   `blocked by static geometry`）、生成点直接用该坐标且没加胶囊半高（史莱姆半埋）、`FallbackSlots` 里未填的
+>   `(0,0,0)` 被当成合法坐标且它的失败原因盖住了首选位。三处均已修复。
+> - **锚点即点位**：`ASpawnPoint` 的 Transform 就是点位中心与活动圈圆心；`FSlimeSpawnPointDef` 删除 `Center`，
+>   `FSlimeSpawnSlot::Location` → `RelativeLocation` + `RelativeRotation`（锚点局部、含旋转）。移动/旋转锚点
+>   即移动/旋转整组槽位，DA 不用改。
+> - **槽位 Z 不作数**：运行时只信 XY，用 `SlimeSlotResolver::Resolve` 沿 Z 向下找地面，生成点 = 地面 +
+>   胶囊半高（从生成类 CDO 读）。该解析函数是**运行时与编辑器工具的唯一共享实现**，避免两边规则漂移。
+> - **新增 runtime 组件**：`USlimeSpawnSlotMarker`（`Role`/`SlotIndex`）与 `USlimeSpawnPointAnchor`，
+>   都是 `bIsEditorOnly = true` + `bHiddenInGame`，只作编辑期手柄，打包被剥离、运行时零成本；DA 仍是运行时唯一数据源。
+> - **新增 Editor 模块 `Source/SlimeWarEditor`**（`Type: Editor`，`PostEngineInit`；`.uproject` 与
+>   `SlimeWarEditor.Target.cs` 同步登记）：`FSlimeSpawnPointVisualizer`（活动圈/连线/HUD 含同步状态）、
+>   `FSlimeSpawnPointDetails`（补齐默认槽位/增删/吸附地面/校验/导出/导入）、`FSlimeSpawnSlotMarkerDetails`
+>   （Remove Slot 与按角色改色）、PIE 前一致性强校验（只警告，不自动写入资产）。
+>   **运行时模块不含任何编辑器代码**；升级成 ComponentVisualizer 拖拽手柄（B）或 `UEdMode`（C）只需扩这个模块。
+> - **契约变更（§7.4，第二次）**：C11 —— 删除 `Center`、槽位改局部坐标；旧 `DA_SpawnLayout` 数据需用工具重摆一次。
+> - **为跨模块调用补齐导出宏**：`SLIMEWAR_API` 加在 `ASpawnPoint` / `USlimeSpawnSlotMarker` /
+>   `USlimeSpawnPointAnchor` / `USlimeSpawnLayout` / `USlimeRunConfig` / `USlimeGameSettings` 与 `LogSlimeWar` 上。
+> - **新增自动化测试**：`Private/Tests/SlimeSpawnLayoutTests.cpp`（`SlimeWar.Spawn.LayoutArrays` /
+>   `DuplicateSlots` / `AnchorSpace`）。
+> - **新增任务 `PC-10`**（生成点编辑器）；`Docs/PhaseC/PhaseC-Plan.md` 升为 v1.1，
+>   `PhaseC-Checklist.md` 改为"用工具摆位 + 导出 + 校验"的流程。
+> - **补完 Phase A 遗留的活动半径缺口**：新增 Core 纯函数 `SlimeActivityArea`（判定 / 夹回）；
+>   `ASlimeEnemyBase::InitializeFromSpawn` 增加 `ActivityRadius`，由生成点传入**该点位的有效半径**；
+>   `Slime: Wander Step` 把随机游走目标夹回活动圈，漂到圈外则先走回最近圈内点；调试 HUD 改画
+>   **该敌人自己的半径**（未设置才回退全局值）。设计 5.1「普通目标只在本点位活动」由此变成真实约束，
+>   不再只是画出来的圈。新增测试 `SlimeWar.Enemy.ActivityArea`。
 
 ### 6.5 Phase D —— 整局闭环
 
@@ -1005,3 +1064,31 @@ public:
   - `GA_Die` 落地（PA-11）与 `USlimeWarCharacter::ApplyDeathEffects`（PA-10 死亡半边）；辅助瞄准补查新碰撞通道
   - 新增 CVar `Slime.Debug.DrawFusion` 与 3 条融合调试命令；§8 新增 `Q13`/`Q14`
   - 新增文档 `Docs/PhaseB/PhaseB-Plan.md`、`Docs/PhaseB/PhaseB-Checklist.md`
+- `2026-10-07`：**Phase C 落地（生成点与单点闭环）**。变更范围：
+  - §6.4 Phase C 任务 → `[~]`（代码完成并编译通过，等编辑器资产与 CP-3 实机验收），并新增"Phase C 实现注记"
+  - 新增 `Source/SlimeWar/{Public,Private}/Flow/`：`ASpawnPoint`、`URunSubsystem`、`UScoreSubsystem`、
+    `ASlimeRunGameState`、`USlimeEnemyManagerSubsystem`、纯逻辑 `SlimeFlowMath.h`
+  - **契约变更（§7.4）**：`USlimeSpawnLayout::SpawnSlots` → `Points`（C11）；改造前该字段无任何读取方，无兼容层
+  - **架构变更（决策 A）**：`ASlimeWarGameMode` 改为纯广播源（4 个 multicast 委托），Flow 侧订阅；
+    消除 L1→L3 向上依赖，GameMode 不再 include 任何 Flow 头
+  - `ASlimeWarGameMode` 新增 `UPROPERTY(config) TSoftClassPtr<AGameStateBase> RunGameStateClass`
+    （`DefaultGame.ini` → `/Script/SlimeWar.SlimeRunGameState`），用于在 `PreInitializeComponents()` 覆盖 GameState 类
+  - **口径变更**：PC-08 对象池 → `USlimeEnemyManagerSubsystem` 轻量管理；PA-12 计分 UI 延后到 Phase D/E
+  - 新增 CVar `Slime.Debug.DrawRun`、`Slime.Run.TimeScale` 与 4 条命令
+    （`SlimeRunStart` / `SlimeRunEnd` / `SlimeRunTimeScale` / `SlimeRunStatus`）
+  - 新增自动化测试 `Private/Tests/SlimeFlowMathTests.cpp`（4 个测试）
+  - 新增文档 `Docs/PhaseC/PhaseC-Plan.md`、`Docs/PhaseC/PhaseC-Checklist.md`
+- `2026-10-07`（第二次）：**Phase C v1.1 —— 锚点即点位 + 生成点编辑器**。变更范围：
+  - §6.4 新增 `PC-10 生成点编辑器`；新增"Phase C v1.1 修订"实现注记
+  - **契约变更（§7.4，第二次）**：`FSlimeSpawnPointDef::Center` 删除；
+    `FSlimeSpawnSlot::Location` → `RelativeLocation` + `RelativeRotation`（锚点局部、含旋转）；
+    `FSlimeSpawnSlot` 去掉 `PointId` / `SlotIndex` / `Kind`
+  - **出生位解析集中到** `SlimeSlotResolver`（运行时与编辑器共用）：NavMesh → 地面射线 → 地面之上的遮挡探针 →
+    玩家距离；生成点 = 地面 + 胶囊半高；首次失败逐候选位打印原因。修掉 v1.0 的探针锚点/半埋/原点坑位三个缺陷
+  - **新增 runtime 组件** `USlimeSpawnSlotMarker` / `USlimeSpawnPointAnchor`（`bIsEditorOnly`，编辑期手柄）
+  - **新增 Editor 模块** `Source/SlimeWarEditor`（视觉化 + 详情面板按钮 + PIE 前一致性检查），
+    运行时模块不含编辑器代码；`.uproject` 与 `SlimeWarEditor.Target.cs` 同步登记
+  - 为跨模块调用给 `ASpawnPoint` / marker / `USlimeSpawnLayout` / `USlimeRunConfig` / `USlimeGameSettings` /
+    `LogSlimeWar` 补 `SLIMEWAR_API`
+  - 新增自动化测试 `Private/Tests/SlimeSpawnLayoutTests.cpp`（3 个测试）
+  - `Docs/PhaseC/PhaseC-Plan.md` 升为 v1.1；`PhaseC-Checklist.md` 改为工具化流程（旧 DA 数据需重摆）

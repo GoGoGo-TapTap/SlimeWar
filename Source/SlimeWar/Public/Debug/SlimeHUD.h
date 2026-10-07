@@ -31,6 +31,9 @@ protected:
 	void DrawFusionDebug();
 	void DrawAggroPathDebug();
 
+	/** Phase C (PA-13): score, countdown, point states and live enemy counts. */
+	void DrawRunDebug();
+
 	/**
 	 * Breadcrumb of where an aggro slime actually went.
 	 *

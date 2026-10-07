@@ -3,6 +3,7 @@
 #include "Debug/SlimeCheatManager.h"
 
 #include "Core/SlimeHealthComponent.h"
+#include "Core/SlimeWarCVars.h"
 #include "Core/SlimeWarLog.h"
 #include "Enemy/SlimeAggro.h"
 #include "Enemy/SlimeEnemyBase.h"
@@ -11,6 +12,11 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Flow/RunSubsystem.h"
+#include "Flow/ScoreSubsystem.h"
+#include "Flow/SlimeEnemyManagerSubsystem.h"
+#include "Flow/SlimeFlowNames.h"
+#include "Flow/SpawnPoint.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayFramework/SlimeCombatSubsystem.h"
 #include "GameplayFramework/StatTableProvider.h"
@@ -346,4 +352,125 @@ void USlimeCheatManager::SlimeForceFuse()
 
 	UE_LOG(LogSlimeWar, Log, TEXT("SlimeForceFuse: forced %s (mass %d) + %s (mass %d)."),
 		*GetNameSafe(First), First->GetMass(), *GetNameSafe(Second), Second->GetMass());
+}
+
+void USlimeCheatManager::SlimeRunStart()
+{
+	URunSubsystem* Run = URunSubsystem::Get(this);
+	if (!Run)
+	{
+		UE_LOG(LogSlimeWar, Error, TEXT("SlimeRunStart: no URunSubsystem in this world."));
+		return;
+	}
+
+	Run->StartRun();
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeRunStart: run state is now %s."),
+		SlimeFlowNames::RunState(Run->GetRunState()));
+}
+
+void USlimeCheatManager::SlimeRunEnd()
+{
+	URunSubsystem* Run = URunSubsystem::Get(this);
+	if (!Run)
+	{
+		UE_LOG(LogSlimeWar, Error, TEXT("SlimeRunEnd: no URunSubsystem in this world."));
+		return;
+	}
+
+	Run->EndRun(ERunEndReason::TimeUp);
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeRunEnd: run state is now %s."),
+		SlimeFlowNames::RunState(Run->GetRunState()));
+}
+
+void USlimeCheatManager::SlimeRunTimeScale(float Scale)
+{
+	SlimeCVars::RunTimeScale = FMath::Max(0.f, Scale);
+
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("SlimeRunTimeScale: the run timeline now advances at %.2fx (0 freezes it)."),
+		SlimeCVars::RunTimeScale);
+}
+
+void USlimeCheatManager::SlimeRunStatus()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	URunSubsystem* Run = URunSubsystem::Get(this);
+	UScoreSubsystem* Score = UScoreSubsystem::Get(this);
+	const USlimeEnemyManagerSubsystem* Manager = USlimeEnemyManagerSubsystem::Get(this);
+
+	if (!Run || !Score)
+	{
+		UE_LOG(LogSlimeWar, Error, TEXT("SlimeRunStatus: the run / score subsystem is unavailable."));
+		return;
+	}
+
+	UE_LOG(LogSlimeWar, Log, TEXT("=== SlimeWar run status (CP-3) ==="));
+	UE_LOG(LogSlimeWar, Log, TEXT("state %s   elapsed %.1f s   remaining %d s   batch %d / %d"),
+		SlimeFlowNames::RunState(Run->GetRunState()),
+		Run->GetElapsedTime(),
+		Run->GetRemainingSeconds(),
+		Run->GetLastIssuedBatch() == INDEX_NONE ? 0 : Run->GetLastIssuedBatch() + 1,
+		Run->GetBatchCount());
+
+	// -- score, plus the per-mass breakdown the hand check compares against --
+	TArray<int32> KillsByMass;
+	TArray<int32> ScoreByMass;
+	Score->GetKillBreakdown(KillsByMass, ScoreByMass);
+
+	int32 BreakdownScore = 0;
+	for (int32 Mass = 1; Mass < KillsByMass.Num(); ++Mass)
+	{
+		BreakdownScore += ScoreByMass.IsValidIndex(Mass) ? ScoreByMass[Mass] : 0;
+
+		if (KillsByMass[Mass] > 0)
+		{
+			UE_LOG(LogSlimeWar, Log, TEXT("  mass %d: %d kill(s) -> %d points"),
+				Mass, KillsByMass[Mass], ScoreByMass.IsValidIndex(Mass) ? ScoreByMass[Mass] : 0);
+		}
+	}
+
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("score %d (per-mass sum %d)   target %d   best %d   locked %s"),
+		Score->GetCurrentScore(),
+		BreakdownScore,
+		Score->GetTargetScore(),
+		Score->GetBestScore(),
+		Score->IsScoringLocked() ? TEXT("yes") : TEXT("no"));
+	UE_LOG(LogSlimeWar, Log, TEXT("normal kills %d   cleared points %d   fusions %d"),
+		Score->GetNormalKillCount(), Score->GetClearedPointCount(), Run->GetEnemyFusedCount());
+
+	if (Manager)
+	{
+		UE_LOG(LogSlimeWar, Log, TEXT("enemies live %d (normal %d / aggro %d)   peak %d"),
+			Manager->GetLiveEnemyCount(),
+			Manager->GetLiveCount(ETargetKind::Normal),
+			Manager->GetLiveCount(ETargetKind::Aggressive),
+			Manager->GetPeakLiveEnemyCount());
+	}
+
+	// -- per point: the numbers behind the four point states --
+	for (TActorIterator<ASpawnPoint> It(World); It; ++It)
+	{
+		const ASpawnPoint* Point = *It;
+		if (!Point)
+		{
+			continue;
+		}
+
+		UE_LOG(LogSlimeWar, Log,
+			TEXT("point %d: %s   spawned normal %d / %d   live normal %d   live aggro %d   pending %d   supply done %s"),
+			Point->GetPointId(),
+			SlimeFlowNames::PointState(Point->GetState()),
+			Point->GetSpawnedNormalCount(), Point->GetTotalNormalSupply(),
+			Point->GetLiveNormalCount(), Point->GetLiveAggroCount(),
+			Point->GetPendingSpawnCount(),
+			Point->IsSupplyDone() ? TEXT("yes") : TEXT("no"));
+	}
+
+	UE_LOG(LogSlimeWar, Log, TEXT("=== end of run status ==="));
 }

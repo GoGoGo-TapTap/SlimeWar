@@ -14,6 +14,10 @@
 #include "EngineUtils.h"
 #include "Enemy/SlimeEnemyBase.h"
 #include "Enemy/SlimeFusionComponent.h"
+#include "Flow/RunSubsystem.h"
+#include "Flow/SlimeEnemyManagerSubsystem.h"
+#include "Flow/SlimeFlowNames.h"
+#include "Flow/SlimeRunGameState.h"
 #include "GameplayFramework/SlimeRunConfig.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "GameplayTagContainer.h"
@@ -30,6 +34,12 @@ namespace
 	constexpr float FusionLabelHeight = 60.f;
 	constexpr int32 ActivityCircleSegments = 24;
 	constexpr int32 ContactCircleSegments = 20;
+
+	/** Phase C run HUD layout (debug only). */
+	constexpr float RunHudMargin = 24.f;
+	constexpr float RunHudLineHeight = 15.f;
+	constexpr float RunHudScale = 1.f;
+	constexpr float RunHudTitleScale = 1.25f;
 
 	/** Aggro chase debug (Slime.Debug.DrawAggroPath). All debug-only, not gameplay values. */
 	constexpr float TrailSampleInterval = 0.1f;
@@ -101,6 +111,108 @@ void ASlimeHUD::DrawHUD()
 	if (SlimeCVars::DebugDrawAggroPath != 0)
 	{
 		DrawAggroPathDebug();
+	}
+
+	if (SlimeCVars::DebugDrawRun != 0)
+	{
+		DrawRunDebug();
+	}
+}
+
+void ASlimeHUD::DrawRunDebug()
+{
+	UWorld* World = GetWorld();
+	if (!World || !Canvas)
+	{
+		return;
+	}
+
+	const ASlimeRunGameState* GameState = World->GetGameState<ASlimeRunGameState>();
+	if (!GameState)
+	{
+		return;
+	}
+
+	const URunSubsystem* Run = URunSubsystem::Get(this);
+	const USlimeEnemyManagerSubsystem* Manager = USlimeEnemyManagerSubsystem::Get(this);
+
+	// -- top left: score / best / settlement counters --
+	float Y = RunHudMargin;
+
+	const FLinearColor ScoreColor = GameState->IsTargetReached()
+		? FLinearColor(0.4f, 1.f, 0.4f) : FLinearColor(1.f, 0.9f, 0.3f);
+
+	DrawText(
+		FString::Printf(TEXT("SCORE %d / %d"), GameState->GetCurrentScore(), GameState->GetTargetScore()),
+		ScoreColor, RunHudMargin, Y, nullptr, RunHudTitleScale);
+	Y += RunHudLineHeight * RunHudTitleScale;
+
+	DrawText(
+		FString::Printf(TEXT("BEST %d"), GameState->GetBestScore()),
+		FLinearColor(0.8f, 0.8f, 0.8f), RunHudMargin, Y, nullptr, RunHudScale);
+	Y += RunHudLineHeight;
+
+	DrawText(
+		FString::Printf(TEXT("kills %d   cleared %d"),
+			GameState->GetNormalKillCount(), GameState->GetClearedPointCount()),
+		FLinearColor(0.8f, 0.8f, 0.8f), RunHudMargin, Y, nullptr, RunHudScale);
+	Y += RunHudLineHeight;
+
+	if (Run)
+	{
+		const int32 LastBatch = Run->GetLastIssuedBatch();
+		DrawText(
+			FString::Printf(TEXT("run %s   batch %d/%d   fused %d"),
+				SlimeFlowNames::RunState(Run->GetRunState()),
+				LastBatch == INDEX_NONE ? 0 : LastBatch + 1,
+				Run->GetBatchCount(),
+				Run->GetEnemyFusedCount()),
+			FLinearColor(0.7f, 0.7f, 0.9f), RunHudMargin, Y, nullptr, RunHudScale);
+	}
+	Y += RunHudLineHeight * 1.5f;
+
+	// -- point states (the HUD marker PD-09 will replace this in Phase D) --
+	for (int32 Index = 0; Index < GameState->GetPointCount(); ++Index)
+	{
+		const int32 PointId = GameState->GetPointIdAt(Index);
+		const ESpawnPointState State = GameState->GetPointState(PointId);
+
+		FLinearColor Color(0.8f, 0.8f, 0.8f);
+		switch (State)
+		{
+		case ESpawnPointState::AwaitingDeploy:		Color = FLinearColor(0.6f, 0.6f, 0.6f); break;
+		case ESpawnPointState::Spawning:			Color = FLinearColor(1.f, 0.8f, 0.3f); break;
+		case ESpawnPointState::DepletedNotCleared:	Color = FLinearColor(1.f, 0.5f, 0.2f); break;
+		case ESpawnPointState::Cleared:				Color = FLinearColor(0.4f, 1.f, 0.4f); break;
+		default:									break;
+		}
+
+		DrawText(
+			FString::Printf(TEXT("POINT %d  %s"), PointId, SlimeFlowNames::PointState(State)),
+			Color, RunHudMargin, Y, nullptr, RunHudScale);
+		Y += RunHudLineHeight;
+	}
+
+	// -- top right: countdown --
+	const FString TimeText = FString::Printf(TEXT("TIME %d"), GameState->GetRemainingSeconds());
+	float TextWidth = 0.f;
+	float TextHeight = 0.f;
+	GetTextSize(TimeText, TextWidth, TextHeight, nullptr, RunHudTitleScale);
+
+	DrawText(TimeText, FLinearColor(1.f, 1.f, 1.f),
+		Canvas->ClipX - TextWidth - RunHudMargin, RunHudMargin, nullptr, RunHudTitleScale);
+
+	// -- bottom left: live / peak enemy counts (PE-05 input) --
+	if (Manager)
+	{
+		DrawText(
+			FString::Printf(TEXT("enemies live %d  (normal %d / aggro %d)   peak %d"),
+				Manager->GetLiveEnemyCount(),
+				Manager->GetLiveCount(ETargetKind::Normal),
+				Manager->GetLiveCount(ETargetKind::Aggressive),
+				Manager->GetPeakLiveEnemyCount()),
+			FLinearColor(0.8f, 0.8f, 0.8f),
+			RunHudMargin, Canvas->ClipY - RunHudMargin - RunHudLineHeight, nullptr, RunHudScale);
 	}
 }
 
@@ -380,12 +492,17 @@ void ASlimeHUD::DrawEnemyStateDebug()
 			continue;
 		}
 
-		// The radius is a config value; read it through the provider the same way the AI does.
-		UGameInstance* GameInstance = World->GetGameInstance();
-		UStatTableProvider* Provider =
-			GameInstance ? GameInstance->GetSubsystem<UStatTableProvider>() : nullptr;
-		const USlimeRunConfig* RunConfig = Provider ? Provider->GetRunConfig() : nullptr;
-		const float Radius = RunConfig ? RunConfig->AIActivityRadius : 0.f;
+		// Draw what the AI actually enforces: the slime's own point radius, with the global value as
+		// the fallback for actors that were not spawned by a point (cheats, hand-placed slimes).
+		float Radius = Enemy->GetActivityRadius();
+		if (Radius <= 0.f)
+		{
+			UGameInstance* GameInstance = World->GetGameInstance();
+			UStatTableProvider* Provider =
+				GameInstance ? GameInstance->GetSubsystem<UStatTableProvider>() : nullptr;
+			const USlimeRunConfig* RunConfig = Provider ? Provider->GetRunConfig() : nullptr;
+			Radius = RunConfig ? RunConfig->AIActivityRadius : 0.f;
+		}
 
 		if (Radius <= 0.f)
 		{

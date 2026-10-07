@@ -40,6 +40,35 @@ enum class ERunEndReason : uint8
 };
 
 /**
+ * Which of the three slot lists an editing marker belongs to.
+ *
+ * Only the editor markers carry this: inside FSlimeSpawnPointDef a slot's role is implied by the
+ * array it lives in (design 5.2 uses separate positions for normal and aggressive slimes).
+ */
+UENUM(BlueprintType)
+enum class ESlimeSlotRole : uint8
+{
+	Normal		UMETA(DisplayName = "Normal"),
+	Aggro		UMETA(DisplayName = "Aggressive"),
+	Fallback	UMETA(DisplayName = "Fallback")
+};
+
+/**
+ * High level run state (Phase C).
+ *
+ * Idle  -> the world is up but the run has not started (Phase D: during deployment).
+ * Running -> batches are being driven and score can still be earned.
+ * Ended -> terminal. Spawning stops and the score is locked (design 5.6).
+ */
+UENUM(BlueprintType)
+enum class ESlimeRunState : uint8
+{
+	Idle		UMETA(DisplayName = "Idle"),
+	Running		UMETA(DisplayName = "Running"),
+	Ended		UMETA(DisplayName = "Ended")
+};
+
+/**
  * Per-mass slime stats, keyed in DT_SlimeStats by the mass value as row name ("1".."8").
  * PLACEHOLDER: every numeric column is pending design confirmation (plan section 8, Q1/Q7).
  * Numbers must live in the DataTable, never in code.
@@ -162,26 +191,67 @@ struct FSlimeAggroStatRow : public FTableRowBase
 	TSoftObjectPtr<UStaticMesh> Mesh;
 };
 
-/** One spawnable slot inside a spawn point (8 normal slots + 2 aggro slots per point). */
+/**
+ * One spawnable slot inside a spawn point, expressed in the anchor's local space
+ * (8 normal slots + 2 aggro slots per point).
+ *
+ * Everything is relative to the ASpawnPoint actor, so moving or rotating the anchor moves the
+ * whole layout without touching this asset.
+ */
 USTRUCT(BlueprintType)
 struct FSlimeSpawnSlot
+{
+	GENERATED_BODY()
+
+	/**
+	 * Anchor-local offset in cm.
+	 * Only X and Y are authoritative: the Z is re-resolved to the ground under that XY at runtime,
+	 * so a slot dragged into the air still produces a slime standing on the floor below.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	FVector RelativeLocation = FVector::ZeroVector;
+
+	/** Anchor-local facing, degrees. The slime turns to face its movement right after spawning. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	FRotator RelativeRotation = FRotator::ZeroRotator;
+};
+
+/**
+ * One spawn point definition (Phase C, PC-01).
+ *
+ * The centre is NOT stored here: ASpawnPoint's own transform is the centre, and every slot below
+ * is an offset in that anchor's local space. The layout lives in DA_SpawnLayout so the runtime
+ * never reads the level's editor markers (plan 7.3 + the Phase C tooling decision).
+ *
+ * Slot counts are not enforced by the struct: the number of slots per batch and the number of
+ * batches come from USlimeRunConfig, so the design values stay in data.
+ */
+USTRUCT(BlueprintType)
+struct FSlimeSpawnPointDef
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
 	int32 PointId = 0;
 
+	/**
+	 * Activity radius around the anchor, cm. 0 = fall back to USlimeRunConfig::AIActivityRadius.
+	 * Kept in data (not on the anchor) so it stays tunable without touching the binary map.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
-	int32 SlotIndex = 0;
+	float ActivityRadius = 0.f;
 
+	/** Primary normal spawn offsets, one per normal slot in a batch. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
-	ETargetKind Kind = ETargetKind::Normal;
+	TArray<FSlimeSpawnSlot> NormalSlots;
 
+	/** Primary aggressive spawn offsets, one per aggro slot in a batch. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
-	FVector Location = FVector::ZeroVector;
+	TArray<FSlimeSpawnSlot> AggroSlots;
 
+	/** Backup offsets tried when a primary slot fails the standable / distance check. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
-	FRotator Rotation = FRotator::ZeroRotator;
+	TArray<FSlimeSpawnSlot> FallbackSlots;
 };
 
 /**
@@ -189,13 +259,14 @@ struct FSlimeSpawnSlot
  * so the map stays cheap to edit and merge.
  */
 UCLASS(BlueprintType)
-class USlimeSpawnLayout : public UPrimaryDataAsset
+class SLIMEWAR_API USlimeSpawnLayout : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
+	/** One entry per spawn point. Phase C sandbox only fills a single point. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
-	TArray<FSlimeSpawnSlot> SpawnSlots;
+	TArray<FSlimeSpawnPointDef> Points;
 
 	/** Player drop points (D1/D2). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")

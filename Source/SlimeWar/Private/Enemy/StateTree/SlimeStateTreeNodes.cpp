@@ -218,13 +218,23 @@ EStateTreeRunStatus FSlimeSTTaskWanderStep::EnterState(FStateTreeExecutionContex
 	InstanceData.Destination = Enemy->GetActivityCenter();
 
 	const float Radius = Config->AIWanderRadius;
-	if (Radius > 0.f && Context.GetWorld())
+
+	if (!Enemy->IsInsideActivityArea())
+	{
+		// Drifted outside its point (a long fusion walk, a shove, a partial path): walk back to the
+		// nearest point inside the area instead of wandering further away. Design 5.1: normal
+		// targets only ever act inside their own point.
+		InstanceData.Destination = Enemy->ClampToActivityArea(Enemy->GetActorLocation());
+	}
+	else if (Radius > 0.f && Context.GetWorld())
 	{
 		FVector Candidate = FVector::ZeroVector;
 		if (UNavigationSystemV1::K2_GetRandomReachablePointInRadius(
 			Context.GetWorld(), Enemy->GetActivityCenter(), Candidate, Radius))
 		{
-			InstanceData.Destination = Candidate;
+			// Clamp as well: the random point is picked around the centre, but a slime standing at
+			// the edge could still be asked to step outside.
+			InstanceData.Destination = Enemy->ClampToActivityArea(Candidate);
 		}
 	}
 

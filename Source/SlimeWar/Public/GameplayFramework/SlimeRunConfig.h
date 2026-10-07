@@ -16,7 +16,7 @@ class USlimeSpawnLayout;
  * (plan rule 5). Fill them in the editor and they are changeable without recompiling.
  */
 UCLASS(BlueprintType)
-class USlimeRunConfig : public UPrimaryDataAsset
+class SLIMEWAR_API USlimeRunConfig : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
@@ -38,6 +38,13 @@ public:
 	/** Result orbit camera length in seconds (design: 2~3). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Run")
 	float ResultOrbitDuration = 0.f;
+
+	/**
+	 * Phase C: start the run automatically when the world begins play (sandbox behaviour).
+	 * Phase D turns this off and calls URunSubsystem::StartRun after the deployment cinematic.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Run")
+	bool bAutoStartRun = true;
 
 	// -- Player --
 
@@ -167,4 +174,38 @@ public:
 	/** Row name used in DT_WeaponStats for the starting weapon. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	FName DefaultWeaponId;
+
+	// -- Spawn points (Phase C, PC-02 / PC-03) --
+
+	/** Batches per point (design: 6). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	int32 SpawnBatchCount = 0;
+
+	/** Seconds between batches (design: 20). Batch 0 is due at t = 0. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	float SpawnBatchInterval = 0.f;
+
+	/** Normal slimes per batch (design: 8). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	int32 SpawnNormalPerBatch = 0;
+
+	/** Aggressive slimes per batch (design: 2). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	int32 SpawnAggroPerBatch = 0;
+
+	/** A spawn position must be at least this far from the player, in cm (design: 3 m). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	float SpawnPlayerMinDistance = 0.f;
+
+	/** How long a failed slot may keep retrying before the spawn is cancelled (design: 2 s). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	float SpawnRetryWindow = 0.f;
+
+	/** Delay between two retries of a delayed spawn, seconds. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	float SpawnRetryInterval = 0.f;
+
+	/** Lead time of the "next batch incoming" warning, seconds (design: 1). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	float SpawnBatchWarningLead = 0.f;
 };

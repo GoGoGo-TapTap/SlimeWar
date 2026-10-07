@@ -82,9 +82,15 @@ public:
 
 	// -- Spawn / point identity --
 
-	/** Called by the spawner (spawn points, cheats). Safe to call after BeginPlay. */
+	/**
+	 * Called by the spawner (spawn points, cheats). Safe to call after BeginPlay.
+	 *
+	 * @param InActivityRadius cm; the radius this slime must stay inside around InActivityCenter.
+	 *                         0 = unset, in which case the AI falls back to the global
+	 *                         USlimeRunConfig::AIActivityRadius.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
-	void InitializeFromSpawn(int32 InPointId, const FVector& InActivityCenter);
+	void InitializeFromSpawn(int32 InPointId, const FVector& InActivityCenter, float InActivityRadius = 0.f);
 
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
 	int32 GetPointId() const { return PointId; }
@@ -92,6 +98,18 @@ public:
 	/** Centre of the activity radius. Falls back to the spawn location when unset. */
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
 	FVector GetActivityCenter() const { return ActivityCenter; }
+
+	/** Radius this normal slime must stay inside. 0 = unset (the AI uses the global value). */
+	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
+	float GetActivityRadius() const { return ActivityRadius; }
+
+	/** True while inside GetActivityRadius() around GetActivityCenter() (always true when unset). */
+	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
+	bool IsInsideActivityArea(float SlackCm = 0.f) const;
+
+	/** Pull a world position back inside the activity radius (X/Y only, Z is left alone). */
+	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
+	FVector ClampToActivityArea(const FVector& WorldLocation) const;
 
 	/** StateTree asset this individual runs. Filled by ASlimeNormal / ASlimeAggro. */
 	TSoftObjectPtr<UStateTree> GetStateTreeAsset() const { return StateTreeAsset; }
@@ -161,6 +179,13 @@ protected:
 	/** Centre of the activity radius, world space. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Slime|Enemy")
 	FVector ActivityCenter = FVector::ZeroVector;
+
+	/**
+	 * Radius of the point this slime belongs to (design 5.1: normal targets only act inside their
+	 * own point). Filled by InitializeFromSpawn from the spawn point's effective radius.
+	 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Slime|Enemy")
+	float ActivityRadius = 0.f;
 
 	/** Phase A: which state tree to run. Filled by the concrete subclasses. */
 	UPROPERTY(EditDefaultsOnly, Category = "Slime|Enemy")

@@ -59,4 +59,22 @@ public:
 	/** Force the two nearest normal slimes of one spawn point into a fusion pair. */
 	UFUNCTION(Exec)
 	void SlimeForceFuse();
+
+	// -- Phase C: run flow (PC-06 / CP-3) --
+
+	/** Start (or restart) the run without waiting for the auto-start. */
+	UFUNCTION(Exec)
+	void SlimeRunStart();
+
+	/** End the run as a time-up. The player-death path is exercised by SlimeKillPlayer. */
+	UFUNCTION(Exec)
+	void SlimeRunEnd();
+
+	/** Multiplier for the run timeline: 10 reaches the last batch in ~10 s. 1 = real time. */
+	UFUNCTION(Exec)
+	void SlimeRunTimeScale(float Scale);
+
+	/** Print every number the CP-3 hand calculation needs (score per mass tier, point states). */
+	UFUNCTION(Exec)
+	void SlimeRunStatus();
 };

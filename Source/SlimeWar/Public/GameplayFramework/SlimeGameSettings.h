@@ -17,7 +17,7 @@ class USlimeRunConfig;
  * Text only: no binary asset needs to be touched to repoint a table or an effect.
  */
 UCLASS(config = Game, defaultconfig, meta = (DisplayName = "Slime War"))
-class USlimeGameSettings : public UDeveloperSettings
+class SLIMEWAR_API USlimeGameSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 
