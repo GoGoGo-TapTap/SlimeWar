@@ -55,6 +55,16 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> PauseWidgetClass;
 
+	/** Main menu flow screens. These are independent from the in-run UI subsystem. */
+	UPROPERTY(config, EditAnywhere, Category = "UI|Menus")
+	TSoftClassPtr<UUserWidget> MainMenuWidgetClass;
+
+	UPROPERTY(config, EditAnywhere, Category = "UI|Menus")
+	TSoftClassPtr<UUserWidget> SettingsWidgetClass;
+
+	UPROPERTY(config, EditAnywhere, Category = "UI|Menus")
+	TSoftClassPtr<UUserWidget> LevelSelectWidgetClass;
+
 	/**
 	 * Deployment cinematics, one per drop point (index = drop point index in DA_SpawnLayout).
 	 *

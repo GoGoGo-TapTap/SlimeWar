@@ -33,6 +33,7 @@ Plugins/*/Saved/
 .idea/
 .vscode/
 *.code-workspace
+/.agents/
 
 # 解决方案与用户级文件由本机生成，不入库
 *.sln
@@ -42,6 +43,7 @@ Plugins/*/Saved/
 *.sln.docstates
 *.VC.opendb
 *.VC.VC.opendb
+Docs/GameDesign/
 
 # ============================================
 # 系统噪声文件
