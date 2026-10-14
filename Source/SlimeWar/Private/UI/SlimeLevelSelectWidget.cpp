@@ -8,7 +8,7 @@
 
 namespace
 {
-	const FName CityPlazaMap(TEXT("/Game/_SlimeWar/Maps/L_Whitebox_CityPlaza"));
+	const FName LevelSelectCityPlazaMap(TEXT("/Game/_SlimeWar/Maps/L_Whitebox_CityPlaza"));
 }
 
 void USlimeLevelSelectWidget::SelectLevel(int32 LevelIndex)
@@ -35,7 +35,7 @@ void USlimeLevelSelectWidget::EnterSelectedLevel()
 		return;
 	}
 
-	UGameplayStatics::OpenLevel(this, CityPlazaMap);
+	UGameplayStatics::OpenLevel(this, LevelSelectCityPlazaMap);
 }
 
 void USlimeLevelSelectWidget::ReturnToMainMenu()

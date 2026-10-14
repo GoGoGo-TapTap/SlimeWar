@@ -13,7 +13,7 @@
 
 namespace
 {
-	const FName CityPlazaMap(TEXT("/Game/_SlimeWar/Maps/L_Whitebox_CityPlaza"));
+	const FName MainMenuCityPlazaMap(TEXT("/Game/_SlimeWar/Maps/L_Whitebox_CityPlaza"));
 }
 
 void USlimeMainMenuWidget::StartGame()
@@ -32,7 +32,7 @@ void USlimeMainMenuWidget::StartGame()
 			*Settings->LevelSelectWidgetClass.ToString());
 	}
 
-	UGameplayStatics::OpenLevel(this, CityPlazaMap);
+	UGameplayStatics::OpenLevel(this, MainMenuCityPlazaMap);
 }
 
 void USlimeMainMenuWidget::OpenSettings()
