@@ -33,6 +33,7 @@ Plugins/*/Saved/
 .idea/
 .vscode/
 *.code-workspace
+/.agents/
 
 # 解决方案与用户级文件由本机生成，不入库
 *.sln
