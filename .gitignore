@@ -42,6 +42,7 @@ Plugins/*/Saved/
 *.sln.docstates
 *.VC.opendb
 *.VC.VC.opendb
+Docs/GameDesign/
 
 # ============================================
 # 系统噪声文件
