@@ -20,7 +20,8 @@ public class SlimeWarEditor : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
-			"SlimeWar"
+			"SlimeWar",
+			"AkAudio"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

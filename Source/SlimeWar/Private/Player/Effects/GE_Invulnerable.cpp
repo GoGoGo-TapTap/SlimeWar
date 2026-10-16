@@ -22,4 +22,5 @@ UGE_Invulnerable::UGE_Invulnerable()
 	UTargetTagsGameplayEffectComponent* TargetTags =
 		CreateDefaultSubobject<UTargetTagsGameplayEffectComponent>(TEXT("TargetTags"));
 	TargetTags->SetAndApplyTargetTagChanges(TagChanges);
+	GEComponents.Add(TargetTags);
 }

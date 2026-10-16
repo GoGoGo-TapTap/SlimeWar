@@ -125,7 +125,20 @@ void USlimeHUDWidget::UpdateAll()
 		return;
 	}
 
-	OnScoreUpdated(RunState->GetCurrentScore(), RunState->GetTargetScore());
+	const int32 CurrentScore = RunState->GetCurrentScore();
+	const int32 TargetScore = RunState->GetTargetScore();
+
+	UE_LOG(
+		LogSlimeWar,
+		Warning,
+		TEXT("[TargetScore][HUD::UpdateAll] Widget=%s Current=%d Target=%d"),
+		*GetNameSafe(this),
+		CurrentScore,
+		TargetScore
+	);
+
+	OnScoreUpdated(CurrentScore, TargetScore);
+	//OnScoreUpdated(RunState->GetCurrentScore(), RunState->GetTargetScore());
 	OnTimeUpdated(RunState->GetRemainingSeconds());
 
 	// Sync the fly-in baseline: showing the HUD is not a kill.
@@ -175,7 +188,9 @@ void USlimeHUDWidget::EvaluateHints()
 void USlimeHUDWidget::HandleScoreChanged(int32 NewScore)
 {
 	const ASlimeRunGameState* RunState = BoundGameState.Get();
-	OnScoreUpdated(NewScore, RunState ? RunState->GetTargetScore() : 0);
+	const int32 TargetScore = RunState ? RunState->GetTargetScore() : 0;
+
+	OnScoreUpdated(NewScore, TargetScore);
 
 	// PA-12: tell the WBP how much the last kill was worth so it can fly an icon in. The first
 	// update after construction is a sync, not a kill, hence the "did it actually go up" test.

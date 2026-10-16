@@ -23,4 +23,5 @@ UGE_FireCooldown::UGE_FireCooldown()
 	UTargetTagsGameplayEffectComponent* TargetTags =
 		CreateDefaultSubobject<UTargetTagsGameplayEffectComponent>(TEXT("TargetTags"));
 	TargetTags->SetAndApplyTargetTagChanges(TagChanges);
+	GEComponents.Add(TargetTags);
 }
