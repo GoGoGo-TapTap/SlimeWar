@@ -35,8 +35,9 @@ public class SlimeWar : ModuleRules
 			"LevelSequence",
 			"MovieScene"
 		});
+        PublicAdditionalLibraries.Add("E:/UE/chajian/VC/Tools/MSVC/14.44.35207/lib/x64/delayimp.lib");
 
-		if (Target.bBuildEditor)
+        if (Target.bBuildEditor)
 		{
 			// GAS 编辑器支持（蓝图节点 / 资产面板），UncookedOnly
 			PrivateDependencyModuleNames.Add("GameplayAbilitiesEditor");

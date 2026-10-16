@@ -1,0 +1,77 @@
+Event	ID	Name			Wwise Object Path	Notes
+	88885899	ui_nagetive			\Default Work Unit\SFX\ui\ui_nagetive	
+	215992295	player_health			\Default Work Unit\SFX\player\player_health	
+	506287935	ui_shoot			\Default Work Unit\SFX\ui\ui_shoot	
+	562758224	ui_collect			\Default Work Unit\SFX\ui\ui_collect	
+	581999743	resource_deliver			\Default Work Unit\SFX\other\resource_deliver	
+	664984855	ui_positive			\Default Work Unit\SFX\ui\ui_positive	
+	673286149	ui_alert01			\Default Work Unit\SFX\ui\ui_alert01	
+	673286150	ui_alert02			\Default Work Unit\SFX\ui\ui_alert02	
+	871813740	player_hit			\Default Work Unit\SFX\player\player_hit	
+	1423837695	ui_ending_positive			\Default Work Unit\SFX\ui\ui_ending_positive	
+	1765917915	ui_news			\Default Work Unit\SFX\ui\ui_news	
+	1869858337	weapon_01			\Default Work Unit\SFX\weapon\weapon_01	
+	1935979060	ui_go			\Default Work Unit\SFX\ui\ui_go	
+	2249769530	ui_click			\Default Work Unit\SFX\ui\ui_click	
+	2353766611	ui_ending_negative			\Default Work Unit\SFX\ui\ui_ending_negative	
+	2407763367	monster_move			\Default Work Unit\SFX\other\monster_move	
+	2453392179	player_footstep			\Default Work Unit\SFX\player\player_footstep	
+	2681230974	scout_report			\Default Work Unit\SFX\other\scout_report	
+	3083087645	player_death			\Default Work Unit\SFX\player\player_death	
+	3422627571	monster_attact			\Default Work Unit\SFX\other\monster_attact	
+	3508117276	monster_merge			\Default Work Unit\SFX\other\monster_merge	
+	3593590674	monster_merge_end			\Default Work Unit\SFX\other\monster_merge_end	
+	3786772804	ui_choose01			\Default Work Unit\SFX\ui\ui_choose01	
+	3786772806	ui_choose03			\Default Work Unit\SFX\ui\ui_choose03	
+	3786772807	ui_choose02			\Default Work Unit\SFX\ui\ui_choose02	
+	3972774391	weapon_hit			\Default Work Unit\SFX\weapon\weapon_hit	
+	4047484203	weapon_empty			\Default Work Unit\SFX\weapon\weapon_empty	
+	4188031367	weapon_reload			\Default Work Unit\SFX\weapon\weapon_reload	
+	4239040186	resource_collect			\Default Work Unit\SFX\other\resource_collect	
+
+Game Parameter	ID	Name			Wwise Object Path	Notes
+	393239870	sfx			\Default Work Unit\sfx	
+	1100754030	all			\Default Work Unit\all	
+
+In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
+	12769542	move02	E:\GJ2026\2026taptap\.cache\4D\{4DF06201-FCB8-4873-9CBC-C99C8BE0CA01}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move02		88504
+	45595246	weapon_hit_02	E:\GJ2026\2026taptap\.cache\F8\{F8DA4F89-25EE-6B20-C661-05E9A6D72364}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon_hit\weapon_hit_02		190556
+	56605306	player_hit_03	E:\GJ2026\2026taptap\.cache\8E\{8EA8E589-8F4C-B771-FE9A-8AAEECD3C9D1}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_hit\player_hit_03		70828
+	61415074	ui_news	E:\GJ2026\2026taptap\.cache\F7\{F77D5158-5CE0-6342-24D2-3C17FC7833F7}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_news		208352
+	134770121	resource_collect	E:\GJ2026\2026taptap\.cache\50\{5025EDB9-A86B-B4B4-33C8-1C2DA3F1BC99}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\resource_collect		51876
+	154967454	move01	E:\GJ2026\2026taptap\.cache\70\{7093749C-0171-0908-C84F-870EEC8DF0FD}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move01		86748
+	188141732	empty	E:\GJ2026\2026taptap\.cache\C2\{C2F6DB9B-CA33-56CA-88B2-4890C8FB3C73}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\empty		76584
+	306244957	player_hit_01	E:\GJ2026\2026taptap\.cache\EE\{EE469400-FF4E-9492-83D6-5838EBD89AFA}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_hit\player_hit_01		126724
+	322176472	monster_merge_end	E:\GJ2026\2026taptap\.cache\C3\{C3327719-3587-5196-515D-16FDA30036E9}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\monster_merge_end		285940
+	358552951	move04	E:\GJ2026\2026taptap\.cache\3E\{3ED5BAFF-A652-E82E-49C1-AA5678255E1D}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move04		160708
+	394469846	weapon_hit_01	E:\GJ2026\2026taptap\.cache\7A\{7ABD2C0F-EA51-17E5-F42E-76FAFC1C5BF5}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon_hit\weapon_hit_01		149008
+	419171517	player_footstep_02	E:\GJ2026\2026taptap\.cache\4D\{4D4FA5B1-1856-11FD-2821-69266C02CFF1}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_02		62720
+	482004822	ui_go	E:\GJ2026\2026taptap\.cache\66\{668EF40A-2B61-DC26-0E44-AFCF3EFD558E}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_go		156192
+	497441416	weapon_hit_03	E:\GJ2026\2026taptap\.cache\DA\{DA4CC258-0BA3-197A-DE8D-D3DC39DAA20A}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon_hit\weapon_hit_03		183632
+	526628607	player_footstep_01	E:\GJ2026\2026taptap\.cache\EE\{EE3446C7-F6D7-DEF6-B393-76E50CDF8778}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_01		71656
+	543374751	choose03	E:\GJ2026\2026taptap\.cache\33\{336813C7-D497-9958-D68E-CCB477FB8F8C}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\choose03		38752
+	557634748	player_footstep_03	E:\GJ2026\2026taptap\.cache\17\{17F172A9-0982-81B8-D4C1-136A94D911DA}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_03		82384
+	597695863	reload	E:\GJ2026\2026taptap\.cache\CF\{CF8156ED-BEE0-3A7B-0AC1-79F0CBAF5BD5}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\reload		146504
+	607211103	weapon	E:\GJ2026\2026taptap\.cache\0B\{0B2C5E95-4120-23D2-D12E-ACD78E3CF82C}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon		169760
+	622622811	player_footstep_04	E:\GJ2026\2026taptap\.cache\72\{7243C36B-9F7D-CB59-1AE7-A53196072495}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_04		60932
+	635452055	move05	E:\GJ2026\2026taptap\.cache\71\{7123E135-68C2-BA12-8307-4AD3B1DCAE77}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move05		207924
+	647578506	ui_ending_positive	E:\GJ2026\2026taptap\.cache\55\{5590F279-8DB4-EA74-C20C-CCAD9028100F}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_ending_positive		172200
+	651108116	move03	E:\GJ2026\2026taptap\.cache\CC\{CCB3A8F9-7768-D35E-9428-D11E3A57786F}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move03		100444
+	651809234	ui_shoot	E:\GJ2026\2026taptap\.cache\AE\{AE6C43CA-06E1-7C70-B42E-97A14F297A7E}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_shoot		15784
+	683813417	ui_nagetive	E:\GJ2026\2026taptap\.cache\91\{910C0934-C77F-68BA-73E3-758E44B042F1}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_nagetive		145380
+	691959542	weapon_hit_04	E:\GJ2026\2026taptap\.cache\2A\{2A7E0A04-3234-D213-E544-EF53807AFD85}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon_hit\weapon_hit_04		102276
+	692501745	ui_ending_negative	E:\GJ2026\2026taptap\.cache\35\{35A33E1C-CEE6-F662-BC15-EDD5A679D2DB}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_ending_negative		233520
+	702792096	scout_report	E:\GJ2026\2026taptap\.cache\65\{659B033A-6546-E156-C79E-5599FEDEFCC5}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\scout_report		122268
+	723818723	player_hit_04	E:\GJ2026\2026taptap\.cache\52\{52E96D24-F296-8271-A109-717955B736B2}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_hit\player_hit_04		79052
+	741580100	player_footstep_05	E:\GJ2026\2026taptap\.cache\6F\{6FB1CC63-B8B0-C95B-192D-299A2D085728}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_05		55568
+	757432667	ui_alert01	E:\GJ2026\2026taptap\.cache\E9\{E94CCC17-6D14-39CF-6C7E-F0CD425B04D7}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_alert01		170216
+	815094602	ui_click	E:\GJ2026\2026taptap\.cache\8C\{8CA9A0F5-7ED2-8666-CCB0-B48A3D4604B2}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_click		35868
+	833053697	ui_positive	E:\GJ2026\2026taptap\.cache\AC\{AC18C187-4EEE-FCD0-4720-EBB86CAAC9A4}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_positive		67312
+	850429678	choose02	E:\GJ2026\2026taptap\.cache\1A\{1AFD3FAA-6ACF-D726-6FA2-F8CEB4F2DF3E}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\choose02		50780
+	886147513	ui_alert02	E:\GJ2026\2026taptap\.cache\CC\{CCECA313-2CB7-98D1-C124-4ADF95CC772E}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_alert02		982216
+	910166325	choose	E:\GJ2026\2026taptap\.cache\B8\{B834AE27-0670-BBF7-808B-3DEE8140841C}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\choose		22712
+	923336675	ui_collect	E:\GJ2026\2026taptap\.cache\99\{991E8268-D9AD-B29B-7C0D-5DF6F4BA7831}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_collect		60444
+	929136504	player_hit_02	E:\GJ2026\2026taptap\.cache\20\{201AC144-480B-BDC6-41E1-5F388E1C1E9A}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_hit\player_hit_02		118504
+	1063745597	monster_attact	E:\GJ2026\2026taptap\.cache\FC\{FCF49EDC-1CF5-CF45-3E8B-82CC118AF304}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\monster_attact		86068
+	1066792705	monster_merge	E:\GJ2026\2026taptap\.cache\3B\{3B46F529-5E4D-EE35-C6E4-EC3088CFDD6B}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\monster_merge		328348
+
