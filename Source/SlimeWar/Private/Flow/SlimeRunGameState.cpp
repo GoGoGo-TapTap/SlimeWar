@@ -94,6 +94,14 @@ void ASlimeRunGameState::UnbindSubsystems()
 void ASlimeRunGameState::HandleScoreChanged(int32 NewScore)
 {
 	CurrentScore = NewScore;
+
+	// BeginRun assigns TargetScore before broadcasting the initial score reset. Mirror both values
+	// here so a HUD reacting to the subsequent Running transition never observes a stale target.
+	if (const UScoreSubsystem* Score = UScoreSubsystem::Get(this))
+	{
+		TargetScore = Score->GetTargetScore();
+	}
+
 	OnScoreChanged.Broadcast(CurrentScore);
 }
 
