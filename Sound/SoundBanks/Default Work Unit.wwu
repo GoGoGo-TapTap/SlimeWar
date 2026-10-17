@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{06D6D6E1-7265-45FA-8EA8-BEBFBEE3F642}" SchemaVersion="123">
+	<SoundBanks>
+		<WorkUnit Name="Default Work Unit" ID="{06D6D6E1-7265-45FA-8EA8-BEBFBEE3F642}" PersistMode="Standalone">
+			<ChildrenList>
+				<SoundBank Name="GJ2026" ID="{72E6972D-3944-416A-B096-A680A915B9A3}">
+					<ObjectInclusionList>
+						<ObjectRef Name="SFX" ID="{D5B3040B-1883-4161-B1F0-7CFF9D38DCD7}" WorkUnitID="{1B0636B5-EE20-463B-A1FD-760AD2263A63}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="BGM" ID="{2B1DE43B-D5F9-4891-8382-8180E7993AAC}" WorkUnitID="{1B0636B5-EE20-463B-A1FD-760AD2263A63}" Origin="Manual" Filter="7"/>
+					</ObjectInclusionList>
+					<ObjectExclusionList/>
+					<GameSyncExclusionList/>
+				</SoundBank>
+			</ChildrenList>
+		</WorkUnit>
+	</SoundBanks>
+</WwiseDocument>
