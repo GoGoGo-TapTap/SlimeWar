@@ -1,0 +1,3206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{371F7943-F828-4A33-9BC2-C997FBEF016E}" SchemaVersion="123">
+	<AudioObjects>
+		<WorkUnit Name="Default Work Unit" ID="{371F7943-F828-4A33-9BC2-C997FBEF016E}" PersistMode="Standalone">
+			<ChildrenList>
+				<Folder Name="SFX" ID="{5C7AF988-EDE2-48A3-9313-94610B2150F1}" ShortID="517446308">
+					<ChildrenList>
+						<Folder Name="other" ID="{71BCCF32-EDE0-48A2-AC90-68ECF1C01368}" ShortID="833680378">
+							<ChildrenList>
+								<Sound Name="monster_attact" ID="{5D9C504B-7134-4D6E-8C82-606AAFE5EACE}" ShortID="698564938">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="monster_attact" ID="{C3719A1E-667A-4A23-BEE8-98E20F0DA603}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.0513505143070988"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.538467184472388"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>10</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>monster_attact.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="1063745597"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{8BCD3D21-9637-457A-92F4-424A0E2906FF}" ShortID="522048139">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{4EB5BCC7-44BC-43D1-BC92-F8D518074B88}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{8CE27121-27C4-49C4-8F22-B50BF7687D95}" ShortID="765265471">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{C261959A-9AC1-44BC-AED0-645036298D70}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="monster_attact" ID="{C3719A1E-667A-4A23-BEE8-98E20F0DA603}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="monster_merge" ID="{455976A8-B1E9-4C66-A255-F9A1EEDD9EC5}" ShortID="642085894">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="monster_merge" ID="{E5E750D8-BEE4-4341-B17A-0E8878E685A2}">
+											<Language>SFX</Language>
+											<AudioFile>monster_merge.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="1066792705"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{73E4FBB6-42BD-4855-8FAE-669415DEC673}" ShortID="785003907">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{E85819A6-3E41-4F22-819C-24403C31830E}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{66859BE5-12F0-421D-B76F-EEC76860AD66}" ShortID="752488695">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{D87063D0-CB39-4BC2-A764-313E942752EF}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="monster_merge" ID="{E5E750D8-BEE4-4341-B17A-0E8878E685A2}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="monster_merge_end" ID="{B94EC7FF-F4A2-4932-84D6-1D314AC7C992}" ShortID="196229732">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="monster_merge_end" ID="{82C95B7C-7B44-4303-91B3-5F32AB35B30A}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.204007113374057"/>
+												<Property Name="TrimEnd" Type="Real64" Value="1.82418019229034"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>2.1</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>monster_merge_end.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="322176472"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{3871A3F1-902D-483E-AF74-DDFD85D50A80}" ShortID="50304047">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{8A2A3C46-E221-475F-9561-1F13624B0CA3}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{6E326826-8560-4E16-902F-6038C3E9B69C}" ShortID="838184233">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{02A50191-7D7C-4ECD-856C-19EDE23FA18B}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="monster_merge_end" ID="{82C95B7C-7B44-4303-91B3-5F32AB35B30A}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="resource_collect" ID="{7F63F529-4BB5-449D-8F40-23A9B7351127}" ShortID="757068446">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="resource_collect" ID="{52580436-355B-49DE-8569-C8AFAE9EFB04}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>-5.1</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>resource_collect.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="134770121"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{C4C81913-CA60-47E5-BDAC-39461870131A}" ShortID="528014316">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{D6E6DEF1-53E7-4742-8B0A-FEDF1FB3CF35}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{DF3B772E-9468-4CEA-9E26-348CB3306BC0}" ShortID="1030301298">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{BE01598D-CA99-4DD0-8F54-37AC39532F54}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="resource_collect" ID="{52580436-355B-49DE-8569-C8AFAE9EFB04}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="scout_report" ID="{73ABEF8B-235E-45D7-801C-BFC35ABBD48C}" ShortID="715046693">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="scout_report" ID="{D27BA62B-B233-47CA-B9AC-46E417CFD882}">
+											<PropertyList>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>-6.7</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>scout_report.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="702792096"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{EFAE81FC-B5CC-4DED-B1AE-6DA655150DE8}" ShortID="957854959">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{AFF766D6-7BB2-494B-ADA5-2D6B052E660B}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{E18017A6-6F7F-4B8A-8F3A-A126ACD34F42}" ShortID="673691553">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{61EC8738-7D37-4B83-8975-007735908968}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="scout_report" ID="{D27BA62B-B233-47CA-B9AC-46E417CFD882}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<RandomSequenceContainer Name="move" ID="{9B103A57-9B94-43CC-9FA3-6CD0DC2D9B69}" ShortID="16599822">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<Sound Name="move05" ID="{7EE0F2A5-EF4C-40AB-AE48-76291E4E49AD}" ShortID="565420282">
+											<PropertyList>
+												<Property Name="Weight" Type="Real64">
+													<ValueList>
+														<Value>40</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="move05" ID="{FDDA7D4C-AEA5-48F1-8923-98ACC5972048}">
+													<Language>SFX</Language>
+													<AudioFile>move05.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="635452055"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="move05" ID="{FDDA7D4C-AEA5-48F1-8923-98ACC5972048}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="move03" ID="{B1F0104E-2E9E-4220-BB27-D462DF13962F}" ShortID="747017741">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="move03" ID="{25B0DD86-0E86-4869-9C1C-7A55E976338D}">
+													<PropertyList>
+														<Property Name="LoopBegin" Type="Real64" Value="0.136282394995532"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.136282394995532"/>
+														<Property Name="TrimEnd" Type="Real64" Value="0.704870420017873"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>move03.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="651108116"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="move03" ID="{25B0DD86-0E86-4869-9C1C-7A55E976338D}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="move04" ID="{9E696CE6-D311-43DD-8780-666B70C26FC6}" ShortID="925463840">
+											<PropertyList>
+												<Property Name="Weight" Type="Real64">
+													<ValueList>
+														<Value>40</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="move04" ID="{FC551E5A-FF47-45E7-9429-A6CD62276A33}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.147452349317617"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>move04.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="358552951"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="move04" ID="{FC551E5A-FF47-45E7-9429-A6CD62276A33}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="move01" ID="{616F0D10-EE36-4C39-96D3-9ACAE16CD92A}" ShortID="544191904">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="move01" ID="{E9BDA9A4-1E00-42FC-BBBA-3FCB727939AA}">
+													<PropertyList>
+														<Property Name="LoopBegin" Type="Real64" Value="0.190554989566752"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.190554989566752"/>
+														<Property Name="TrimEnd" Type="Real64" Value="0.681498657707258"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>move01.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="154967454"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="move01" ID="{E9BDA9A4-1E00-42FC-BBBA-3FCB727939AA}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="move02" ID="{A9660DEC-DEB9-4FCF-A182-5EF9E24A3B16}" ShortID="331730158">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="move02" ID="{63FBA4D8-64E2-4CA1-87D7-13C054FCEEC1}">
+													<PropertyList>
+														<Property Name="LoopBegin" Type="Real64" Value="0.348954856981647"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.348954856981647"/>
+														<Property Name="TrimEnd" Type="Real64" Value="0.849873970725463"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>move02.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="12769542"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="move02" ID="{63FBA4D8-64E2-4CA1-87D7-13C054FCEEC1}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{08B08EDE-D2F2-410C-B3A1-C90C01FE138D}" ShortID="983208201">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{7024C7C5-F87B-4F2C-9F97-0561284EED5F}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{B2029FFE-79F8-46D1-81B9-83A5240A1822}" ShortID="667007620">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{68240FDF-4D3C-4C41-BC6D-07D1B9035249}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+								</RandomSequenceContainer>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="player" ID="{89CB2284-7482-4808-85C5-B41BF8585CC2}" ShortID="676222684">
+							<ChildrenList>
+								<RandomSequenceContainer Name="player_hit" ID="{049193A4-B770-4A60-AA9E-3524DB85217A}" ShortID="239101390">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<Sound Name="player_hit_02" ID="{DB6FF3FF-C1DF-41F8-A12B-3647B17D29E0}" ShortID="343381330">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_hit" ID="{94E64377-D47D-498B-ACE7-8026CD56CF5E}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="2.92614656265982"/>
+														<Property Name="TrimEnd" Type="Real64" Value="3.59710953089047"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>5.6</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="929136504"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_hit" ID="{94E64377-D47D-498B-ACE7-8026CD56CF5E}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="player_hit_03" ID="{0D75BDA9-9C88-40C3-9947-7F6A6ACC10A8}" ShortID="816044084">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_hit" ID="{7483BC1F-B3D7-4ED9-9413-44C64999A1E3}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="6.24368852542063"/>
+														<Property Name="TrimEnd" Type="Real64" Value="6.64440228881964"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="56605306"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_hit" ID="{7483BC1F-B3D7-4ED9-9413-44C64999A1E3}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="player_hit_04" ID="{F21053CF-EE52-4DCC-AF29-24DAC132C37E}" ShortID="469127514">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_hit" ID="{589F4C12-5584-4565-871F-FF201BCBC57F}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="9.29098128334979"/>
+														<Property Name="TrimEnd" Type="Real64" Value="9.73828973723702"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="723818723"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_hit" ID="{589F4C12-5584-4565-871F-FF201BCBC57F}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="player_hit_01" ID="{9C6E5F42-F592-4224-8406-FC1E72C981D2}" ShortID="507397826">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_hit" ID="{3FB154F8-7BE0-4640-B6BC-DFA88E3C64DF}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.447309028686851"/>
+														<Property Name="TrimEnd" Type="Real64" Value="1.16486668740572"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="306244957"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_hit" ID="{3FB154F8-7BE0-4640-B6BC-DFA88E3C64DF}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{8061E11E-FF82-46F6-81A4-D15022D42233}" ShortID="716354956">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{852FFD67-678A-4DE7-B64A-B4E49358689D}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{28AE99CE-488C-4FD0-9525-69CE8E109FD4}" ShortID="555223644">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{303C5A8B-F9DF-4271-83CA-D1F23CFB7FB0}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+								</RandomSequenceContainer>
+								<RandomSequenceContainer Name="player_footstep" ID="{12C8E841-18DC-4CCA-828E-679977474285}" ShortID="475478937">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<Sound Name="player_footstep_04" ID="{0D28F69D-47E8-418B-A6B7-346DB205CFE4}" ShortID="495555977">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_footstep" ID="{804D4A4F-5456-4512-ADA5-99FE35A9FF2F}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="6.80074822508511"/>
+														<Property Name="TrimEnd" Type="Real64" Value="7.145347160306"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>12</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_footstep.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="622622811"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_footstep" ID="{804D4A4F-5456-4512-ADA5-99FE35A9FF2F}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="player_footstep_05" ID="{1DC8647C-F633-4521-899F-53467ACF5F53}" ShortID="415486622">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_footstep" ID="{14B18FA0-9F14-452B-A9D1-8A5374E0CA79}">
+													<PropertyList>
+														<Property Name="LoopBegin" Type="Real64" Value="9.38523525548258"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="9.38523525548258"/>
+														<Property Name="TrimEnd" Type="Real64" Value="9.6994284609341"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>12</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_footstep.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="741580100"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_footstep" ID="{14B18FA0-9F14-452B-A9D1-8A5374E0CA79}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="player_footstep_01" ID="{606A3725-4E6F-4079-9C2C-A953DE651D52}" ShortID="720117680">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_footstep" ID="{9DB9ACA1-5BF6-44B2-8EA5-446DEE4B38A0}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.131758162333989"/>
+														<Property Name="TrimEnd" Type="Real64" Value="0.537168557093652"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>12</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_footstep.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="526628607"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_footstep" ID="{9DB9ACA1-5BF6-44B2-8EA5-446DEE4B38A0}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="player_footstep_03" ID="{111AE2E4-BBA9-428F-8727-83331D68BDE8}" ShortID="1032992138">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_footstep" ID="{85029E95-7D55-4243-AC86-29EE88C89C0D}">
+													<PropertyList>
+														<Property Name="LoopBegin" Type="Real64" Value="4.01355632955843"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="4.01355632955843"/>
+														<Property Name="TrimEnd" Type="Real64" Value="4.47977818385685"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>12</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_footstep.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="557634748"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_footstep" ID="{85029E95-7D55-4243-AC86-29EE88C89C0D}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="player_footstep_02" ID="{3D315F04-6CA2-420D-81F3-CE3B41B97E9A}" ShortID="364348660">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="player_footstep" ID="{F5EAABA9-163A-4400-AF8A-6850DB392788}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="1.41893405590449"/>
+														<Property Name="TrimEnd" Type="Real64" Value="1.77366823438185"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>12</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>player_footstep.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="419171517"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="player_footstep" ID="{F5EAABA9-163A-4400-AF8A-6850DB392788}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{C6143979-8867-4128-940F-4A49C52CF6A5}" ShortID="351176777">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{4B2833FD-C796-4AD3-8920-2BD4180AC676}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{048A3FC5-C294-4411-996C-4B17A9095E37}" ShortID="966790830">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{0C9132DE-48A7-4D35-A5E1-ED8EFDDF2567}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+								</RandomSequenceContainer>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="ui" ID="{59D858E9-AF86-41EF-BE50-C33163ECF049}" ShortID="655707716">
+							<ChildrenList>
+								<Sound Name="choose02" ID="{D2EE36B9-D17B-4F52-ACDD-EFED346073B2}" ShortID="1016673280">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="choose02" ID="{02570315-2D91-418F-97D7-EBD6298BFFFA}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.126090100239813"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.126090100239813"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.41315692040485"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>choose02.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="850429678"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{5FA5DA94-BEAC-42B6-9ACC-0B1AF75B08FC}" ShortID="14176302">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{2CD962B6-0412-4B25-BCB5-5FC1FF44BDE4}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{9A7AD0F7-951B-440C-813D-6CA45A091E11}" ShortID="82485519">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{F9432179-3568-4125-91AC-21A6D085723A}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="choose02" ID="{02570315-2D91-418F-97D7-EBD6298BFFFA}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="choose03" ID="{06A697D8-255E-4357-BBF8-2544EEFC3067}" ShortID="1040943858">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="choose03" ID="{C7C86E88-4D85-4C15-AE02-42F904E0CCA9}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.0869587547977233"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.0869587547977233"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.305837901555118"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>choose03.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="543374751"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{64989EEB-1CD4-47CC-98FC-C972D3863B44}" ShortID="922501313">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{141619AF-6CA3-4BE3-9EC1-DF920F2F060F}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{026227D8-AD6A-48EB-920A-F7EBCD116A2D}" ShortID="1031234902">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{AD515D1C-28B3-4708-8D72-6146359AA9F5}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="choose03" ID="{C7C86E88-4D85-4C15-AE02-42F904E0CCA9}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="choose" ID="{AF9D96F8-402B-4D78-B027-80FE2AD82950}" ShortID="846140759">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="choose" ID="{E1CB6618-6E17-43E5-8C91-611E9D6AA915}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.0458430892340939"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.0458430892340939"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.173786945964353"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>choose.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="910166325"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{884D6133-330C-4A75-AFC1-600D2C9D8EA4}" ShortID="533092615">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{279E1862-A3D6-4038-A2CC-AC5E305F8DFC}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{A315C26C-E2F8-4D90-9567-B2C8328DE503}" ShortID="283614044">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{23F57D31-7AE4-4F12-AE1F-D0A5AD66056D}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="choose" ID="{E1CB6618-6E17-43E5-8C91-611E9D6AA915}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_alert01" ID="{04A72E35-BB88-424B-8B3C-AA65D64E001B}" ShortID="730344257">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_alert01" ID="{024BFD1F-D7C2-4583-ACB6-CCF28BDCD7C3}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.153382412549957"/>
+												<Property Name="TrimEnd" Type="Real64" Value="1.11750044137482"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_alert01.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="757432667"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{03772E36-F268-4769-952D-8007A6D62425}" ShortID="819959869">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{44756836-DB34-475E-8CAD-2ED9F90D06A8}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{B00E9AFF-6F1B-4DF3-923E-6C5A076DADC2}" ShortID="623234087">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{A15A5DEA-6AD2-45B3-9C20-A42EB6AEF7A3}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_alert01" ID="{024BFD1F-D7C2-4583-ACB6-CCF28BDCD7C3}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_alert02" ID="{C7B39CDF-0E98-4DC4-B08E-1AF23C399811}" ShortID="365548854">
+									<PropertyList>
+										<Property Name="IsLoopingEnabled" Type="bool" Value="True"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_alert02" ID="{3AF8F821-D7CC-4A2F-ABBD-79194B0ECD8F}">
+											<Language>SFX</Language>
+											<AudioFile>ui_alert02.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="886147513"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{8A7B11A4-3002-4161-8C40-05D95042CF91}" ShortID="185735197">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{B292A45B-4DA1-4D05-B47D-07C68ABF4A70}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{8C877D74-CE22-41FD-8BA9-1DB605A41D5D}" ShortID="955437076">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{C406973A-AF00-4BF5-B4D5-74732C3B1373}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_alert02" ID="{3AF8F821-D7CC-4A2F-ABBD-79194B0ECD8F}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_click" ID="{24EE71BA-EE23-42D2-B579-5D5705B77751}" ShortID="902367324">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_click" ID="{E94B3F16-BD64-4536-9D1D-7A948A030B3A}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.22905194279975"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.202104655411544"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.404630346845401"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>10</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_click.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="815094602"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{12E0B106-9784-49B2-879A-ED5D2F38E176}" ShortID="633714316">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{C8241E34-70C8-4518-9F49-9DCE80ED6CD8}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{CD1A7CF3-BFEB-4C31-B9B9-71C9C44C1268}" ShortID="98908307">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{C811C19A-ED87-447A-9127-BA7E5B83CC75}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_click" ID="{E94B3F16-BD64-4536-9D1D-7A948A030B3A}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_collect" ID="{F4713619-E6CC-47BF-A876-FFFA92404B9A}" ShortID="504768884">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_collect" ID="{8EAFB7EC-2846-4950-B7C4-7D4DFBD58ABC}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.0677811995055443"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.0677811995055443"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.40960882878933"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>8</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_collect.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="923336675"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{BAD06588-5521-4EDA-9433-D7B9EE2E515E}" ShortID="295919699">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{55BE8A15-4EF8-475E-B8B8-EA94D8EA699C}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{39C073C4-DC75-43FB-B219-729E8102D43D}" ShortID="443045916">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{725F715F-5547-4535-9C67-76C8CBE4A3D4}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_collect" ID="{8EAFB7EC-2846-4950-B7C4-7D4DFBD58ABC}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_ending_negative" ID="{4A707076-01B8-4DFD-BA09-F7841FF7C399}" ShortID="1027803107">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_ending_negative" ID="{1E7ED508-D747-4EAA-A0FD-CD7DAC8B1776}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.27707994016182"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.27707994016182"/>
+												<Property Name="TrimEnd" Type="Real64" Value="1.60007421245263"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>8</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_ending_negative.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="692501745"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{2B9B802A-7F48-46C1-838D-E5C484E8037F}" ShortID="715601687">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{3F72BAC9-5E4B-4AA9-9715-ED6B57067029}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{4C236BB3-C4D2-44C3-8025-D4E6AB7BE12A}" ShortID="596248128">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{E8993667-6678-48BD-B4DE-C62CAF5E2568}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_ending_negative" ID="{1E7ED508-D747-4EAA-A0FD-CD7DAC8B1776}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_ending_positive" ID="{2F5310C1-D580-47DE-9353-FAFAAFBA6C9F}" ShortID="762228739">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_ending_positive" ID="{CEA33EC5-1DDC-4122-BF0D-AA98654518A0}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.393464997796953"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.393464997796953"/>
+												<Property Name="TrimEnd" Type="Real64" Value="1.36884385576999"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>8</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_ending_positive.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="647578506"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{62ED3033-BDF2-4671-9537-09DA16296E69}" ShortID="256345169">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{4F039A2E-9E16-492B-987D-78DB8138D18E}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{EE7CF171-20F2-466A-A4F8-79294877DE37}" ShortID="906096354">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{F3F6A545-0445-4A80-AE88-2C351E2E7A1D}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_ending_positive" ID="{CEA33EC5-1DDC-4122-BF0D-AA98654518A0}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_go" ID="{F88CBB77-AF22-4BCC-B502-C251CF67C515}" ShortID="619288545">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_go" ID="{5B480006-9FBF-4299-BB43-6D3B74FDCB1C}">
+											<PropertyList>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>8</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_go.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="482004822"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{034ABCB4-4892-4B33-AD79-8293D233BB55}" ShortID="880992239">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{8F4F0EB9-78B8-491A-BC87-87EB53D4CB39}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{571D625A-BED3-48CE-8520-C33CC103A1B7}" ShortID="20188239">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{40198CEF-8360-46B0-99AB-77259CF537DB}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_go" ID="{5B480006-9FBF-4299-BB43-6D3B74FDCB1C}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_nagetive" ID="{E32DD1F7-2CA7-4D0F-899F-33DEEA38BA22}" ShortID="733263689">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_nagetive" ID="{C1910052-E751-4E05-A316-113B5DD775EB}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.823344090982541"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>8</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_nagetive.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="683813417"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{13E71814-7A19-4E93-AC6D-B45A80884C3C}" ShortID="474335912">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{F253704B-10A0-41BD-8ACC-87D21261E425}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{EECDAE03-F7F4-4780-A617-4D55F2661551}" ShortID="497578056">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{DD86BE7A-CAE0-455D-A826-B37E182A58E7}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_nagetive" ID="{C1910052-E751-4E05-A316-113B5DD775EB}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_news" ID="{CE0287E4-D06D-41E8-97D2-A091F4A0BD25}" ShortID="4129858">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_news" ID="{6FB1D079-FF91-4136-8D62-70C325070DC7}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.64223037861201"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.64223037861201"/>
+												<Property Name="TrimEnd" Type="Real64" Value="1.82254560766157"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_news.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="61415074"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{12610E6B-5490-4E66-8147-ADA32F9DF5FF}" ShortID="641946957">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{6D91007C-9DDE-45C2-B428-0FE615850E56}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{D2D85CD0-5683-4AA9-B21B-2B5C71F260B3}" ShortID="1000701024">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{3A068D68-2A35-41BF-9AFC-412B8189EE18}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_news" ID="{6FB1D079-FF91-4136-8D62-70C325070DC7}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_positive" ID="{2B89426E-C879-4E66-B7FC-F6BE279E0D69}" ShortID="5903848">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_positive" ID="{425B03AC-F88F-4C21-AD95-F9996860F84B}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.158965063904736"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.539729349583665"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>8</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_positive.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="833053697"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{1E6C7BB8-1542-4638-8996-16030DD42C57}" ShortID="100581101">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{FC22CF32-7CE5-41AB-8EC9-FE680B38159A}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{D48AFDAA-EE85-4AAB-99F4-086567EAB3BB}" ShortID="85398631">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{30BDFAEE-1B2F-4F8D-A45B-2C7CA84D1A87}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_positive" ID="{425B03AC-F88F-4C21-AD95-F9996860F84B}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="ui_shoot" ID="{06D77B92-68A1-406F-A5E9-0D4926FA26DD}" ShortID="604041928">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="ui_shoot" ID="{1A70A1D9-F6EC-460B-829A-55D872F671EE}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.262526274366609"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.262526274366609"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.35117785658332"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>ui_shoot.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="651809234"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{7ADC48F3-45D2-46A8-A117-33D3745573E1}" ShortID="974743781">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{E15CF789-1477-4BA6-9329-CA45744C1243}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{7BC0527D-9196-4A4B-8D54-419C2FAADFFE}" ShortID="455408317">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{D74B72DE-62A8-4A93-ABDD-CACD146920C7}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="ui_shoot" ID="{1A70A1D9-F6EC-460B-829A-55D872F671EE}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="weapon" ID="{6BA11A08-4F2D-4A16-B3E3-A6A84218A267}" ShortID="608755036">
+							<ChildrenList>
+								<Sound Name="empty" ID="{97D80A98-28C5-44C5-BB74-031DC2710936}" ShortID="358485175">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="empty" ID="{72063AC9-4976-4BE0-8250-CEF846FD1DA1}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0.425116811297215"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.425116811297215"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.858448446107736"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>10</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>empty.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="188141732"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{BC92F135-4FF3-41CE-8832-7331FB22591F}" ShortID="972933553">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{C53D6F2D-13A7-4690-AD74-85ED8E5A5391}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{F1FA8D92-2F08-47B3-9FAB-715C6685C929}" ShortID="677044026">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{8236305A-C68F-407E-8584-00614E6DD8D2}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="empty" ID="{72063AC9-4976-4BE0-8250-CEF846FD1DA1}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="reload" ID="{AF56B75D-526F-485E-B75D-AD6FB7BB9DEF}" ShortID="182345585">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="reload" ID="{411A5C06-640E-4FF2-A82A-89FE3921415B}">
+											<PropertyList>
+												<Property Name="LoopBegin" Type="Real64" Value="0"/>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.829708094036954"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>7</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>reload.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="597695863"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{2AFACFA1-60B1-4346-91C8-4F8F427477E3}" ShortID="867940422">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{B0EA7B4A-6550-4786-8DE0-981084A85F8D}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{2DE1AADB-82B0-4A0E-8932-D0B09A9EFB0C}" ShortID="112254327">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{DB6A3115-49FA-4DE8-8EFF-0A4E0C7A0E6A}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="reload" ID="{411A5C06-640E-4FF2-A82A-89FE3921415B}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="weapon" ID="{3EE2D2B5-56D0-49A8-B3DF-1C12B876C192}" ShortID="698291174">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="weapon" ID="{A1EB431B-2AD0-455B-B176-2538B919609C}">
+											<PropertyList>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>0.1</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>weapon.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="607211103"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{A6AAFB54-6281-417A-80D8-7EA88830FA53}" ShortID="815454769">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{C5F49B39-FB68-4C43-B358-EF2AC5D0D0A3}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{3D722450-A78C-4ED0-8586-63836CE583A4}" ShortID="31648163">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{8B9BF3F0-7165-4FFF-BCFC-D8E4AFDFD49A}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+									<ActiveSourceList>
+										<ActiveSource Name="weapon" ID="{A1EB431B-2AD0-455B-B176-2538B919609C}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<RandomSequenceContainer Name="weapon_hit" ID="{D050B1A5-13F0-4046-A53E-F70945F552EB}" ShortID="479347298">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<Sound Name="weapon_hit_01" ID="{31A27FED-05B8-4D02-88C8-15B22A1ABF4C}" ShortID="914778636">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="weapon_hit" ID="{933A67F3-4373-424B-BC4D-0718F1803C7E}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.215886473123041"/>
+														<Property Name="TrimEnd" Type="Real64" Value="1.05980623290241"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>-10</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>weapon_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="394469846"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="weapon_hit" ID="{933A67F3-4373-424B-BC4D-0718F1803C7E}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="weapon_hit_03" ID="{AD035272-73C7-49EA-879B-7C1998D8C426}" ShortID="180150263">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="weapon_hit" ID="{2B5D87B1-EFEA-4591-A23C-30FAB8F25754}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="5.93687801088362"/>
+														<Property Name="TrimEnd" Type="Real64" Value="6.97705820077484"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>-10</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>weapon_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="497441416"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="weapon_hit" ID="{2B5D87B1-EFEA-4591-A23C-30FAB8F25754}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="weapon_hit_02" ID="{BEB113FD-F36D-4A9D-847A-B2C5C17C1F87}" ShortID="646313199">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="weapon_hit" ID="{2C98BB01-477A-4F3D-ADF2-2D4F65D1CDC8}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="2.7083939355436"/>
+														<Property Name="TrimEnd" Type="Real64" Value="3.78782621145719"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>-10</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>weapon_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="45595246"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="weapon_hit" ID="{2C98BB01-477A-4F3D-ADF2-2D4F65D1CDC8}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="weapon_hit_04" ID="{24306DCB-72B3-4407-A899-73D9E034840D}" ShortID="347028082">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="weapon_hit" ID="{ACAA45FE-DAB5-4E5A-B0A9-FD96A9669AB8}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="9.13592302170687"/>
+														<Property Name="TrimEnd" Type="Real64" Value="9.71489120083522"/>
+														<Property Name="VolumeOffset" Type="Real64">
+															<ValueList>
+																<Value>-10</Value>
+															</ValueList>
+														</Property>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>weapon_hit.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="691959542"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="weapon_hit" ID="{ACAA45FE-DAB5-4E5A-B0A9-FD96A9669AB8}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="RTPC">
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{C5EDC38F-1EF3-4F45-9E18-B4204BF637D7}" ShortID="171271710">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{DE3517F9-5565-4F22-9275-115E9C572472}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+											<Reference>
+												<Local>
+													<RTPC Name="" ID="{D00E9A9E-F263-4280-9399-585C81EDC565}" ShortID="595643067">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{60071456-DDAF-422B-A8E9-31929616B14E}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-200</YPos>
+																				<Flags>5</Flags>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</Local>
+											</Reference>
+										</ObjectList>
+									</ObjectLists>
+								</RandomSequenceContainer>
+							</ChildrenList>
+						</Folder>
+					</ChildrenList>
+				</Folder>
+				<Folder Name="MUSIC" ID="{D0C2396E-15C3-49B3-8ADF-CEC002371ACE}" ShortID="676825635"/>
+			</ChildrenList>
+		</WorkUnit>
+	</AudioObjects>
+</WwiseDocument>
