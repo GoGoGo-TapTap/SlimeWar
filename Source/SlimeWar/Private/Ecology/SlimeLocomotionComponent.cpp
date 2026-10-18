@@ -1,0 +1,355 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "Ecology/SlimeLocomotionComponent.h"
+
+#include "Components/CapsuleComponent.h"
+#include "Ecology/SlimeBodyInteractionComponent.h"
+#include "Ecology/SlimeEcologyBrainComponent.h"
+#include "Ecology/SlimeEcologyEnemy.h"
+#include "Ecology/SlimeEcologyRules.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "NavigationPath.h"
+#include "NavigationSystem.h"
+
+namespace
+{
+	constexpr float MinimumPathRefreshCooldown = 0.5f;
+	constexpr float LineProbeHeightOffset = 0.f;
+}
+
+USlimeLocomotionComponent::USlimeLocomotionComponent()
+{
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.TickGroup = TG_PrePhysics;
+}
+
+void USlimeLocomotionComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (const USlimeEcologyRules* Rules = GetRules())
+	{
+		if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+		{
+			UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+			Movement->MaxAcceleration = Rules->MoveAcceleration;
+			Movement->BrakingDecelerationWalking = Rules->BrakingDeceleration;
+			Movement->RotationRate = FRotator(0.f, Rules->TurnRateDegPerSecond, 0.f);
+			Movement->bOrientRotationToMovement = true;
+		}
+	}
+
+	ProgressAnchor = GetOwner() ? GetOwner()->GetActorLocation() : FVector::ZeroVector;
+}
+
+ASlimeEcologyEnemy* USlimeLocomotionComponent::GetOwnerEnemy() const
+{
+	return Cast<ASlimeEcologyEnemy>(GetOwner());
+}
+
+USlimeEcologyBrainComponent* USlimeLocomotionComponent::GetBrain() const
+{
+	const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	return Enemy ? Enemy->GetEcologyBrain() : nullptr;
+}
+
+USlimeBodyInteractionComponent* USlimeLocomotionComponent::GetBodyInteraction() const
+{
+	const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	return Enemy ? Enemy->GetBodyInteraction() : nullptr;
+}
+
+const USlimeEcologyRules* USlimeLocomotionComponent::GetRules() const
+{
+	return USlimeEcologyRules::GetFor(GetOwner());
+}
+
+void USlimeLocomotionComponent::SetMoveGoal(const FVector& InGoal, float InSpeed)
+{
+	const bool bNewGoal =
+		!bHasGoal || FVector::DistSquared2D(Goal, InGoal) > FMath::Square(25.f);
+
+	Goal = InGoal;
+	DesiredSpeed = FMath::Max(0.f, InSpeed);
+	bHasGoal = true;
+	bAtGoal = false;
+	bStuckExhausted = false;
+	bStopped = false;
+
+	if (bNewGoal || PathPoints.Num() == 0)
+	{
+		PathFailures = 0;
+		PathIndex = 0;
+		PathRefreshRemaining = 0.f;
+		RefreshPath();
+	}
+}
+
+void USlimeLocomotionComponent::ClearMoveGoal()
+{
+	bHasGoal = false;
+	bAtGoal = false;
+	bStuckExhausted = false;
+	PathPoints.Reset();
+	PathIndex = 0;
+	CurrentWaypoint = FVector::ZeroVector;
+	SmoothedDirection = FVector::ZeroVector;
+	PathFailures = 0;
+
+	if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+	{
+		Character->GetCharacterMovement()->StopMovementImmediately();
+	}
+	bStopped = true;
+}
+
+bool USlimeLocomotionComponent::ConsumeStuckExhausted()
+{
+	const bool bResult = bStuckExhausted;
+	bStuckExhausted = false;
+	return bResult;
+}
+
+void USlimeLocomotionComponent::TickComponent(
+	float DeltaTime,
+	ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	ACharacter* Character = Cast<ACharacter>(GetOwner());
+	if (!Enemy || !Character)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+	const USlimeBodyInteractionComponent* Body = GetBodyInteraction();
+	if (!bHasGoal || Enemy->IsRunFrozen()
+		|| (Body && Body->BlocksVoluntaryMovement()))
+	{
+		if (!bStopped)
+		{
+			Movement->StopMovementImmediately();
+			bStopped = true;
+		}
+		return;
+	}
+
+	const USlimeEcologyRules* Rules = GetRules();
+	if (!Rules)
+	{
+		return;
+	}
+
+	const FVector Location = Enemy->GetActorLocation();
+	if (FVector::DistSquared2D(Location, Goal) <= FMath::Square(Rules->WanderArrivalRadius))
+	{
+		StopAtGoal();
+		return;
+	}
+
+	PathRefreshRemaining -= DeltaTime;
+
+	while (PathPoints.IsValidIndex(PathIndex)
+		&& FVector::DistSquared2D(Location, PathPoints[PathIndex])
+			<= FMath::Square(Rules->WaypointAcceptanceRadius))
+	{
+		++PathIndex;
+	}
+
+	if (!PathPoints.IsValidIndex(PathIndex))
+	{
+		if (PathRefreshRemaining <= 0.f && PathFailures <= Rules->MaxPathFailures)
+		{
+			RefreshPath();
+		}
+
+		if (!PathPoints.IsValidIndex(PathIndex))
+		{
+			return;
+		}
+	}
+
+	CurrentWaypoint = PathPoints[PathIndex];
+	FVector PathDirection = CurrentWaypoint - Location;
+	PathDirection.Z = 0.f;
+	PathDirection = PathDirection.GetSafeNormal();
+
+	const FVector Separation = GetBrain()
+		? GetBrain()->GetSeparationVector()
+		: FVector::ZeroVector;
+	const FVector LateralSeparation =
+		Separation - PathDirection * FVector::DotProduct(Separation, PathDirection);
+	FVector CandidateDirection =
+		(PathDirection + LateralSeparation * Rules->SeparationOverlayWeight).GetSafeNormal2D();
+
+	if (CandidateDirection.IsNearlyZero())
+	{
+		Movement->StopMovementImmediately();
+		bStopped = true;
+		return;
+	}
+
+	const float BlendAlpha =
+		1.f - FMath::Exp(-FMath::Max(0.1f, Rules->DirectionSmoothing) * DeltaTime);
+	SmoothedDirection = FMath::Lerp(SmoothedDirection, CandidateDirection, BlendAlpha)
+		.GetSafeNormal2D();
+
+	Movement->MaxWalkSpeed = DesiredSpeed;
+	Character->AddMovementInput(SmoothedDirection, 1.f);
+	bStopped = false;
+
+	const float MovedDistance = FVector::Dist2D(ProgressAnchor, Location);
+	if (MovedDistance >= Rules->StuckDistance)
+	{
+		ProgressAnchor = Location;
+		TimeWithoutProgress = 0.f;
+	}
+	else
+	{
+		TimeWithoutProgress += DeltaTime;
+		MaxStuckTime = FMath::Max(MaxStuckTime, TimeWithoutProgress);
+		if (TimeWithoutProgress >= Rules->StuckCheckSeconds)
+		{
+			HandleStuck();
+		}
+	}
+}
+
+void USlimeLocomotionComponent::RefreshPath()
+{
+	const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	const USlimeEcologyRules* Rules = GetRules();
+	if (!Enemy || !Rules)
+	{
+		return;
+	}
+
+	const FVector Start = Enemy->GetActorLocation();
+	PathPoints.Reset();
+	PathIndex = 0;
+	CurrentWaypoint = Goal;
+
+	if (IsDirectPathClear(Start, Goal))
+	{
+		PathPoints.Add(Goal);
+	}
+	else if (!BuildNavPath(Start, Goal, PathPoints))
+	{
+		++PathFailures;
+	}
+
+	++PathRequestCount;
+	PathRefreshRemaining = FMath::Max(MinimumPathRefreshCooldown, Rules->PathRefreshInterval);
+	ProgressAnchor = Start;
+	TimeWithoutProgress = 0.f;
+}
+
+bool USlimeLocomotionComponent::IsDirectPathClear(const FVector& From, const FVector& To) const
+{
+	const UWorld* World = GetWorld();
+	const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	const UCapsuleComponent* Capsule = Enemy ? Enemy->GetCapsuleComponent() : nullptr;
+	if (!World || !Enemy || !Capsule)
+	{
+		return false;
+	}
+
+	FVector Direction = To - From;
+	Direction.Z = 0.f;
+	Direction = Direction.GetSafeNormal();
+	if (Direction.IsNearlyZero())
+	{
+		return true;
+	}
+
+	const FVector Side = FVector::CrossProduct(FVector::UpVector, Direction);
+	const float HalfWidth = Capsule->GetScaledCapsuleRadius() * 0.8f;
+	const FVector TraceStart = From + FVector(0.f, 0.f, LineProbeHeightOffset);
+	const FVector TraceEnd = To + FVector(0.f, 0.f, LineProbeHeightOffset);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SlimeDirectPath), false, Enemy);
+	for (const float SideScale : {-1.f, 0.f, 1.f})
+	{
+		FHitResult Hit;
+		if (World->LineTraceSingleByChannel(
+			Hit,
+			TraceStart + Side * HalfWidth * SideScale,
+			TraceEnd + Side * HalfWidth * SideScale,
+			ECC_WorldStatic,
+			QueryParams))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool USlimeLocomotionComponent::BuildNavPath(
+	const FVector& From,
+	const FVector& To,
+	TArray<FVector>& OutPoints) const
+{
+	UWorld* World = GetWorld();
+	UNavigationSystemV1* NavSystem = World
+		? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World)
+		: nullptr;
+	if (!NavSystem)
+	{
+		return false;
+	}
+
+	UNavigationPath* Path = NavSystem->FindPathToLocationSynchronously(
+		const_cast<USlimeLocomotionComponent*>(this), From, To, nullptr, nullptr);
+	if (!Path || !Path->IsValid() || Path->PathPoints.Num() < 2)
+	{
+		return false;
+	}
+
+	OutPoints = Path->PathPoints;
+	if (OutPoints.Num() > 1
+		&& FVector::DistSquared2D(OutPoints[0], From) <= FMath::Square(25.f))
+	{
+		OutPoints.RemoveAt(0);
+	}
+	return OutPoints.Num() > 0;
+}
+
+void USlimeLocomotionComponent::HandleStuck()
+{
+	const USlimeEcologyRules* Rules = GetRules();
+	if (!Rules)
+	{
+		return;
+	}
+
+	++PathFailures;
+	TimeWithoutProgress = 0.f;
+
+	if (PathFailures > Rules->MaxPathFailures)
+	{
+		bStuckExhausted = true;
+		ClearMoveGoal();
+		return;
+	}
+
+	RefreshPath();
+}
+
+void USlimeLocomotionComponent::StopAtGoal()
+{
+	bAtGoal = true;
+	bHasGoal = false;
+	PathPoints.Reset();
+	PathIndex = 0;
+	SmoothedDirection = FVector::ZeroVector;
+	bStopped = true;
+
+	if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+	{
+		Character->GetCharacterMovement()->StopMovementImmediately();
+	}
+}

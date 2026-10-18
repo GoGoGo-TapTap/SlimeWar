@@ -52,3 +52,5 @@ Docs/GameDesign/
 Thumbs.db
 Desktop.ini
 .DS_Store
+.tools/gdre/GDRE_tools-v2.7.4-windows.zip
+/.tools

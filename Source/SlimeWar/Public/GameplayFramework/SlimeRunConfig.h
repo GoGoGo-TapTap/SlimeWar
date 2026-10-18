@@ -8,6 +8,7 @@
 
 class UDataTable;
 class USlimeSpawnLayout;
+class USlimeEcologyRules;
 
 /**
  * Single source of truth for run numbers and data table references (DA_RunConfig).
@@ -176,6 +177,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
 	TSoftObjectPtr<UDataTable> WeaponStatTable;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
+	TSoftObjectPtr<USlimeEcologyRules> EcologyRules;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
 	TSoftObjectPtr<USlimeSpawnLayout> SpawnLayout;

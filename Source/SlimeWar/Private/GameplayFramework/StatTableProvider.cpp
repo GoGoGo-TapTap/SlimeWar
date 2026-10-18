@@ -2,6 +2,7 @@
 
 #include "GameplayFramework/StatTableProvider.h"
 #include "Core/SlimeWarLog.h"
+#include "Ecology/SlimeEcologyRules.h"
 #include "Engine/DataTable.h"
 #include "GameplayFramework/SlimeGameSettings.h"
 #include "GameplayFramework/SlimeLevelDefinition.h"
@@ -28,6 +29,7 @@ void UStatTableProvider::Deinitialize()
 	SlimeStatTable = nullptr;
 	WeaponStatTable = nullptr;
 	AggroStatTable = nullptr;
+	EcologyRules = nullptr;
 
 	Super::Deinitialize();
 }
@@ -37,6 +39,7 @@ bool UStatTableProvider::LoadTables()
 	SlimeStatTable = nullptr;
 	WeaponStatTable = nullptr;
 	AggroStatTable = nullptr;
+	EcologyRules = nullptr;
 	RunConfig = nullptr;
 
 	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
@@ -73,6 +76,21 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 	SlimeStatTable = RunConfig->SlimeStatTable.LoadSynchronous();
 	WeaponStatTable = RunConfig->WeaponStatTable.LoadSynchronous();
 	AggroStatTable = RunConfig->AggroStatTable.LoadSynchronous();
+	EcologyRules = RunConfig->EcologyRules.LoadSynchronous();
+
+	if (!EcologyRules)
+	{
+		EcologyRules = LoadObject<USlimeEcologyRules>(
+			nullptr,
+			TEXT("/Game/_SlimeWar/Ecology/DA_EcologyRules.DA_EcologyRules"));
+	}
+
+	if (!EcologyRules)
+	{
+		EcologyRules = GetMutableDefault<USlimeEcologyRules>();
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("StatTableProvider: DA_EcologyRules is missing; using USlimeEcologyRules defaults."));
+	}
 
 	if (!SlimeStatTable)
 	{
@@ -91,10 +109,12 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 			*RunConfig->GetName());
 	}
 
-	UE_LOG(LogSlimeWar, Log, TEXT("StatTableProvider: loaded run config %s (slime table: %s, weapon table: %s)"),
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("StatTableProvider: loaded run config %s (slime table: %s, weapon table: %s, ecology rules: %s)"),
 		*RunConfig->GetName(),
 		SlimeStatTable ? *SlimeStatTable->GetName() : TEXT("none"),
-		WeaponStatTable ? *WeaponStatTable->GetName() : TEXT("none"));
+		WeaponStatTable ? *WeaponStatTable->GetName() : TEXT("none"),
+		EcologyRules ? *EcologyRules->GetName() : TEXT("none"));
 }
 
 bool UStatTableProvider::SelectLevel(FName LevelId)
@@ -144,6 +164,11 @@ bool UStatTableProvider::SelectLevel(FName LevelId)
 bool UStatTableProvider::ReloadTables()
 {
 	return LoadTables();
+}
+
+const USlimeEcologyRules* UStatTableProvider::GetEcologyRules() const
+{
+	return EcologyRules ? EcologyRules : GetDefault<USlimeEcologyRules>();
 }
 
 bool UStatTableProvider::GetSlimeStat(int32 Mass, FSlimeStatRow& Out) const

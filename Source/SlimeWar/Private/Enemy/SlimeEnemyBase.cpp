@@ -35,6 +35,8 @@ ASlimeEnemyBase::ASlimeEnemyBase()
 	BodyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BodyMesh"));
 	BodyMesh->SetupAttachment(RootComponent);
 	BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DefaultBodyMesh = TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(
+		TEXT("/Game/Characters/Slime/SM_Slime_Base.SM_Slime_Base")));
 
 	Health = CreateDefaultSubobject<USlimeHealthComponent>(TEXT("Health"));
 	Health->bAuthoritative = true;
@@ -231,17 +233,19 @@ void ASlimeEnemyBase::ApplyStatRow(int32 NewMass, float HealthFraction)
 	Mass = Row.Mass;
 	GetCharacterMovement()->MaxWalkSpeed = Row.MoveSpeed;
 
-	if (Row.BodyRadius > 0.f)
-	{
-		ApplyBodyRadius(Row.BodyRadius);
-	}
-
 	if (BodyMesh)
 	{
-		if (UStaticMesh* LoadedMesh = Row.Mesh.LoadSynchronous())
+		const TSoftObjectPtr<UStaticMesh>& MeshToLoad =
+			Row.Mesh.IsNull() ? DefaultBodyMesh : Row.Mesh;
+		if (UStaticMesh* LoadedMesh = MeshToLoad.LoadSynchronous())
 		{
 			BodyMesh->SetStaticMesh(LoadedMesh);
 		}
+	}
+
+	if (Row.BodyRadius > 0.f)
+	{
+		ApplyBodyRadius(Row.BodyRadius);
 	}
 
 	if (Health)
@@ -281,17 +285,19 @@ void ASlimeEnemyBase::ApplyAggroStatRow()
 		GetCharacterMovement()->MaxWalkSpeed = Row.MoveSpeed;
 	}
 
-	if (Row.BodyRadius > 0.f)
-	{
-		ApplyBodyRadius(Row.BodyRadius);
-	}
-
 	if (BodyMesh)
 	{
-		if (UStaticMesh* LoadedMesh = Row.Mesh.LoadSynchronous())
+		const TSoftObjectPtr<UStaticMesh>& MeshToLoad =
+			Row.Mesh.IsNull() ? DefaultBodyMesh : Row.Mesh;
+		if (UStaticMesh* LoadedMesh = MeshToLoad.LoadSynchronous())
 		{
 			BodyMesh->SetStaticMesh(LoadedMesh);
 		}
+	}
+
+	if (Row.BodyRadius > 0.f)
+	{
+		ApplyBodyRadius(Row.BodyRadius);
 	}
 
 	if (Health)
@@ -308,20 +314,62 @@ void ASlimeEnemyBase::ApplyBodyRadius(float Radius)
 		return;
 	}
 
-	const float OldHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
+	// Spawn slots place the capsule bottom 2 cm above the ground. Preserve that foot position when
+	// the capsule changes from the ACharacter default to the mass-specific sphere.
+	const float OldHalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+	const FVector OldLocation = GetActorLocation();
+	const float FootZ = OldLocation.Z - OldHalfHeight;
 
-	// UCapsuleComponent::SetCapsuleSize does CapsuleHalfHeight = max(0, NewHalfHeight, NewRadius),
-	// so a radius larger than the current half height silently makes the capsule taller.
-	Capsule->SetCapsuleRadius(Radius);
+	// Set both dimensions explicitly: SetCapsuleRadius alone clamps half height to the old value and
+	// leaves a tall cylinder whose pivot is far above the visual ball.
+	Capsule->SetCapsuleSize(Radius, Radius, /*bUpdateOverlaps=*/true);
 
-	const float DeltaHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight() - OldHalfHeight;
-	if (DeltaHalfHeight > 0.f)
+	const float NewHalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+	SetActorLocation(
+		FVector(OldLocation.X, OldLocation.Y, FootZ + NewHalfHeight),
+		/*bSweep=*/false,
+		nullptr,
+		ETeleportType::TeleportPhysics);
+
+	FitBodyMeshToBodyRadius(Radius);
+}
+
+void ASlimeEnemyBase::FitBodyMeshToBodyRadius(float Radius)
+{
+	if (!BodyMesh || Radius <= 0.f)
 	{
-		// The actor origin is the capsule centre, so a taller capsule would grow downwards and sink
-		// into the floor (that is what wedged the first mass 8 slimes). Keep the feet where they
-		// were: a safety net for any future stat row that outgrows the capsule.
-		AddActorWorldOffset(FVector(0.f, 0.f, DeltaHalfHeight), /*bSweep=*/false);
+		return;
 	}
+
+	const UStaticMesh* StaticMesh = BodyMesh->GetStaticMesh();
+	if (!StaticMesh)
+	{
+		return;
+	}
+
+	const FBoxSphereBounds MeshBounds = StaticMesh->GetBounds();
+	const float HorizontalExtent =
+		FMath::Max(MeshBounds.BoxExtent.X, MeshBounds.BoxExtent.Y);
+
+	if (HorizontalExtent <= KINDA_SMALL_NUMBER)
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("ASlimeEnemyBase::FitBodyMeshToBodyRadius: %s has no usable horizontal bounds."),
+			*GetNameSafe(StaticMesh));
+		return;
+	}
+
+	// Match the visual half width to BodyRadius. The Z offset then puts the visual bounds bottom
+	// on the capsule bottom, regardless of the mesh pivot chosen by the artist/importer.
+	const float VisualScale = Radius / HorizontalExtent;
+	const float VisualBottomFromPivot =
+		(MeshBounds.Origin.Z - MeshBounds.BoxExtent.Z) * VisualScale;
+
+	BodyMesh->SetRelativeScale3D(FVector(VisualScale));
+	BodyMesh->SetRelativeLocation(FVector(
+		-MeshBounds.Origin.X * VisualScale,
+		-MeshBounds.Origin.Y * VisualScale,
+		-Radius - VisualBottomFromPivot));
 }
 
 void ASlimeEnemyBase::SetFusionTarget(ASlimeEnemyBase* InTarget)

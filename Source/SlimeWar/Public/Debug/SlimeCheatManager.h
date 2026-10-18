@@ -6,6 +6,9 @@
 #include "GameFramework/CheatManager.h"
 #include "SlimeCheatManager.generated.h"
 
+class ASlimeEnemyBase;
+class ASlimeEcologyEnemy;
+
 /**
  * Phase 0 cheat commands used by the CP-0 acceptance pass.
  * Type these into the PIE console (backtick).
@@ -27,6 +30,43 @@ public:
 	/** Apply Amount damage to the closest live enemy through the unified damage entry. */
 	UFUNCTION(Exec)
 	void SlimeDamageNearestEnemy(float Amount);
+
+	/** Print capsule, mesh and ground heights for the M1 grounding acceptance check. */
+	UFUNCTION(Exec)
+	void SlimeDumpBodyMetrics();
+
+	/** Spawn mass 1/4/8 in the open, then dump grounding metrics and take screenshots. */
+	UFUNCTION(Exec)
+	void SlimeGroundingTest();
+
+	// -- M2: ecology locomotion --
+
+	UFUNCTION(Exec)
+	void SlimeSpawnEcology(int32 Count = 10, int32 Faction = 0, int32 Mass = 1);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyStatus();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyBodyStatus();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyAimLock(int32 Locked = 1);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyExternalPush(float Speed = 400.f);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyStunTest(float Seconds = 1.5f);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyBodyTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologySoakTest(float Seconds = 60.f);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyAvoidanceTest();
 
 	// -- Phase A: CP-1 needs enemies before the Phase C spawn points exist. --
 
@@ -103,4 +143,63 @@ public:
 	/** Toggle the pause menu through the same path the P key uses. */
 	UFUNCTION(Exec)
 	void SlimePause();
+
+private:
+	/** Same-frame spawns are not always visible to the actor iterator yet; retry once next tick. */
+	UFUNCTION()
+	void RetryDumpBodyMetrics();
+
+	UFUNCTION()
+	void RetryDumpBodyMetricsLate();
+
+	UFUNCTION()
+	void FinishGroundingTest();
+
+	UFUNCTION()
+	void ApplyGroundingRuntimeMassChange();
+
+	UFUNCTION()
+	void FinishEcologySoak();
+
+	UFUNCTION()
+	void BeginEcologyAvoidanceContact();
+
+	UFUNCTION()
+	void ConfirmEcologyAvoidanceSubjects();
+
+	UFUNCTION()
+	void BeginEcologyAvoidanceRecovery();
+
+	UFUNCTION()
+	void FinishEcologyAvoidance();
+
+	UFUNCTION()
+	void AdvanceEcologyBodyTest();
+
+	void DumpBodyMetricsNow();
+	void RefreshEcologyTestList();
+	ASlimeEcologyEnemy* FindNearestEcologyEnemy() const;
+	FVector ComputeEcologyGroupCentre() const;
+	int32 CountStaticPenetrations() const;
+	float ComputeMinimumPairDistance() const;
+	float ComputeAverageGroupDistance() const;
+
+	FTimerHandle BodyMetricsTimer;
+	FTimerHandle BodyMetricsLateTimer;
+	FTimerHandle GroundingTestTimer;
+	FTimerHandle GroundingMassChangeTimer;
+	FTimerHandle EcologySoakTimer;
+	FTimerHandle EcologyAvoidanceTimer;
+	FTimerHandle EcologyBodyTestTimer;
+	TArray<TWeakObjectPtr<ASlimeEnemyBase>> GroundingTestSlimes;
+	TArray<TWeakObjectPtr<ASlimeEcologyEnemy>> EcologyTestSlimes;
+	TArray<TWeakObjectPtr<ASlimeEcologyEnemy>> EcologyAvoidanceSubjects;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyPrimaryAvoidanceSubject;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyBodyTestTarget;
+	FVector EcologyAimLockAnchor = FVector::ZeroVector;
+	FVector EcologyTestCentre = FVector::ZeroVector;
+	float EcologySoakStartTime = 0.f;
+	int32 EcologyPathRequestsAtStart = 0;
+	int32 EcologyBodyTestStage = 0;
+	int32 GroundingTestStage = 0;
 };
