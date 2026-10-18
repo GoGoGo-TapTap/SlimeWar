@@ -137,6 +137,9 @@ protected:
 	/** Aim assist cone search; returns CameraForward unchanged when not aiming or nothing is close. */
 	FVector GetAimDirectionWithAssist(const FVector& CameraLocation, const FVector& CameraForward, float MaxRange, AActor** OutAssistTarget = nullptr) const;
 
+	/** M3: push nearby mass 1-3 ecology bodies without damage or ammo. */
+	void ApplyBodyPushToNearbyEcology();
+
 	bool HasClearShot(const FVector& From, const AActor* Target) const;
 
 	const USlimeRunConfig* GetRunConfig() const;
@@ -199,4 +202,8 @@ protected:
 
 	/** True while the run is not in Running (Phase D). Gates the input handlers, not the component. */
 	bool bInputBlocked = false;
+
+	/** M3: last world-space movement intent, used when collision has already zeroed velocity. */
+	FVector LastMoveDirection = FVector::ZeroVector;
+	float LastMoveInputTime = -100.f;
 };

@@ -12,6 +12,10 @@
 #include "Core/SlimeWarCVars.h"
 #include "Core/SlimeWarLog.h"
 #include "DrawDebugHelpers.h"
+#include "Ecology/SlimeBodyInteractionComponent.h"
+#include "Ecology/SlimeEcologyEnemy.h"
+#include "Ecology/SlimeEcologyRules.h"
+#include "Ecology/SlimeEcologySubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/OverlapResult.h"
@@ -38,8 +42,7 @@ ASlimeWarCharacter::ASlimeWarCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Capsule stays at the template size; Phase A only moves the tuning values into data.
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+	GetCapsuleComponent()->InitCapsuleSize(43.f, 90.0f);
 
 	// Normal slimes sit on their own object channel and the player *overlaps* them instead of
 	// blocking. Blocking two capsules makes the player's sweeps push the slime out of the way
@@ -379,6 +382,8 @@ void ASlimeWarCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	ApplyBodyPushToNearbyEcology();
+
 	// Hold-to-fire: the cooldown GameplayEffect is what actually gates the rate, so simply
 	// asking again every frame is enough (a blocked activation is silently ignored).
 	if (bWantsToFire && !bInputBlocked && AbilitySystem && Health && !Health->IsDead())
@@ -408,6 +413,92 @@ void ASlimeWarCharacter::Tick(float DeltaSeconds)
 			DrawDebugLine(GetWorld(), CameraLocation, AssistTarget->GetActorLocation(),
 				FColor::Green, false, -1.f, 0, 3.f);
 		}
+	}
+}
+
+void ASlimeWarCharacter::ApplyBodyPushToNearbyEcology()
+{
+	if (bInputBlocked || !Health || Health->IsDead())
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	const USlimeEcologySubsystem* Ecology = World
+		? World->GetSubsystem<USlimeEcologySubsystem>()
+		: nullptr;
+	const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+	const UCapsuleComponent* PlayerCapsule = GetCapsuleComponent();
+	if (!Ecology || !Rules || !PlayerCapsule)
+	{
+		return;
+	}
+
+	const FVector PlayerLocation = GetActorLocation();
+	const FVector PlayerVelocity = GetVelocity();
+	const float PlayerSpeed = PlayerVelocity.Size2D();
+	const float Now = World ? World->GetTimeSeconds() : 0.f;
+	const FVector ControlInput = GetLastMovementInputVector();
+	const bool bHasControlInput = ControlInput.SizeSquared2D() > KINDA_SMALL_NUMBER;
+	const bool bHasRecentMoveInput =
+		Now - LastMoveInputTime <= 0.15f && !LastMoveDirection.IsNearlyZero();
+	if (PlayerSpeed < 10.f && !bHasRecentMoveInput && !bHasControlInput)
+	{
+		return;
+	}
+
+	TArray<ASlimeEcologyEnemy*> Neighbours;
+	Ecology->QueryAgentsAroundLocation(
+		PlayerLocation,
+		PlayerCapsule->GetScaledCapsuleRadius()
+			+ Rules->BodyPushContactPadding
+			+ 80.f,
+		Neighbours);
+
+	const FVector MoveDirection = PlayerSpeed >= 10.f
+		? PlayerVelocity.GetSafeNormal2D()
+		: (!LastMoveDirection.IsNearlyZero()
+			? LastMoveDirection
+			: ControlInput.GetSafeNormal2D());
+	const float MaxPlayerSpeed = FMath::Max(1.f, GetCharacterMovement()->MaxWalkSpeed);
+	const float EffectivePlayerSpeed = PlayerSpeed >= 10.f
+		? PlayerSpeed
+		: MaxPlayerSpeed * 0.5f;
+	for (ASlimeEcologyEnemy* Slime : Neighbours)
+	{
+		const UCapsuleComponent* SlimeCapsule = Slime ? Slime->GetCapsuleComponent() : nullptr;
+		USlimeBodyInteractionComponent* Body = Slime ? Slime->GetBodyInteraction() : nullptr;
+		if (!Slime || !SlimeCapsule || !Body || Slime->GetMass() > Rules->BodyPushMaxMass)
+		{
+			continue;
+		}
+
+		const FVector ToSlime = Slime->GetActorLocation() - PlayerLocation;
+		const float ContactDistance =
+			PlayerCapsule->GetScaledCapsuleRadius()
+			+ SlimeCapsule->GetScaledCapsuleRadius()
+			+ Rules->BodyPushContactPadding;
+		if (ToSlime.Size2D() > ContactDistance
+			|| FMath::Abs(ToSlime.Z) > 120.f)
+		{
+			continue;
+		}
+
+		FVector PushDirection =
+			(ToSlime.GetSafeNormal2D() * 0.65f + MoveDirection * 0.35f).GetSafeNormal2D();
+		if (PushDirection.IsNearlyZero())
+		{
+			PushDirection = MoveDirection;
+		}
+
+		const float SpeedScale =
+			1.f + (EffectivePlayerSpeed / MaxPlayerSpeed) * Rules->BodyPushPlayerSpeedScale;
+		const float MassScale =
+			FMath::Pow(static_cast<float>(FMath::Max(1, Slime->GetMass())), Rules->BodyPushMassExponent);
+		Body->ReceiveBodyPush(
+			PushDirection,
+			Rules->BodyPushBaseSpeed * SpeedScale / MassScale,
+			this);
 	}
 }
 
@@ -574,6 +665,10 @@ void ASlimeWarCharacter::Move(const FInputActionValue& Value)
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
+		LastMoveDirection =
+			(ForwardDirection * MovementVector.Y + RightDirection * MovementVector.X)
+			.GetSafeNormal2D();
+		LastMoveInputTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
 	}

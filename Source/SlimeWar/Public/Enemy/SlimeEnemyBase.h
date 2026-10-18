@@ -56,6 +56,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
 	USlimeFusionComponent* GetFusionComponent() const { return Fusion; }
 
+	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
+	UStaticMeshComponent* GetBodyMeshComponent() const { return BodyMesh; }
+
 	/**
 	 * Look up the stat row for a mass tier and apply health / speed / size / mesh.
 	 * HealthFraction is forwarded to USlimeHealthComponent::InitializeHealth so a fused slime
@@ -69,10 +72,11 @@ public:
 	void ApplyAggroStatRow();
 
 	/**
-	 * Set the capsule radius without letting the capsule sink into the floor.
-	 * UCapsuleComponent::SetCapsuleRadius forces half height >= radius, and the actor origin is the
-	 * capsule centre, so an oversized radius would push the bottom below the ground and wedge the
-	 * character. See the implementation for the compensation.
+	 * Resize the body to a sphere whose bottom stays at the same world Z.
+	 *
+	 * The engine capsule origin is its centre, while the Godot slime origin is at its feet. The
+	 * capsule is therefore kept spherical (half height == radius) and the actor is moved after a
+	 * resize so its feet do not move. The visual mesh is then fitted to that same sphere.
 	 */
 	void ApplyBodyRadius(float Radius);
 
@@ -138,7 +142,7 @@ public:
 	 * Safe to call repeatedly; it is refreshed whenever the player pawn may have changed.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
-	void IgnorePlayerForMovement();
+	virtual void IgnorePlayerForMovement();
 
 	/**
 	 * Phase D: freeze everything this actor drives, without touching the run flow.
@@ -181,6 +185,13 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	TObjectPtr<UStaticMeshComponent> BodyMesh;
+
+	/** Used when a stat row has no mesh of its own (the current placeholder rows). */
+	UPROPERTY(EditDefaultsOnly, Category = "Slime|Enemy")
+	TSoftObjectPtr<UStaticMesh> DefaultBodyMesh;
+
+	/** Fit and centre the static mesh so its visual bottom matches the capsule bottom. */
+	void FitBodyMeshToBodyRadius(float Radius);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	ETargetKind TargetKind = ETargetKind::Normal;

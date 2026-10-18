@@ -9,6 +9,15 @@
 
 class UStaticMesh;
 
+/** Ecology allegiance. C is reserved for the later three-site layout. */
+UENUM(BlueprintType)
+enum class ESlimeFaction : uint8
+{
+	A UMETA(DisplayName = "Faction A"),
+	B UMETA(DisplayName = "Faction B"),
+	C UMETA(DisplayName = "Faction C")
+};
+
 /**
  * Target kind. Normal slimes can fuse with each other and award score.
  * Aggressive slimes chase and attack the player and never award score.

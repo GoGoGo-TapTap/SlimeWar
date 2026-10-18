@@ -1,0 +1,83 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Components/ActorComponent.h"
+#include "SlimeEcologyBrainComponent.generated.h"
+
+class APawn;
+class ASlimeEcologyEnemy;
+class USlimeEcologyRules;
+class USlimeEcologySubsystem;
+class USlimeLocomotionComponent;
+
+UENUM(BlueprintType)
+enum class ESlimeEcologyBehavior : uint8
+{
+	Paused,
+	AvoidPlayer,
+	Regroup,
+	Explore
+};
+
+/** M2 perception, group and exploration decisions for one ecology slime. */
+UCLASS(ClassGroup = (SlimeWar), meta = (BlueprintSpawnableComponent))
+class SLIMEWAR_API USlimeEcologyBrainComponent : public UActorComponent
+{
+	GENERATED_BODY()
+
+public:
+	USlimeEcologyBrainComponent();
+
+	virtual void BeginPlay() override;
+	virtual void TickComponent(
+		float DeltaTime,
+		ELevelTick TickType,
+		FActorComponentTickFunction* ThisTickFunction) override;
+
+	void SetHome(const FVector& InHome, float InActivityRadius);
+	void ForceRefresh();
+
+	ESlimeEcologyBehavior GetBehavior() const { return Behavior; }
+	const TCHAR* GetBehaviorName() const;
+	FVector GetGroupCenter() const { return GroupCenter; }
+	FVector GetDesiredGoal() const { return DesiredGoal; }
+	float GetDesiredSpeed() const { return DesiredSpeed; }
+	int32 GetVisibleAllyCount() const;
+	int32 GetRefreshCount() const { return RefreshCount; }
+	bool IsPlayerVisible() const { return bPlayerVisible; }
+	float GetPlayerDistance() const { return PlayerDistance; }
+
+	/** Cached-neighbour separation force used by the per-frame locomotion layer. */
+	FVector GetSeparationVector() const;
+
+private:
+	ASlimeEcologyEnemy* GetOwnerEnemy() const;
+	USlimeLocomotionComponent* GetLocomotion() const;
+	USlimeEcologySubsystem* GetEcologySubsystem() const;
+
+	void RefreshPerception();
+	void UpdateBehavior();
+	void ChooseExploreGoal();
+	FVector ChooseAvoidGoal(const FVector& AwayDirection) const;
+	bool HasLineOfSight(const AActor* Target) const;
+	bool ProjectToNavigation(const FVector& Desired, FVector& OutLocation) const;
+
+	ESlimeEcologyBehavior Behavior = ESlimeEcologyBehavior::Paused;
+	FVector HomeLocation = FVector::ZeroVector;
+	FVector GroupCenter = FVector::ZeroVector;
+	FVector DesiredGoal = FVector::ZeroVector;
+	float ActivityRadius = 0.f;
+	float DesiredSpeed = 0.f;
+	float RefreshCountdown = 0.f;
+	float ExploreGoalAge = 0.f;
+	float AvoidGoalAge = 0.f;
+	float PlayerDistance = TNumericLimits<float>::Max();
+	bool bPlayerVisible = false;
+	bool bHasExploreGoal = false;
+	TArray<TWeakObjectPtr<ASlimeEcologyEnemy>> VisibleAllies;
+	TWeakObjectPtr<APawn> CachedPlayer;
+	FRandomStream RandomStream;
+	int32 RefreshCount = 0;
+};

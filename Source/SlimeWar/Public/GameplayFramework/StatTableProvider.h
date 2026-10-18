@@ -8,6 +8,7 @@
 #include "StatTableProvider.generated.h"
 
 class USlimeRunConfig;
+class USlimeEcologyRules;
 class UDataTable;
 
 /**
@@ -48,6 +49,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Data")
 	const USlimeRunConfig* GetRunConfig() const { return RunConfig; }
 
+	UFUNCTION(BlueprintPure, Category = "Slime|Data")
+	const USlimeEcologyRules* GetEcologyRules() const;
+
 	/**
 	 * Switch to the run config owned by a level, then reload the table references.
 	 *
@@ -77,4 +81,7 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDataTable> AggroStatTable = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USlimeEcologyRules> EcologyRules = nullptr;
 };
