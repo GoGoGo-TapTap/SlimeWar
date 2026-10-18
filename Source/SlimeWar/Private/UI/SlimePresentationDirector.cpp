@@ -4,12 +4,16 @@
 
 #include "Core/SlimeWarLog.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Flow/RunSubsystem.h"
 #include "Flow/SlimeRunGameState.h"
+#include "Flow/SlimeSessionSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayFramework/SlimeGameSettings.h"
+#include "GameplayFramework/SlimeLevelDefinition.h"
 #include "GameplayFramework/SlimeRunConfig.h"
+#include "GameplayFramework/StatTableProvider.h"
 #include "LevelSequence.h"
 #include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"
@@ -101,21 +105,54 @@ void USlimePresentationDirector::HandleRunStateChanged(ESlimeRunState NewState)
 	}
 }
 
+const USlimeRunConfig* USlimePresentationDirector::GetRunConfig() const
+{
+	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
+	const UStatTableProvider* Provider = GameInstance ? GameInstance->GetSubsystem<UStatTableProvider>() : nullptr;
+	return Provider ? Provider->GetRunConfig() : nullptr;
+}
+
+const USlimeLevelDefinition* USlimePresentationDirector::GetLevelDefinition() const
+{
+	const USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
+	return Session ? Session->GetSelectedLevelDefinition() : nullptr;
+}
+
+const TArray<FSoftObjectPath>& USlimePresentationDirector::GetDeploySequences() const
+{
+	if (const USlimeLevelDefinition* Level = GetLevelDefinition())
+	{
+		if (Level->DeploySequences.Num() > 0)
+		{
+			return Level->DeploySequences;
+		}
+	}
+
+	// Levels authored before this field existed (and PIE-opened maps) keep using the global list.
+	if (const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>())
+	{
+		return Settings->DeploySequences;
+	}
+
+	static const TArray<FSoftObjectPath> Empty;
+	return Empty;
+}
+
 void USlimePresentationDirector::PlayDeployment()
 {
 	StopCurrentSequence();
 
-	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
-	const USlimeRunConfig* RunConfig = Settings ? Settings->RunConfig.LoadSynchronous() : nullptr;
+	const USlimeRunConfig* RunConfig = GetRunConfig();
 	const float Duration = RunConfig ? FMath::Max(0.f, RunConfig->DeployDuration) : 0.f;
 
 	const URunSubsystem* Run = URunSubsystem::Get(this);
 	const int32 DropIndex = Run ? Run->GetSelectedDropPoint() : INDEX_NONE;
 
 	ULevelSequence* Sequence = nullptr;
-	if (Settings && Settings->DeploySequences.IsValidIndex(DropIndex))
+	const TArray<FSoftObjectPath>& Sequences = GetDeploySequences();
+	if (Sequences.IsValidIndex(DropIndex))
 	{
-		Sequence = Cast<ULevelSequence>(Settings->DeploySequences[DropIndex].TryLoad());
+		Sequence = Cast<ULevelSequence>(Sequences[DropIndex].TryLoad());
 	}
 
 	if (Sequence)
@@ -156,8 +193,23 @@ void USlimePresentationDirector::PlayResult()
 {
 	StopCurrentSequence();
 
-	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
-	ULevelSequence* Sequence = Settings ? Cast<ULevelSequence>(Settings->ResultSequence.TryLoad()) : nullptr;
+	// Level first, global second - the same rule the deployment sequences follow.
+	ULevelSequence* Sequence = nullptr;
+	if (const USlimeLevelDefinition* Level = GetLevelDefinition())
+	{
+		if (!Level->ResultSequence.IsNull())
+		{
+			Sequence = Cast<ULevelSequence>(Level->ResultSequence.TryLoad());
+		}
+	}
+
+	if (!Sequence)
+	{
+		if (const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>())
+		{
+			Sequence = Cast<ULevelSequence>(Settings->ResultSequence.TryLoad());
+		}
+	}
 
 	if (!Sequence)
 	{
@@ -167,7 +219,7 @@ void USlimePresentationDirector::PlayResult()
 		return;
 	}
 
-	const USlimeRunConfig* RunConfig = Settings ? Settings->RunConfig.LoadSynchronous() : nullptr;
+	const USlimeRunConfig* RunConfig = GetRunConfig();
 	WarnIfLengthDiffers(Sequence, RunConfig ? RunConfig->ResultOrbitDuration : 0.f, TEXT("ResultOrbitDuration"));
 
 	StartSequence(Sequence);

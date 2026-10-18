@@ -47,6 +47,19 @@ void URunSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 
 	BindDirectorEvents();
 
+	// The selected level decides which RunConfig this world runs with, so the switch has to happen
+	// before anything reads bAutoStartRun, a duration or a stat. Everything downstream (the run
+	// timeline, the player, the enemies, StateTree) reads the provider, never the settings, so this
+	// one call is what makes the whole config chain per-level.
+	if (UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+	{
+		if (UStatTableProvider* Provider = GameInstance->GetSubsystem<UStatTableProvider>())
+		{
+			const USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
+			Provider->SelectLevel(Session ? Session->GetSelectedLevelId() : NAME_None);
+		}
+	}
+
 	// UWorldSubsystem::OnWorldBeginPlay runs BEFORE GameMode::StartPlay(), so the GameState and the
 	// spawn point actors have not had their BeginPlay yet. Deferring by one frame lets them pull
 	// their first snapshot and register themselves.
@@ -335,8 +348,11 @@ void URunSubsystem::RequestRetry(bool bReselectDropPoint)
 	{
 		if (bReselectDropPoint)
 		{
-			// Back to the preparation screen: no drop point, no auto deploy.
+			// Back to the preparation screen: no drop point, but the next world must still enter the
+			// game - without this flag USlimeUISubsystem would treat the reload as a fresh launch and
+			// show the main menu instead of the preparation screen.
 			Session->ClearSelectedDropPoint();
+			Session->RequestEnterGameplay();
 		}
 		else
 		{

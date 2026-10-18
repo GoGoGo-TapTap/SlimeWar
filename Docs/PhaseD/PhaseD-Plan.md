@@ -36,7 +36,7 @@
 | D4 | 结算冻结 | **Flow 主动下发** `ASlimeEnemyBase::SetRunFrozen(bool)` | 相机走正常 tick，无全局副作用；用时间膨胀或引擎暂停会连带影响 Sequencer 与 UI |
 | D5 | "首个融合附近" | **扩展 `IBattleDirector::OnEnemyFused` 带位置** | 走 §7.4 契约变更流程，同步 GameMode 委托与 `URunSubsystem` 处理 |
 | D6 | 三点位白盒 | **新建 `L_Whitebox_CityPlaza`** | `L_Sandbox_OnePoint` 保留给 CP-3 回归；地图为二进制资产，单人持锁 |
-| D7 | 暂停 | **做暂停菜单，沿用已绑定的 P 键**（`IA_Pause`） | 与设计案 3.1 写的"Esc"不符 → 见 §9 偏差登记 |
+| D7 | 暂停 | **做暂停菜单，使用 `Escape` 键**（`IA_Pause`） | 与设计案 3.1 一致；总体 UI 流程见 `Docs/UI/UIFlowImplementationPlan.md` |
 | D8 | 准备页形态 | **静态俯瞰图 + 手摆标记** | 不被地图完工阻塞 |
 | D9 | 演出镜头 | **Level Sequence 资产** | 每个落点一条投放序列 + 共用一条结算序列；时长必须与 DA 对齐（见 §8） |
 
@@ -60,7 +60,7 @@
 | PD-10 | 结算页（数字 + 重试 / 重新选落点 / 退出） | P2 | 资产 + 代码 |
 | PD-11 | 结算俯瞰 2~3s（冻结期间无输入，镜头结束才出结算页） | P2 | 资产 + 代码 |
 | PD-12 | 5 条教学提示 | P2 | 代码 |
-| **PD-13** | **暂停菜单（P 键）**：继续 / 重试 / 重新选落点 / 退出 | P2 | 资产 + 代码 |
+| **PD-13** | **暂停菜单（`Escape` 键）**：继续 / 重试 / 重新选落点 / 退出 | P2 | 资产 + 代码 |
 | CP-4 | 整局闭环实机验收 | P1+P2 | 文档 |
 
 > PD-13 为**新增任务**：设计案 3.1 要求暂停，但 `ProgramTaskList.md` 与 PD-01~PD-12 都没有覆盖它。
@@ -207,7 +207,7 @@ stateDiagram-v2
 
 "只提示一次"的标志放在 HUD 控件内部，随关卡重载自然重建，不进 GameState。
 
-### PD-13 暂停菜单（P2，新增）
+### PD-13 暂停菜单（P2，新增，`Escape` 键）
 
 1. `WBP_SlimePause` + `USlimePauseWidget`：继续 / 重试 / 重新选落点 / 退出。
 2. `ASlimeWarCharacter::OnPausePressed` 改为广播委托；`USlimeUISubsystem` 订阅后 `SetGamePaused(true/false)`。
@@ -260,7 +260,7 @@ SlimePause               # 打开/关闭暂停菜单
 5. 俯瞰 2~3s 内无输入，**结束之后**才出现结算页；
 6. **重试 ×3** 无残留（满血满弹、0 分、180s、点位全 `AwaitingDeploy`、无残留敌人）；
 7. **重新选落点 ×3** 无残留；
-8. 暂停菜单（P 键）可开、按钮可点、重试/重选/退出都通；
+8. 暂停菜单（`Escape` 键）可开、按钮可点、重试/重选/退出都通；
 9. 5 条教学各只出现一次，不暂停战斗、不抢焦点；
 10. 序列时长与 `DeployDuration` / `ResultOrbitDuration` 一致（不一致时日志有 Warning）。
 

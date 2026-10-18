@@ -44,9 +44,49 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
 	void ConfirmPreviewedDropPoint();
 
+	/**
+	 * Leave the preparation screen and go back to the main menu.
+	 *
+	 * This screen has no other way out: the UI subsystem's accessor is a plain C++ static (not a
+	 * UFUNCTION), so a WBP cannot reach it. The forwarder lives here, next to the actions this
+	 * screen already owns.
+	 *
+	 * Uses ReturnToMainMenu rather than ShowMainMenu on purpose: leaving the preparation screen
+	 * means abandoning the attempt, so the world is rebuilt and the next launch starts clean.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
+	void RequestBackToMainMenu();
+
 	UFUNCTION(BlueprintPure, Category = "Slime|UI")
 	int32 GetPreviewedDropPoint() const { return PreviewedDropPoint; }
 
+	/**
+	 * Stable id of the level this screen belongs to. Empty when PIE opened a map directly.
+	 * A screen shared by several levels can branch on it; the normal case is one WBP per level,
+	 * in which case the WBP does not need it.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Slime|UI")
+	FName GetLevelId() const { return CachedLevelId; }
+
+	/**
+	 * Drop point count for this level - the same value OnPreparationReady received.
+	 *
+	 * Use this when the WBP needs the count again later (e.g. validating a marker index); do not
+	 * read the data asset directly.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Slime|UI")
+	int32 GetDropPointCount() const { return CachedDropPointCount; }
+
 protected:
+	/** Range check against the cached count. Shared so confirm cannot skip what preview enforces. */
+	bool IsValidDropPoint(int32 DropPointIndex) const
+	{
+		return DropPointIndex >= 0 && DropPointIndex < CachedDropPointCount;
+	}
+
 	int32 PreviewedDropPoint = INDEX_NONE;
+
+	/** Resolved once in NativeConstruct so hover-time range checks do not re-resolve the asset. */
+	FName CachedLevelId;
+	int32 CachedDropPointCount = 0;
 };

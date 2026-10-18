@@ -10,6 +10,8 @@
 class ALevelSequenceActor;
 class ULevelSequence;
 class ULevelSequencePlayer;
+class USlimeLevelDefinition;
+class USlimeRunConfig;
 
 /**
  * Plays the two Phase D cinematics (PD-07 deployment, PD-11 settlement).
@@ -45,6 +47,20 @@ protected:
 
 	void PlayDeployment();
 	void PlayResult();
+
+	/**
+	 * This run's config, read through UStatTableProvider rather than USlimeGameSettings.
+	 *
+	 * Reading Settings->RunConfig directly was a bug once levels got their own config: the
+	 * deployment length and result orbit would keep using the global numbers.
+	 */
+	const USlimeRunConfig* GetRunConfig() const;
+
+	/** Definition of the level being played; null when PIE opened a map directly. */
+	const USlimeLevelDefinition* GetLevelDefinition() const;
+
+	/** Per-level deployment sequences; falls back to USlimeGameSettings::DeploySequences. */
+	const TArray<FSoftObjectPath>& GetDeploySequences() const;
 
 	/** Play a sequence, replacing whatever was playing. Returns false when it could not start. */
 	bool StartSequence(ULevelSequence* Sequence);

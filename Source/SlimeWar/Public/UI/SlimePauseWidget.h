@@ -9,8 +9,7 @@
 /**
  * Pause menu (PD-13).
  *
- * The key is the one already bound to IA_Pause (P); the design document says Esc, and that
- * difference is registered in Docs/PhaseD/PhaseD-Plan.md §9.
+ * The key is the one bound to IA_Pause (Escape in the design configuration).
  */
 UCLASS(Abstract)
 class SLIMEWAR_API USlimePauseWidget : public UUserWidget

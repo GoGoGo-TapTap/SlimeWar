@@ -6,33 +6,19 @@
 #include "Core/SlimeWarLog.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayFramework/SlimeGameSettings.h"
-#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "UI/SlimeLevelSelectWidget.h"
 #include "UI/SlimeSettingsWidget.h"
-
-namespace
-{
-	const FName MainMenuCityPlazaMap(TEXT("/Game/_SlimeWar/Maps/L_Whitebox_CityPlaza"));
-}
+#include "UI/SlimeUISubsystem.h"
 
 void USlimeMainMenuWidget::StartGame()
 {
-	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
-	if (Settings && !Settings->LevelSelectWidgetClass.IsNull())
+	if (USlimeUISubsystem* UI = USlimeUISubsystem::Get(this))
 	{
-		if (UClass* LevelSelectClass = Settings->LevelSelectWidgetClass.LoadSynchronous())
-		{
-			OpenMenuWidget(LevelSelectClass);
-			return;
-		}
-
-		UE_LOG(LogSlimeWar, Warning,
-			TEXT("USlimeMainMenuWidget: LevelSelectWidgetClass could not be loaded (%s); opening CityPlaza."),
-			*Settings->LevelSelectWidgetClass.ToString());
+		UI->OpenLevelSelect();
+		return;
 	}
 
-	UGameplayStatics::OpenLevel(this, MainMenuCityPlazaMap);
+	UE_LOG(LogSlimeWar, Error, TEXT("USlimeMainMenuWidget: UI subsystem is unavailable; cannot start the game."));
 }
 
 void USlimeMainMenuWidget::OpenSettings()
@@ -90,10 +76,6 @@ void USlimeMainMenuWidget::OpenMenuWidget(TSubclassOf<UUserWidget> WidgetClass)
 	if (USlimeSettingsWidget* SettingsWidget = Cast<USlimeSettingsWidget>(ChildWidget))
 	{
 		SettingsWidget->SetReturnWidget(this);
-	}
-	else if (USlimeLevelSelectWidget* LevelSelectWidget = Cast<USlimeLevelSelectWidget>(ChildWidget))
-	{
-		LevelSelectWidget->SetReturnWidget(this);
 	}
 
 	ChildWidget->AddToViewport(10);

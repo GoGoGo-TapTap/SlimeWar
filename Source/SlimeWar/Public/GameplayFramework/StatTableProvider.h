@@ -48,8 +48,23 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Data")
 	const USlimeRunConfig* GetRunConfig() const { return RunConfig; }
 
+	/**
+	 * Switch to the run config owned by a level, then reload the table references.
+	 *
+	 * Called by URunSubsystem::OnWorldBeginPlay *before* anything reads bAutoStartRun or a duration,
+	 * which is what makes the whole per-level config chain work: player, enemies, StateTree and the
+	 * abilities all read this one pointer.
+	 *
+	 * @return false when the id is unknown or the level has no usable RunConfig; the current
+	 *         config is kept, so an unconfigured level degrades to the global one.
+	 */
+	bool SelectLevel(FName LevelId);
+
 protected:
 	bool LoadTables();
+
+	/** Re-read the three table pointers from RunConfig. No-op safe when RunConfig is null. */
+	void LoadTablesFromRunConfig();
 
 	UPROPERTY(Transient)
 	TObjectPtr<USlimeRunConfig> RunConfig = nullptr;

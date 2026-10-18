@@ -128,17 +128,7 @@ void USlimeHUDWidget::UpdateAll()
 	const int32 CurrentScore = RunState->GetCurrentScore();
 	const int32 TargetScore = RunState->GetTargetScore();
 
-	UE_LOG(
-		LogSlimeWar,
-		Warning,
-		TEXT("[TargetScore][HUD::UpdateAll] Widget=%s Current=%d Target=%d"),
-		*GetNameSafe(this),
-		CurrentScore,
-		TargetScore
-	);
-
 	OnScoreUpdated(CurrentScore, TargetScore);
-	//OnScoreUpdated(RunState->GetCurrentScore(), RunState->GetTargetScore());
 	OnTimeUpdated(RunState->GetRemainingSeconds());
 
 	// Sync the fly-in baseline: showing the HUD is not a kill.

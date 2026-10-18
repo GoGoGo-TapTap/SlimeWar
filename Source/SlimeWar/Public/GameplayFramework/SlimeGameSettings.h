@@ -7,6 +7,7 @@
 #include "SlimeGameSettings.generated.h"
 
 class UGameplayEffect;
+class USlimeLevelDefinition;
 class USlimeRunConfig;
 class UUserWidget;
 
@@ -34,6 +35,23 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Combat")
 	TSoftClassPtr<UGameplayEffect> DamageEffectClass;
 
+	// -- Levels --
+
+	/**
+	 * The level list. Array order IS the level select slot order, which is why this is a TArray and
+	 * not a TMap: "+Levels=" lines in the ini stay readable in the order they are written.
+	 *
+	 * An empty list is supported (the project still runs from a single map opened in PIE).
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Levels")
+	TArray<TSoftObjectPtr<USlimeLevelDefinition>> Levels;
+
+	/** Level definition for a level select slot; null when the slot is not configured. */
+	const USlimeLevelDefinition* FindLevelByIndex(int32 Index) const;
+
+	/** Level definition by stable id; null when nothing matches (including an empty id). */
+	const USlimeLevelDefinition* FindLevelById(FName LevelId) const;
+
 	// -- Phase D UI (PD-05 ~ PD-13) --
 
 	/**
@@ -46,6 +64,10 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> HUDWidgetClass;
 
+	/**
+	 * Fallback drop point screen, used when the current level does not configure its own
+	 * (see USlimeLevelDefinition::PreparationWidgetClass).
+	 */
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> PreparationWidgetClass;
 
@@ -66,7 +88,9 @@ public:
 	TSoftClassPtr<UUserWidget> LevelSelectWidgetClass;
 
 	/**
-	 * Deployment cinematics, one per drop point (index = drop point index in DA_SpawnLayout).
+	 * Fallback deployment cinematics, one per drop point (index = DA_SpawnLayout drop point index).
+	 * Levels normally configure their own in USlimeLevelDefinition::DeploySequences; this list is
+	 * only read when the level leaves it empty.
 	 *
 	 * FSoftObjectPath rather than TSoftObjectPtr so the value serialises cleanly in an ini list.
 	 * A missing entry means "no cinematic": the director confirms the deployment immediately.
@@ -74,9 +98,24 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	TArray<FSoftObjectPath> DeploySequences;
 
-	/** Settlement orbit camera. Empty means "no orbit": the run goes straight to the result screen. */
+	/** Fallback settlement orbit camera, used when the level does not configure one. */
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	FSoftObjectPath ResultSequence;
+
+	/**
+	 * Editor convenience: start PIE directly on the preparation screen of the current map instead of
+	 * stopping at the main menu first.
+	 *
+	 * **Off by default**: starting a session must look the same in PIE and in a packaged build, or
+	 * "it works in editor" stops meaning anything. Turn it on only while debugging a single map's
+	 * combat or drop point screen, and remember that with it on you cannot test the menu flow.
+	 *
+	 * Ignored when the session explicitly asked for the main menu
+	 * (USlimeSessionSubsystem::RequestMainMenu), so leaving a run always lands on the main menu.
+	 * Has no effect outside the editor.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "UI|Editor")
+	bool bSkipMainMenuInPIE = false;
 
 	virtual FName GetCategoryName() const override { return TEXT("Game"); }
 };
