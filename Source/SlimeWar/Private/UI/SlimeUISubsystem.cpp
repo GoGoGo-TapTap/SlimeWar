@@ -7,13 +7,16 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "Flow/RunSubsystem.h"
+#include "Flow/SlimeSessionSubsystem.h"
 #include "Flow/SlimeRunGameState.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayFramework/SlimeGameSettings.h"
+#include "GameplayFramework/SlimeLevelDefinition.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "Player/SlimeWarCharacter.h"
 #include "TimerManager.h"
+#include "UI/SlimeLevelSelectWidget.h"
+#include "UI/SlimeMainMenuWidget.h"
 #include "UI/SlimeResultWidget.h"
 
 USlimeUISubsystem* USlimeUISubsystem::Get(const UObject* WorldContextObject)
@@ -107,6 +110,27 @@ void USlimeUISubsystem::SetupUI()
 
 	EnsureWidgets();
 
+	USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
+
+	// "Leave the run" is the only request that may override the editor's PIE shortcut, so it is
+	// consumed before ShouldEnterGameplay() is asked anything.
+	const bool bMainMenuRequested = Session && Session->ConsumeMainMenuRequest();
+
+	if (bMainMenuRequested || !ShouldEnterGameplay())
+	{
+		ApplyMenuState(ESlimeUIFlowState::MainMenu);
+		return;
+	}
+
+	if (Session)
+	{
+		Session->ConsumeGameplayEntryRequest();
+	}
+
+	// Before the "no preparation screen" fallback below: that check has to see the real widget, or
+	// every run would silently deploy to drop point 0.
+	EnsurePreparationWidget();
+
 	const ESlimeRunState Phase = BoundGameState.IsValid() ? BoundGameState->GetRunState() : ESlimeRunState::Idle;
 
 	// Degrade instead of dead-ending.
@@ -139,7 +163,28 @@ void USlimeUISubsystem::SetupUI()
 		return;
 	}
 
+	// A same-point retry reloads straight into Deploying, but URunSubsystem and this subsystem both
+	// run on next tick and the order is not guaranteed. Showing the preparation screen here would
+	// flash it for a frame when this one wins.
+	//
+	// Waiting one more tick instead of returning outright: by then the deployment has either started
+	// (nothing to show) or failed (the preparation screen MUST appear, or the player sits in front of
+	// an empty screen with no way into the run).
+	if (Session && Session->HasAutoDeployRequest() && Phase == ESlimeRunState::Idle)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimerForNextTick(this, &USlimeUISubsystem::ApplyBoundPhaseToScreens);
+		}
+		return;
+	}
+
 	ApplyPhaseToScreens(Phase);
+}
+
+void USlimeUISubsystem::ApplyBoundPhaseToScreens()
+{
+	ApplyPhaseToScreens(BoundGameState.IsValid() ? BoundGameState->GetRunState() : ESlimeRunState::Idle);
 }
 
 void USlimeUISubsystem::EnsureWidgets()
@@ -165,41 +210,218 @@ void USlimeUISubsystem::EnsureWidgets()
 
 	// A missing class is a supported state: the code side ships before the WBP assets do, and the
 	// run still plays (only that screen is skipped).
-	auto CreateScreen = [PC](const TSoftClassPtr<UUserWidget>& WidgetClass, const TCHAR* Label) -> UUserWidget*
-	{
-		UClass* LoadedClass = WidgetClass.LoadSynchronous();
-		if (!LoadedClass)
-		{
-			// Distinguish "nothing configured" from "a path that does not resolve yet": the second
-			// case is the normal state while the WBP assets are still being made, and seeing the
-			// actual path is what makes that obvious.
-			UE_LOG(LogSlimeWar, Warning,
-				TEXT("USlimeUISubsystem: %s widget class could not be loaded (%s); that screen is skipped."),
-				Label,
-				WidgetClass.IsNull()
-					? TEXT("not set in Project Settings -> Game -> Slime War")
-					: *WidgetClass.ToString());
-			return nullptr;
-		}
+	MainMenuWidget = CreateScreenWidget(Settings->MainMenuWidgetClass, TEXT("MainMenu"));
+	LevelSelectWidget = CreateScreenWidget(Settings->LevelSelectWidgetClass, TEXT("LevelSelect"));
 
-		TSubclassOf<UUserWidget> Class = LoadedClass;
-		UUserWidget* Widget = CreateWidget<UUserWidget>(PC, Class);
+	// A menu world only ever shows the two screens above; loading the HUD, the settlement screen and
+	// the pause menu there is pure waste (each one is a class load plus a widget). They are created
+	// in the world that will actually run the game.
+	if (ShouldEnterGameplay())
+	{
+		HUDWidget = CreateScreenWidget(Settings->HUDWidgetClass, TEXT("HUD"));
+		ResultWidget = CreateScreenWidget(Settings->ResultWidgetClass, TEXT("Result"));
+		PauseWidget = CreateScreenWidget(Settings->PauseWidgetClass, TEXT("Pause"));
+	}
+
+	// The drop point screen is deliberately absent: its class depends on the level, so it is created
+	// by EnsurePreparationWidget() the first time a phase actually needs it.
+}
+
+UUserWidget* USlimeUISubsystem::CreateScreenWidget(const TSoftClassPtr<UUserWidget>& WidgetClass, const FString& Label)
+{
+	APlayerController* PC = GetPlayerController();
+	if (!PC)
+	{
+		return nullptr;
+	}
+
+	UClass* LoadedClass = WidgetClass.LoadSynchronous();
+	if (!LoadedClass)
+	{
+		// Distinguish "nothing configured" from "a path that does not resolve yet": the second case
+		// is the normal state while the WBP assets are still being made, and seeing the actual path
+		// is what makes that obvious.
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("USlimeUISubsystem: %s widget class could not be loaded (%s); that screen is skipped."),
+			*Label,
+			WidgetClass.IsNull()
+				? TEXT("not set in Project Settings -> Game -> Slime War")
+				: *WidgetClass.ToString());
+		return nullptr;
+	}
+
+	TSubclassOf<UUserWidget> Class = LoadedClass;
+	UUserWidget* Widget = CreateWidget<UUserWidget>(PC, Class);
+	if (Widget)
+	{
+		Widget->AddToViewport(0);
+		Widget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	return Widget;
+}
+
+void USlimeUISubsystem::EnsurePreparationWidget()
+{
+	if (PreparationWidget)
+	{
+		return;
+	}
+
+	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+	if (!Settings)
+	{
+		return;
+	}
+
+	// Level first, global second. A level that does not configure a drop point screen keeps working
+	// with the single screen the project shipped with, which also covers PIE opened on a bare map.
+	TSoftClassPtr<UUserWidget> WidgetClass = Settings->PreparationWidgetClass;
+	FName LevelId = NAME_None;
+
+	if (const USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this))
+	{
+		LevelId = Session->GetSelectedLevelId();
+
+		if (const USlimeLevelDefinition* Level = Session->GetSelectedLevelDefinition())
+		{
+			if (!Level->PreparationWidgetClass.IsNull())
+			{
+				WidgetClass = Level->PreparationWidgetClass;
+			}
+		}
+	}
+
+	PreparationWidget = CreateScreenWidget(WidgetClass, FString::Printf(TEXT("Preparation[%s]"), *LevelId.ToString()));
+
+	if (!PreparationWidget)
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("USlimeUISubsystem: no drop point screen for level '%s'; the run will fall back to drop point 0."),
+			*LevelId.ToString());
+	}
+}
+
+bool USlimeUISubsystem::ShouldEnterGameplay() const
+{
+	const USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
+
+	// An explicit "show the main menu" request beats everything below, including the PIE shortcut.
+	// This is checked before SetupUI consumes the request, so both callers see the same answer.
+	if (Session && Session->HasMainMenuRequest())
+	{
+		return false;
+	}
+
+	if (Session && (Session->HasGameplayEntryRequest() || Session->HasAutoDeployRequest()))
+	{
+		return true;
+	}
+
+	// The two flags above are ONE-SHOT: URunSubsystem runs on the same next tick and may call
+	// ConsumeAutoDeployRequest() first, in which case this function would see nothing and fall back
+	// to the main menu. A retry then reloads into an empty screen: the main menu screen covers the
+	// deployment cinematic, and once it ends there is no HUD because none was ever created.
+	//
+	// So the answer must come from state nobody consumes.
+	//
+	// (1) The run phase. If the world is already deploying/running/settling, it is by definition
+	//     a gameplay world - the menu world never leaves Idle.
+	if (BoundGameState.IsValid() && BoundGameState->GetRunState() != ESlimeRunState::Idle)
+	{
+		return true;
+	}
+
+	// (2) The level identity. Nobody consumes it either, and it survives OpenLevel. Note that it
+	//     stays None while USlimeGameSettings::Levels is empty (the picker falls back to "reload the
+	//     current map" and never calls SetSelectedLevelId), so this only answers for configured
+	//     levels - (1) is what covers the unconfigured case.
+	if (Session && !Session->GetSelectedLevelId().IsNone())
+	{
+		return true;
+	}
+
+#if WITH_EDITOR
+	// Opt-in shortcut for debugging a single map's combat or drop point screen. Off by default so a
+	// PIE session starts exactly like a packaged build does - see
+	// USlimeGameSettings::bSkipMainMenuInPIE.
+	if (GetWorld() && GetWorld()->WorldType == EWorldType::PIE)
+	{
+		const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+		if (Settings && Settings->bSkipMainMenuInPIE)
+		{
+			return true;
+		}
+	}
+#endif
+
+	return false;
+}
+
+void USlimeUISubsystem::ApplyMenuState(ESlimeUIFlowState NewState)
+{
+	auto Hide = [](UUserWidget* Widget)
+	{
 		if (Widget)
 		{
-			Widget->AddToViewport(0);
 			Widget->SetVisibility(ESlateVisibility::Collapsed);
 		}
-		return Widget;
 	};
 
-	HUDWidget = CreateScreen(Settings->HUDWidgetClass, TEXT("HUD"));
-	PreparationWidget = CreateScreen(Settings->PreparationWidgetClass, TEXT("Preparation"));
-	ResultWidget = CreateScreen(Settings->ResultWidgetClass, TEXT("Result"));
-	PauseWidget = CreateScreen(Settings->PauseWidgetClass, TEXT("Pause"));
+	Hide(MainMenuWidget);
+	Hide(LevelSelectWidget);
+	Hide(PreparationWidget);
+	Hide(HUDWidget);
+	Hide(ResultWidget);
+	Hide(PauseWidget);
+
+	UIFlowState = NewState;
+
+	switch (NewState)
+	{
+	case ESlimeUIFlowState::MainMenu:
+		if (MainMenuWidget)
+		{
+			MainMenuWidget->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			UE_LOG(LogSlimeWar, Error,
+				TEXT("USlimeUISubsystem: MainMenuWidget is unavailable; the game cannot present its entry screen."));
+		}
+		SetUIOnlyInput();
+		break;
+
+	case ESlimeUIFlowState::LevelSelect:
+		if (LevelSelectWidget)
+		{
+			LevelSelectWidget->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			UE_LOG(LogSlimeWar, Error,
+				TEXT("USlimeUISubsystem: LevelSelectWidget is unavailable; returning to the main menu."));
+			ApplyMenuState(ESlimeUIFlowState::MainMenu);
+			return;
+		}
+		SetUIOnlyInput();
+		break;
+
+	default:
+		break;
+	}
 }
 
 void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 {
+	if (MainMenuWidget)
+	{
+		MainMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (LevelSelectWidget)
+	{
+		LevelSelectWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
 	if (PauseWidget)
 	{
 		PauseWidget->SetVisibility(bPaused ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
@@ -222,6 +444,10 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 	switch (Phase)
 	{
 	case ESlimeRunState::Idle:
+		UIFlowState = ESlimeUIFlowState::Preparation;
+		// "Reselect drop point" reaches this branch through the phase broadcast, not through
+		// SetupUI, so the screen is created here too.
+		EnsurePreparationWidget();
 		Show(PreparationWidget, true);
 		Show(HUDWidget, false);
 		Show(ResultWidget, false);
@@ -229,7 +455,16 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		break;
 
 	case ESlimeRunState::Deploying:
+		UIFlowState = ESlimeUIFlowState::Deploying;
+		// Cinematics: no screen at all, the world is the presentation.
+		Show(PreparationWidget, false);
+		Show(HUDWidget, false);
+		Show(ResultWidget, false);
+		SetGameInput();
+		break;
+
 	case ESlimeRunState::Result:
+		UIFlowState = ESlimeUIFlowState::Result;
 		// Cinematics: no screen at all, the world is the presentation.
 		Show(PreparationWidget, false);
 		Show(HUDWidget, false);
@@ -238,6 +473,7 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		break;
 
 	case ESlimeRunState::Running:
+		UIFlowState = ESlimeUIFlowState::Running;
 		Show(PreparationWidget, false);
 		Show(ResultWidget, false);
 		Show(HUDWidget, true);
@@ -245,6 +481,7 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		break;
 
 	case ESlimeRunState::Ended:
+		UIFlowState = ESlimeUIFlowState::Result;
 		Show(PreparationWidget, false);
 		Show(HUDWidget, false);
 		Show(ResultWidget, true);
@@ -276,7 +513,10 @@ void USlimeUISubsystem::HandleRunStateChanged(ESlimeRunState NewState)
 
 void USlimeUISubsystem::HandleRunEnded(ERunEndReason Reason)
 {
-	// The settlement screen appears on the Ended transition, after the orbit camera had its time.
+	// The phase change to Ended is what shows the settlement screen (ApplyPhaseToScreens). This
+	// handler only guarantees the run does not end behind a frozen world: if the player was in the
+	// pause menu when the timer ran out, the pause has to be lifted or the result screen appears
+	// over a game stuck at zero time dilation.
 	if (bPaused)
 	{
 		SetPauseState(false);
@@ -285,10 +525,78 @@ void USlimeUISubsystem::HandleRunEnded(ERunEndReason Reason)
 
 void USlimeUISubsystem::ConfirmDropPoint(int32 DropPointIndex)
 {
-	if (URunSubsystem* Run = URunSubsystem::Get(this))
+	URunSubsystem* Run = URunSubsystem::Get(this);
+	if (!Run)
 	{
-		Run->BeginDeployment(DropPointIndex);
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("USlimeUISubsystem::ConfirmDropPoint: no run subsystem, drop point %d ignored."),
+			DropPointIndex);
+		return;
 	}
+
+	// Level id in the log on purpose: with one drop point screen per level, "drop point 1" alone is
+	// ambiguous in a multi-level bug report.
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("USlimeUISubsystem: confirming drop point %d for level '%s'."),
+		DropPointIndex, *GetCurrentLevelId().ToString());
+
+	Run->BeginDeployment(DropPointIndex);
+}
+
+FName USlimeUISubsystem::GetCurrentLevelId() const
+{
+	const USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
+	return Session ? Session->GetSelectedLevelId() : NAME_None;
+}
+
+void USlimeUISubsystem::OpenLevelSelect()
+{
+	if (!MainMenuWidget || !LevelSelectWidget)
+	{
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("USlimeUISubsystem::OpenLevelSelect: menu widgets are not available."));
+		return;
+	}
+
+	ApplyMenuState(ESlimeUIFlowState::LevelSelect);
+}
+
+void USlimeUISubsystem::ShowMainMenu()
+{
+	// Screen switch only. Menu-to-menu navigation must not touch the world: a reload here reads as
+	// a freeze (the level can be minutes of streaming), and it also throws away the run systems for
+	// nothing. Leaving a run is ReturnToMainMenu() below.
+	ApplyMenuState(ESlimeUIFlowState::MainMenu);
+}
+
+void USlimeUISubsystem::ReturnToMainMenu()
+{
+	if (bPaused)
+	{
+		SetPauseState(false);
+	}
+
+	const FString LevelName = UGameplayStatics::GetCurrentLevelName(this, /*bRemovePrefixString=*/true);
+	if (LevelName.IsEmpty())
+	{
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("USlimeUISubsystem::ReturnToMainMenu: could not resolve the current level name."));
+		return;
+	}
+
+	if (USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this))
+	{
+		Session->ClearSelectedDropPoint();
+		Session->ClearSelectedLevelId();
+
+		// Without this the reloaded world would look like a fresh launch and the editor PIE
+		// shortcut (USlimeGameSettings::bSkipMainMenuInPIE) would send the player straight back
+		// into the level - i.e. "quit to main menu" would do nothing.
+		Session->RequestMainMenu();
+	}
+
+	UE_LOG(LogSlimeWar, Log, TEXT("USlimeUISubsystem: returning to the main menu by reloading '%s'."), *LevelName);
+	UGameplayStatics::OpenLevel(this, FName(*LevelName));
 }
 
 void USlimeUISubsystem::RequestRetry()
@@ -320,14 +628,7 @@ void USlimeUISubsystem::RequestReselectDropPoint()
 
 void USlimeUISubsystem::RequestQuit()
 {
-	if (bPaused)
-	{
-		SetPauseState(false);
-	}
-
-	// No main menu exists in this project (design 1.5), so quitting is the only "exit".
-	APlayerController* PC = GetPlayerController();
-	UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, /*bIgnorePlatformRestrictions=*/false);
+	ReturnToMainMenu();
 }
 
 void USlimeUISubsystem::HandlePauseRequested()
@@ -392,6 +693,7 @@ void USlimeUISubsystem::SetPauseState(bool bNewPaused)
 
 	if (bPaused)
 	{
+		UIFlowState = ESlimeUIFlowState::Pause;
 		FInputModeGameAndUI Mode;
 		Mode.SetHideCursorDuringCapture(false);
 		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);

@@ -4,6 +4,7 @@
 #include "Core/SlimeWarLog.h"
 #include "Engine/DataTable.h"
 #include "GameplayFramework/SlimeGameSettings.h"
+#include "GameplayFramework/SlimeLevelDefinition.h"
 #include "GameplayFramework/SlimeRunConfig.h"
 #include "Subsystems/SubsystemCollection.h"
 
@@ -35,6 +36,7 @@ bool UStatTableProvider::LoadTables()
 {
 	SlimeStatTable = nullptr;
 	WeaponStatTable = nullptr;
+	AggroStatTable = nullptr;
 	RunConfig = nullptr;
 
 	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
@@ -51,6 +53,21 @@ bool UStatTableProvider::LoadTables()
 			TEXT("StatTableProvider: RunConfig is not set. Set it in Project Settings -> Game -> Slime War ")
 			TEXT("(expected /Game/_SlimeWar/Core/Data/DA_RunConfig)."));
 		return false;
+	}
+
+	LoadTablesFromRunConfig();
+
+	return SlimeStatTable != nullptr && WeaponStatTable != nullptr;
+}
+
+void UStatTableProvider::LoadTablesFromRunConfig()
+{
+	if (!RunConfig)
+	{
+		SlimeStatTable = nullptr;
+		WeaponStatTable = nullptr;
+		AggroStatTable = nullptr;
+		return;
 	}
 
 	SlimeStatTable = RunConfig->SlimeStatTable.LoadSynchronous();
@@ -78,8 +95,50 @@ bool UStatTableProvider::LoadTables()
 		*RunConfig->GetName(),
 		SlimeStatTable ? *SlimeStatTable->GetName() : TEXT("none"),
 		WeaponStatTable ? *WeaponStatTable->GetName() : TEXT("none"));
+}
 
-	return SlimeStatTable != nullptr && WeaponStatTable != nullptr;
+bool UStatTableProvider::SelectLevel(FName LevelId)
+{
+	if (LevelId.IsNone())
+	{
+		// No level context (PIE opened a map directly, or the main menu world): keep whatever
+		// LoadTables picked from the global settings.
+		return false;
+	}
+
+	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+	const USlimeLevelDefinition* Level = Settings ? Settings->FindLevelById(LevelId) : nullptr;
+
+	if (!Level || Level->RunConfig.IsNull())
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("StatTableProvider: level '%s' has no RunConfig; keeping the current config."),
+			*LevelId.ToString());
+		return false;
+	}
+
+	USlimeRunConfig* NewRunConfig = Level->RunConfig.LoadSynchronous();
+	if (!NewRunConfig)
+	{
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("StatTableProvider: RunConfig for level '%s' could not be loaded (%s); keeping the current config."),
+			*LevelId.ToString(), *Level->RunConfig.ToString());
+		return false;
+	}
+
+	if (NewRunConfig == RunConfig)
+	{
+		// Same config (a retry, or several levels sharing one tuning asset): nothing to reload.
+		return true;
+	}
+
+	RunConfig = NewRunConfig;
+	LoadTablesFromRunConfig();
+
+	UE_LOG(LogSlimeWar, Log, TEXT("StatTableProvider: switched to the run config of level '%s' (%s)."),
+		*LevelId.ToString(), *RunConfig->GetName());
+
+	return true;
 }
 
 bool UStatTableProvider::ReloadTables()

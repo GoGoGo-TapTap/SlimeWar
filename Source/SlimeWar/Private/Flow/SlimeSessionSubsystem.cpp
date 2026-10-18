@@ -6,6 +6,8 @@
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "GameplayFramework/SlimeGameSettings.h"
+#include "GameplayFramework/SlimeLevelDefinition.h"
 
 USlimeSessionSubsystem* USlimeSessionSubsystem::Get(const UObject* WorldContextObject)
 {
@@ -43,4 +45,24 @@ bool USlimeSessionSubsystem::ConsumeAutoDeployRequest()
 	}
 
 	return bPending;
+}
+
+bool USlimeSessionSubsystem::ConsumeGameplayEntryRequest()
+{
+	const bool bPending = bEnterGameplayPending;
+	bEnterGameplayPending = false;
+	return bPending;
+}
+
+bool USlimeSessionSubsystem::ConsumeMainMenuRequest()
+{
+	const bool bPending = bMainMenuPending;
+	bMainMenuPending = false;
+	return bPending;
+}
+
+const USlimeLevelDefinition* USlimeSessionSubsystem::GetSelectedLevelDefinition() const
+{
+	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+	return Settings ? Settings->FindLevelById(SelectedLevelId) : nullptr;
 }

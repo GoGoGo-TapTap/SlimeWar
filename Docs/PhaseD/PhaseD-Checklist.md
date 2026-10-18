@@ -124,7 +124,7 @@ C++ 只负责"什么时候显示、数据是多少"，具体排版与动画在 W
    点位标记只做三态（生成中 / 耗尽未清 / 已清空），**不显示精确潜在分数**。
 4. `WBP_SlimeResult`：得分 / 最低目标 / 普通击杀数 / 清空点位数 / 是否过关（+ 最佳分）；
    三个按钮分别调用 `RequestRetry()` / `RequestReselect()` / `RequestQuit()`。
-5. `WBP_SlimePause`：继续 / 重试 / 重新选落点 / 退出；P 键呼出。
+5. `WBP_SlimePause`：继续 / 重试 / 重新选落点 / 退出；`Escape` 键呼出。
 
 ---
 

@@ -11,8 +11,7 @@ class UUserWidget;
 /**
  * Entry screen for the game.
  *
- * The WBP owns layout, artwork and button visuals. This class owns the menu flow and provides a
- * small fallback path so the game remains launchable while the menu assets are being authored.
+ * The WBP owns layout, artwork and button visuals. The UI subsystem owns the overall menu flow.
  */
 UCLASS(Abstract)
 class SLIMEWAR_API USlimeMainMenuWidget : public UUserWidget
