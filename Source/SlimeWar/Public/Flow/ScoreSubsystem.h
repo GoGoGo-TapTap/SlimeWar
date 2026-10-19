@@ -31,8 +31,8 @@ public:
 	/** Reset the run counters. The best score deliberately survives. */
 	void BeginRun(int32 InTargetScore);
 
-	/** Add the score of one kill. Ignored for aggressive targets and after the run ended. */
-	void AddKill(ETargetKind Kind, int32 Mass);
+	/** Add one ecology kill when it was caused by the player. */
+	void AddKill(const FSlimeKillContext& Context);
 
 	/** One more spawn point reached "cleared" (settlement data, design 2.6). */
 	void AddClearedPoint();
@@ -64,6 +64,24 @@ public:
 	int32 GetNormalKillCount() const { return NormalKillCount; }
 
 	UFUNCTION(BlueprintPure, Category = "Slime|Score")
+	int32 GetPlayerKillCount() const { return PlayerKillCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Score")
+	int32 GetNpcKillCount() const { return NpcKillCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Score")
+	int32 GetPlayerCargoScored() const { return PlayerCargoScored; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Score")
+	int32 GetHostileKillCount() const { return HostileKillCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Score")
+	int32 GetDetonationKillCount() const { return DetonationKillCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Score")
+	int32 GetChainKillCount() const { return ChainKillCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Score")
 	int32 GetClearedPointCount() const { return ClearedPointCount; }
 
 	UFUNCTION(BlueprintPure, Category = "Slime|Score")
@@ -93,6 +111,12 @@ private:
 	int32 BestScore = 0;
 	int32 TargetScore = 0;
 	int32 NormalKillCount = 0;
+	int32 PlayerKillCount = 0;
+	int32 NpcKillCount = 0;
+	int32 PlayerCargoScored = 0;
+	int32 HostileKillCount = 0;
+	int32 DetonationKillCount = 0;
+	int32 ChainKillCount = 0;
 	int32 ClearedPointCount = 0;
 	bool bScoreLocked = false;
 

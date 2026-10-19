@@ -8,6 +8,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSlimeHealthChangedSignature, float, NewHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSlimeDeathSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimeDamagedSignature, AActor*, Causer);
 
 /**
  * Health for every damageable actor. Deliberately free of any GAS dependency so that
@@ -62,8 +63,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Health")
 	bool IsAuthoritative() const { return bAuthoritative; }
 
+	UFUNCTION(BlueprintPure, Category = "Slime|Health")
+	AActor* GetLastDamageCauser() const { return LastDamageCauser.Get(); }
+
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Health")
 	FSlimeHealthChangedSignature OnHealthChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Slime|Health")
+	FSlimeDamagedSignature OnDamaged;
 
 	/** The single death exit point for both damage paths. */
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Health")
@@ -83,6 +90,8 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Slime|Health")
 	bool bDead = false;
+
+	TWeakObjectPtr<AActor> LastDamageCauser;
 
 private:
 	void BroadcastDeathIfNeeded();

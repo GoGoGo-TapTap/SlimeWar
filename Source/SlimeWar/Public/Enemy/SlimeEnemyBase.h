@@ -8,25 +8,20 @@
 #include "SlimeEnemyBase.generated.h"
 
 class UStaticMeshComponent;
-class UStateTree;
 class USlimeHealthComponent;
-class USlimeFusionComponent;
-class USlimeStateComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimeEnemyDiedSignature, AActor*, Enemy);
 
 /**
- * Base enemy. Deliberately has NO AbilitySystemComponent (layered GAS decision): health is
- * authoritative on USlimeHealthComponent and state is expressed with USlimeStateComponent,
- * so 180 simultaneous enemies stay cheap.
+ * Base ecology body. Deliberately has NO AbilitySystemComponent (layered GAS decision): health is
+ * authoritative on USlimeHealthComponent, so many simultaneous bodies stay cheap.
  *
- * Phase A made this class abstract: spawn ASlimeNormal or ASlimeAggro instead.
  * Slimes are static meshes; the inherited skeletal mesh is disabled.
  *
- * AI lives in StateTree, run by ASlimeAIController:
- *   ASlimeNormal -> ST_SlimeNormal, ASlimeAggro -> ST_SlimeAggro.
+ * This class owns only shared body concerns (health, mass, grounding, mesh fit). Ecology AI and
+ * interaction live on ASlimeEcologyEnemy components; the StateTree/Normal/Aggro routes are gone.
  */
-UCLASS(Abstract)
+UCLASS()
 class ASlimeEnemyBase : public ACharacter
 {
 	GENERATED_BODY()
@@ -41,20 +36,7 @@ public:
 	int32 GetMass() const { return Mass; }
 
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
-	ETargetKind GetTargetKind() const { return TargetKind; }
-
-	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
-	bool IsAggressive() const { return TargetKind == ETargetKind::Aggressive; }
-
-	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
 	USlimeHealthComponent* GetHealthComponent() const { return Health; }
-
-	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
-	USlimeStateComponent* GetStateComponent() const { return State; }
-
-	/** Fusion flow (PB-09~PB-14). Null on aggressive slimes: they never fuse. */
-	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
-	USlimeFusionComponent* GetFusionComponent() const { return Fusion; }
 
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
 	UStaticMeshComponent* GetBodyMeshComponent() const { return BodyMesh; }
@@ -67,10 +49,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
 	void ApplyStatRow(int32 NewMass, float HealthFraction = 1.f);
 
-	/** Apply the DT_AggroStats row. Aggressive individuals have no mass tier. */
-	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
-	void ApplyAggroStatRow();
-
 	/**
 	 * Resize the body to a sphere whose bottom stays at the same world Z.
 	 *
@@ -80,18 +58,14 @@ public:
 	 */
 	void ApplyBodyRadius(float Radius);
 
-	/** Row name looked up in DT_AggroStats (falls back to "Default"). */
-	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
-	FName GetAggroRowName() const;
-
 	// -- Spawn / point identity --
 
 	/**
 	 * Called by the spawner (spawn points, cheats). Safe to call after BeginPlay.
 	 *
 	 * @param InActivityRadius cm; the radius this slime must stay inside around InActivityCenter.
-	 *                         0 = unset, in which case the AI falls back to the global
-	 *                         USlimeRunConfig::AIActivityRadius.
+	 *                         0 = unset, in which case the AI falls back to the ecology rules'
+	 *                         wander radius.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
 	void InitializeFromSpawn(int32 InPointId, const FVector& InActivityCenter, float InActivityRadius = 0.f);
@@ -114,35 +88,6 @@ public:
 	/** Pull a world position back inside the activity radius (X/Y only, Z is left alone). */
 	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
 	FVector ClampToActivityArea(const FVector& WorldLocation) const;
-
-	/** StateTree asset this individual runs. Filled by ASlimeNormal / ASlimeAggro. */
-	TSoftObjectPtr<UStateTree> GetStateTreeAsset() const { return StateTreeAsset; }
-
-	/** Set by the Phase A target selection task; consumed by the Phase B fusion handshake. */
-	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
-	void SetFusionTarget(ASlimeEnemyBase* InTarget);
-
-	UFUNCTION(BlueprintPure, Category = "Slime|Enemy")
-	ASlimeEnemyBase* GetFusionTarget() const { return FusionTarget; }
-
-	/** Clears every enemy state tag (death / despawn). */
-	void ClearAllStateTags();
-
-	/**
-	 * Movement level: never let the player's capsule shove this enemy around.
-	 *
-	 * The slime's own move sweeps are the source of the "player walks into a slime and it gets
-	 * launched" behaviour: while the slime walks towards its fusion meeting point with the player
-	 * capsule inside it, its sweep reports a start-penetrating blocking hit and the engine ejects
-	 * it along the penetration normal. IgnoreActorWhenMoving removes the player from exactly this
-	 * component's sweeps (see FPrimitiveComponent::InitSweepCollisionParams), so no hit -> no
-	 * ejection. The channel responses are untouched, so aggro slimes are still blocked by normal
-	 * slimes (PB-16).
-	 *
-	 * Safe to call repeatedly; it is refreshed whenever the player pawn may have changed.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Slime|Enemy")
-	virtual void IgnorePlayerForMovement();
 
 	/**
 	 * Phase D: freeze everything this actor drives, without touching the run flow.
@@ -171,17 +116,11 @@ protected:
 	/** Death: notify the battle director. Only normal targets award score. */
 	void NotifyDirectorOnDeath();
 
+	virtual FSlimeKillContext BuildKillContext() const;
+
 	/** Authoritative health. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	TObjectPtr<USlimeHealthComponent> Health;
-
-	/** Lightweight tag state (not GAS). */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
-	TObjectPtr<USlimeStateComponent> State;
-
-	/** Created by ASlimeNormal; aggressive slimes leave it null (see the class comment). */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
-	TObjectPtr<USlimeFusionComponent> Fusion;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	TObjectPtr<UStaticMeshComponent> BodyMesh;
@@ -193,8 +132,8 @@ protected:
 	/** Fit and centre the static mesh so its visual bottom matches the capsule bottom. */
 	void FitBodyMeshToBodyRadius(float Radius);
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
-	ETargetKind TargetKind = ETargetKind::Normal;
+	/** Derived ecology bodies refresh weakpoints/cores after every mass/size change. */
+	virtual void OnBodyStatsApplied(int32 NewMass, float BodyRadius);
 
 	/** Mass / body size tier, 1..8. Unused by aggressive individuals. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
@@ -214,14 +153,6 @@ protected:
 	 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Slime|Enemy")
 	float ActivityRadius = 0.f;
-
-	/** Phase A: which state tree to run. Filled by the concrete subclasses. */
-	UPROPERTY(EditDefaultsOnly, Category = "Slime|Enemy")
-	TSoftObjectPtr<UStateTree> StateTreeAsset;
-
-	/** Partner chosen by the target selection task. Cleared on death / target loss. */
-	UPROPERTY(Transient)
-	TObjectPtr<ASlimeEnemyBase> FusionTarget = nullptr;
 
 	/** True while the result camera / a frozen world owns this actor (Phase D). */
 	bool bRunFrozen = false;

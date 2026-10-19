@@ -24,9 +24,6 @@ public class SlimeWar : ModuleRules
 			// Phase A 敌人 AI：AIController + NavMesh 寻路
 			"AIModule",
 			"NavigationSystem",
-			// Phase A 敌人 AI：StateTree（StateTreeModule 为核心，GameplayStateTree 提供 AI Component）
-			"StateTreeModule",
-			"GameplayStateTreeModule",
 			// Phase D UI：UUserWidget 基类 + ULocalPlayerSubsystem
 			"UMG",
 			"Slate",

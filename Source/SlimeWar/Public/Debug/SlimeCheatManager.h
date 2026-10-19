@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/SlimeWarCoreTypes.h"
 #include "GameFramework/CheatManager.h"
 #include "SlimeCheatManager.generated.h"
 
@@ -48,6 +49,9 @@ public:
 	void SlimeEcologyStatus();
 
 	UFUNCTION(Exec)
+	void SlimeEcologyGroundProbe();
+
+	UFUNCTION(Exec)
 	void SlimeEcologyBodyStatus();
 
 	UFUNCTION(Exec)
@@ -63,20 +67,174 @@ public:
 	void SlimeEcologyBodyTest();
 
 	UFUNCTION(Exec)
+	void SlimeEcologySetCargo(int32 Amount = 1);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyPriorityTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyR5Test();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyExternalConnectionTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyShotCooldownTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyCorePriorityTest();
+
+	// -- R1: player controls --
+
+	UFUNCTION(Exec)
+	void SlimePlayerSprint(int32 Enabled = 1);
+
+	UFUNCTION(Exec)
+	void SlimePlayerAim(int32 Enabled = 1);
+
+	UFUNCTION(Exec)
+	void SlimePlayerJump();
+
+	UFUNCTION(Exec)
+	void SlimePlayerSwitchShoulder();
+
+	UFUNCTION(Exec)
+	void SlimePlayerControlStatus();
+
+	UFUNCTION(Exec)
+	void SlimePlayerJumpTest();
+
+        UFUNCTION(Exec)
+        void SlimeEcologyAlertTest();
+
+        UFUNCTION(Exec)
+        void SlimeEcologyDisputeTest();
+
+        UFUNCTION(Exec)
+        void SlimeEcologyHostileFusionTest();
+
+        UFUNCTION(Exec)
+        void SlimeWeaponDoesNotAlertTest();
+
+        UFUNCTION(Exec)
+        void SlimeGrenadeStatus();
+
+        UFUNCTION(Exec)
+        void SlimeThrowGrenade(int32 Type = 0);
+
+        UFUNCTION(Exec)
+	void SlimeGrenadeAssimilationTest(int32 Faction = 1);
+
+        UFUNCTION(Exec)
+        void SlimeGrenadeTornadoTest();
+
+        UFUNCTION(Exec)
+        void SlimeGrenadeTornadoWallTest();
+
+        UFUNCTION(Exec)
+        void SlimeEcologyScoreTest();
+
+        UFUNCTION(Exec)
+        void SlimePaintStatus();
+
+        UFUNCTION(Exec)
+        void SlimePaintTest();
+
+	UFUNCTION(Exec)
+	void SlimeWeaponStatus();
+
+	UFUNCTION(Exec)
+	void SlimeAimAssistStatus();
+
+	UFUNCTION(Exec)
+	void SlimeAimAssistScreenTest();
+
+	UFUNCTION(Exec)
+	void SlimeChargeTest(float Alpha = 0.f);
+
+	UFUNCTION(Exec)
+	void SlimeKnockbackTest();
+
+	UFUNCTION(Exec)
+	void SlimeImpactSplitTest(int32 Mass = 2);
+
+	UFUNCTION(Exec)
+	void SlimeImpactSplitCollisionTest(int32 Mass = 2);
+
+	UFUNCTION(Exec)
+	void SlimeSpawnEcologyCore(int32 Mass = 2, int32 CoreState = 1);
+
+	UFUNCTION(Exec)
+	void SlimeEcologySetCoreState(int32 CoreState = 1);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyProvokePlayer(float Seconds = 6.f);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyCoreStatus();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyPounceTest();
+
+        UFUNCTION(Exec)
+        void SlimeEcologyPounceLockTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyDevourTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyDetonationTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyWeakpointTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyFusionStatus();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyFusionReady();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyForceFuse();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyInterruptFusion();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyInterruptTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyPushPairSetup();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyFusionTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyAutoFusionTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyForcedFusionTest();
+
+	UFUNCTION(Exec)
 	void SlimeEcologySoakTest(float Seconds = 60.f);
 
 	UFUNCTION(Exec)
+	void SlimeEcologyResourceStatus();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyResourceSoakTest(float Seconds = 30.f);
+
+	UFUNCTION(Exec)
+	void SlimeEcologyDeliveryTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyCargoDropTest();
+
+	UFUNCTION(Exec)
+	void SlimeEcologyResourceLedgerCheck();
+
+	UFUNCTION(Exec)
 	void SlimeEcologyAvoidanceTest();
-
-	// -- Phase A: CP-1 needs enemies before the Phase C spawn points exist. --
-
-	/** Spawn Count normal slimes in front of the player. */
-	UFUNCTION(Exec)
-	void SlimeSpawnNormal(int32 Count = 1);
-
-	/** Spawn Count aggressive slimes in front of the player. */
-	UFUNCTION(Exec)
-	void SlimeSpawnAggro(int32 Count = 1);
 
 	/** Destroy every live slime. */
 	UFUNCTION(Exec)
@@ -86,19 +244,13 @@ public:
 	UFUNCTION(Exec)
 	void SlimeKillPlayer();
 
-	// -- Phase B: fusion scenarios for the CP-2 pass --
-
-	/** Spawn Count normal slimes of a given mass in a tight cluster (they pair up on their own). */
+	/** Spawn Count ecology bodies of a given mass in front of the player (faction A). */
 	UFUNCTION(Exec)
 	void SlimeSpawnNormalAtMass(int32 Mass = 1, int32 Count = 1);
 
-	/** Re-stat the nearest normal slime to Mass, keeping its health ratio. */
+	/** Re-stat the nearest ecology body to Mass, keeping its health ratio. */
 	UFUNCTION(Exec)
 	void SlimeSetMass(int32 Mass);
-
-	/** Force the two nearest normal slimes of one spawn point into a fusion pair. */
-	UFUNCTION(Exec)
-	void SlimeForceFuse();
 
 	// -- Phase C: run flow (PC-06 / CP-3) --
 
@@ -176,9 +328,50 @@ private:
 	UFUNCTION()
 	void AdvanceEcologyBodyTest();
 
+	UFUNCTION()
+	void AdvancePlayerJumpTest();
+
+	UFUNCTION()
+	void AdvanceEcologyPriorityTest();
+
+	UFUNCTION()
+	void AdvanceEcologyR5Test();
+
+	UFUNCTION()
+	void FinishEcologyExternalConnectionTest();
+
+        UFUNCTION()
+        void AdvanceEcologyGrenadeTest();
+
+	UFUNCTION()
+	void FinishEcologyResourceSoak();
+
+	UFUNCTION()
+	void FinishEcologyDeliveryTest();
+
+	UFUNCTION()
+	void FinishAimAssistScreenTest();
+
+	UFUNCTION()
+	void FinishImpactSplitCollisionTest();
+
+	UFUNCTION()
+	void AdvanceEcologyCoreTest();
+
+        UFUNCTION()
+        void AdvanceEcologyPounceLockTest();
+
+	UFUNCTION()
+	void AdvanceEcologyFusionTest();
+
 	void DumpBodyMetricsNow();
 	void RefreshEcologyTestList();
 	ASlimeEcologyEnemy* FindNearestEcologyEnemy() const;
+	bool SpawnEcologyPairForTest(
+		int32 Mass,
+		float Spacing,
+		ASlimeEcologyEnemy*& OutFirst,
+		ASlimeEcologyEnemy*& OutSecond);
 	FVector ComputeEcologyGroupCentre() const;
 	int32 CountStaticPenetrations() const;
 	float ComputeMinimumPairDistance() const;
@@ -191,15 +384,55 @@ private:
 	FTimerHandle EcologySoakTimer;
 	FTimerHandle EcologyAvoidanceTimer;
 	FTimerHandle EcologyBodyTestTimer;
+	FTimerHandle PlayerJumpTestTimer;
+	FTimerHandle EcologyPriorityTestTimer;
+	FTimerHandle EcologyR5TestTimer;
+	FTimerHandle EcologyExternalConnectionTimer;
+	FTimerHandle EcologyCorePriorityTimer;
+        FTimerHandle EcologyGrenadeTestTimer;
+        FTimerHandle EcologyAlertTestTimer;
+	FTimerHandle EcologyResourceSoakTimer;
+	FTimerHandle EcologyDeliveryTestTimer;
+	FTimerHandle AimAssistTestTimer;
+	FTimerHandle ImpactSplitCollisionTimer;
+	FTimerHandle EcologyCoreTestTimer;
+        FTimerHandle EcologyPounceLockTimer;
+	FTimerHandle EcologyFusionTestTimer;
 	TArray<TWeakObjectPtr<ASlimeEnemyBase>> GroundingTestSlimes;
 	TArray<TWeakObjectPtr<ASlimeEcologyEnemy>> EcologyTestSlimes;
 	TArray<TWeakObjectPtr<ASlimeEcologyEnemy>> EcologyAvoidanceSubjects;
 	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyPrimaryAvoidanceSubject;
 	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyBodyTestTarget;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyDeliveryTarget;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyFusionTestPrimary;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyFusionTestSecondary;
+        TWeakObjectPtr<ASlimeEcologyEnemy> EcologyTornadoNear;
+        TWeakObjectPtr<ASlimeEcologyEnemy> EcologyTornadoFar;
+        TWeakObjectPtr<AActor> EcologyTornadoWall;
 	FVector EcologyAimLockAnchor = FVector::ZeroVector;
+	TWeakObjectPtr<AActor> ImpactSplitCollisionWall;
+	int32 ImpactSplitCollisionParentMass = 0;
 	FVector EcologyTestCentre = FVector::ZeroVector;
 	float EcologySoakStartTime = 0.f;
 	int32 EcologyPathRequestsAtStart = 0;
 	int32 EcologyBodyTestStage = 0;
+	int32 PlayerJumpTestStage = 0;
+	int32 EcologyPriorityTestStage = 0;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyPriorityCarrier;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyR5Subject;
+	int32 EcologyR5TestStage = 0;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyExternalFirst;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyExternalSecond;
+        int32 EcologyGrenadeTestStage = 0;
+	int32 EcologyDeliveryBaseline = 0;
+	int32 EcologyCoreTestStage = 0;
+        int32 EcologyPounceLockStage = 0;
+        float EcologyPounceLockStartZ = 0.f;
+	TWeakObjectPtr<ASlimeEcologyEnemy> EcologyCoreTestCore;
+	int32 EcologyFusionTestStage = 0;
+	ESlimeFaction EcologyGrenadeTestFaction = ESlimeFaction::B;
+	bool bEcologyFusionForcedTest = false;
+	bool bEcologyFusionAutoTest = false;
+	bool bEcologyFusionInterruptTest = false;
 	int32 GroundingTestStage = 0;
 };

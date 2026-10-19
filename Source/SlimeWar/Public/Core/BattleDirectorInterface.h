@@ -23,8 +23,8 @@ class IBattleDirector
 	GENERATED_BODY()
 
 public:
-	/** A normal target died. The only scoring entry point. */
-	virtual void OnEnemyKilled(ETargetKind Kind, int32 Mass) = 0;
+	/** One ecology death. The only scoring entry point. */
+	virtual void OnEnemyKilled(const FSlimeKillContext& Context) = 0;
 
 	/**
 	 * Two slimes fused successfully. Statistics / presentation only, never score.
@@ -32,10 +32,7 @@ public:
 	 * Location is where the fused body ended up. Phase D adds it for the "first fusion nearby"
 	 * tutorial hint (design 7.5); the score path never reads it.
 	 */
-	virtual void OnEnemyFused(int32 ResultMass, const FVector& Location) = 0;
-
-	/** A spawn point changed state. Drives HUD markers. */
-	virtual void OnPointStateChanged(int32 PointId, ESpawnPointState NewState) = 0;
+	virtual void OnEnemyFused(const FSlimeFusionEvent& Event) = 0;
 
 	/** The player died. Immediate run over (failure). */
 	virtual void OnPlayerDied() = 0;

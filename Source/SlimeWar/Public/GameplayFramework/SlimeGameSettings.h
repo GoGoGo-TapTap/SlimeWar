@@ -52,6 +52,9 @@ public:
 	/** Level definition by stable id; null when nothing matches (including an empty id). */
 	const USlimeLevelDefinition* FindLevelById(FName LevelId) const;
 
+	/** Resolve a level when a map is opened directly in PIE or by a console Open command. */
+	const USlimeLevelDefinition* FindLevelByMapName(const FString& MapName) const;
+
 	// -- Phase D UI (PD-05 ~ PD-13) --
 
 	/**

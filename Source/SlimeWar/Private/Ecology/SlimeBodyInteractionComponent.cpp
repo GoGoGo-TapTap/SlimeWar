@@ -2,7 +2,10 @@
 
 #include "Ecology/SlimeBodyInteractionComponent.h"
 
+#include "Core/SlimeWarLog.h"
 #include "Ecology/SlimeEcologyRules.h"
+#include "Ecology/SlimeEcologyEnemy.h"
+#include "Engine/StaticMeshActor.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -66,6 +69,34 @@ void USlimeBodyInteractionComponent::ApplyExternalVelocity(
 	{
 		LastBodyPushTime = World->GetTimeSeconds();
 	}
+	if (Source)
+	{
+		if (const USlimeEcologyRules* Rules = GetRules())
+		{
+			ForcedFusionWindowRemaining = Rules->ForcedFusionWindow;
+		}
+	}
+}
+
+void USlimeBodyInteractionComponent::SetExternalVelocity(
+	const FVector& InVelocity,
+	AActor* Source)
+{
+	ExternalVelocity = InVelocity;
+	ExternalVelocity.Z = 0.f;
+	LastPushSource = Source;
+	if (const UWorld* World = GetWorld())
+	{
+		LastBodyPushTime = World->GetTimeSeconds();
+	}
+}
+
+void USlimeBodyInteractionComponent::OpenImpactSplitWindow(float Seconds)
+{
+	const USlimeEcologyRules* Rules = GetRules();
+	ImpactSplitWindowRemaining = FMath::Max(
+		ImpactSplitWindowRemaining,
+		Seconds >= 0.f ? Seconds : (Rules ? Rules->ImpactSplitWindow : 0.9f));
 }
 
 void USlimeBodyInteractionComponent::SetAimLocked(bool bLocked, AActor* Source)
@@ -135,6 +166,8 @@ void USlimeBodyInteractionComponent::TickComponent(
 	UpdateStun(DeltaTime);
 	ForcedFusionWindowRemaining =
 		FMath::Max(0.f, ForcedFusionWindowRemaining - DeltaTime);
+	ImpactSplitWindowRemaining =
+		FMath::Max(0.f, ImpactSplitWindowRemaining - DeltaTime);
 }
 
 void USlimeBodyInteractionComponent::ApplyExternalMotion(float DeltaTime)
@@ -153,6 +186,35 @@ void USlimeBodyInteractionComponent::ApplyExternalMotion(float DeltaTime)
 
 	if (Hit.bBlockingHit && !Hit.ImpactNormal.IsNearlyZero())
 	{
+		AActor* HitActor = Hit.GetActor();
+		UPrimitiveComponent* HitComponent = Hit.GetComponent();
+		const bool bBlockingPawn = HitActor && HitActor->IsA<APawn>();
+		const bool bStaticImpact = !bBlockingPawn
+			&& (HitComponent
+				? (HitComponent->GetCollisionObjectType() == ECC_WorldStatic
+					|| HitComponent->Mobility == EComponentMobility::Static
+					|| (HitActor && HitActor->IsA<AStaticMeshActor>()))
+				: false);
+		if (bStaticImpact && ImpactSplitWindowRemaining > 0.f)
+		{
+			UE_LOG(LogSlimeWar, Log,
+				TEXT("ImpactSplitWindow: %s hit actor=%s component=%s objectType=%d mobility=%d."),
+				*GetNameSafe(Owner),
+				*GetNameSafe(HitActor),
+				*GetNameSafe(HitComponent),
+				HitComponent ? static_cast<int32>(HitComponent->GetCollisionObjectType()) : -1,
+				HitComponent ? static_cast<int32>(HitComponent->Mobility) : -1);
+			ImpactSplitWindowRemaining = 0.f;
+			if (ASlimeEcologyEnemy* Enemy = Cast<ASlimeEcologyEnemy>(Owner))
+			{
+				Enemy->TryImpactSplit(Hit.ImpactPoint, Hit.ImpactNormal);
+				if (!IsValid(Owner))
+				{
+					return;
+				}
+			}
+		}
+
 		ExternalVelocity =
 			FVector::VectorPlaneProject(ExternalVelocity, Hit.ImpactNormal).GetSafeNormal2D()
 			* ExternalVelocity.Size2D();

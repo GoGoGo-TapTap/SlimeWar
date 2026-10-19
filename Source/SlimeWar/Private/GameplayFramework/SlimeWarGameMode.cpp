@@ -40,38 +40,29 @@ void ASlimeWarGameMode::PreInitializeComponents()
 	Super::PreInitializeComponents();
 }
 
-void ASlimeWarGameMode::OnEnemyKilled(ETargetKind Kind, int32 Mass)
-{
-	// Design 4.6.3: aggressive individuals never award score. The filter lives in the single
-	// scoring entry point, so Phase C's score subsystem cannot pick them up by accident.
-	if (Kind != ETargetKind::Normal)
-	{
-		UE_LOG(LogSlimeWar, Verbose,
-			TEXT("[BattleDirector] OnEnemyKilled: aggressive target (mass %d), no score."), Mass);
-		return;
-	}
-
-	UE_LOG(LogSlimeWar, Verbose, TEXT("[BattleDirector] OnEnemyKilled: Kind=%d Mass=%d."),
-		static_cast<int32>(Kind), Mass);
-
-	OnEnemyKilledEvent.Broadcast(Kind, Mass);
-}
-
-void ASlimeWarGameMode::OnEnemyFused(int32 ResultMass, const FVector& Location)
+void ASlimeWarGameMode::OnEnemyKilled(const FSlimeKillContext& Context)
 {
 	UE_LOG(LogSlimeWar, Verbose,
-		TEXT("[BattleDirector] OnEnemyFused: ResultMass=%d at %s (statistics only, never score)."),
-		ResultMass, *Location.ToCompactString());
+		TEXT("[BattleDirector] OnEnemyKilled: mass=%d cargo=%d credit=%d player=%s hostile=%s detonated=%s."),
+		Context.Mass,
+		Context.Cargo,
+		Context.BodyScoreCredit,
+		Context.bKilledByPlayer ? TEXT("yes") : TEXT("no"),
+		Context.bHostileCore ? TEXT("yes") : TEXT("no"),
+		Context.bDetonated ? TEXT("yes") : TEXT("no"));
 
-	OnEnemyFusedEvent.Broadcast(ResultMass, Location);
+	OnEnemyKilledEvent.Broadcast(Context);
 }
 
-void ASlimeWarGameMode::OnPointStateChanged(int32 PointId, ESpawnPointState NewState)
+void ASlimeWarGameMode::OnEnemyFused(const FSlimeFusionEvent& Event)
 {
-	UE_LOG(LogSlimeWar, Verbose, TEXT("[BattleDirector] OnPointStateChanged: PointId=%d NewState=%d."),
-		PointId, static_cast<int32>(NewState));
+	UE_LOG(LogSlimeWar, Verbose,
+		TEXT("[BattleDirector] OnEnemyFused: ResultMass=%d hostile=%s at %s (statistics only, never score)."),
+		Event.ResultMass,
+		Event.bHostileCore ? TEXT("yes") : TEXT("no"),
+		*Event.Location.ToCompactString());
 
-	OnPointStateChangedEvent.Broadcast(PointId, NewState);
+	OnEnemyFusedEvent.Broadcast(Event);
 }
 
 void ASlimeWarGameMode::OnPlayerDied()

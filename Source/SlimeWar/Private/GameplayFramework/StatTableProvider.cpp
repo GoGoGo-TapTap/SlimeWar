@@ -3,6 +3,7 @@
 #include "GameplayFramework/StatTableProvider.h"
 #include "Core/SlimeWarLog.h"
 #include "Ecology/SlimeEcologyRules.h"
+#include "Player/SlimeWeaponRules.h"
 #include "Engine/DataTable.h"
 #include "GameplayFramework/SlimeGameSettings.h"
 #include "GameplayFramework/SlimeLevelDefinition.h"
@@ -28,8 +29,8 @@ void UStatTableProvider::Deinitialize()
 	RunConfig = nullptr;
 	SlimeStatTable = nullptr;
 	WeaponStatTable = nullptr;
-	AggroStatTable = nullptr;
 	EcologyRules = nullptr;
+	WeaponRules = nullptr;
 
 	Super::Deinitialize();
 }
@@ -38,8 +39,8 @@ bool UStatTableProvider::LoadTables()
 {
 	SlimeStatTable = nullptr;
 	WeaponStatTable = nullptr;
-	AggroStatTable = nullptr;
 	EcologyRules = nullptr;
+	WeaponRules = nullptr;
 	RunConfig = nullptr;
 
 	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
@@ -69,20 +70,33 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 	{
 		SlimeStatTable = nullptr;
 		WeaponStatTable = nullptr;
-		AggroStatTable = nullptr;
 		return;
 	}
 
 	SlimeStatTable = RunConfig->SlimeStatTable.LoadSynchronous();
 	WeaponStatTable = RunConfig->WeaponStatTable.LoadSynchronous();
-	AggroStatTable = RunConfig->AggroStatTable.LoadSynchronous();
 	EcologyRules = RunConfig->EcologyRules.LoadSynchronous();
+	WeaponRules = RunConfig->WeaponRules.LoadSynchronous();
 
 	if (!EcologyRules)
 	{
 		EcologyRules = LoadObject<USlimeEcologyRules>(
 			nullptr,
 			TEXT("/Game/_SlimeWar/Ecology/DA_EcologyRules.DA_EcologyRules"));
+	}
+
+	if (!WeaponRules)
+	{
+		WeaponRules = LoadObject<USlimeWeaponRules>(
+			nullptr,
+			TEXT("/Game/_SlimeWar/Weapon/DA_Weapon_Rifle.DA_Weapon_Rifle"));
+	}
+
+	if (!WeaponRules)
+	{
+		WeaponRules = GetMutableDefault<USlimeWeaponRules>();
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("StatTableProvider: DA_Weapon_Rifle is missing; using USlimeWeaponRules defaults."));
 	}
 
 	if (!EcologyRules)
@@ -102,19 +116,13 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 		UE_LOG(LogSlimeWar, Error, TEXT("StatTableProvider: WeaponStatTable is not set on %s."), *RunConfig->GetName());
 	}
 
-	if (!AggroStatTable)
-	{
-		UE_LOG(LogSlimeWar, Warning,
-			TEXT("StatTableProvider: AggroStatTable is not set on %s (aggressive slimes fall back to defaults)."),
-			*RunConfig->GetName());
-	}
-
 	UE_LOG(LogSlimeWar, Log,
-		TEXT("StatTableProvider: loaded run config %s (slime table: %s, weapon table: %s, ecology rules: %s)"),
+		TEXT("StatTableProvider: loaded run config %s (slime table: %s, weapon table: %s, ecology rules: %s, weapon rules: %s)"),
 		*RunConfig->GetName(),
 		SlimeStatTable ? *SlimeStatTable->GetName() : TEXT("none"),
 		WeaponStatTable ? *WeaponStatTable->GetName() : TEXT("none"),
-		EcologyRules ? *EcologyRules->GetName() : TEXT("none"));
+		EcologyRules ? *EcologyRules->GetName() : TEXT("none"),
+		WeaponRules ? *WeaponRules->GetName() : TEXT("none"));
 }
 
 bool UStatTableProvider::SelectLevel(FName LevelId)
@@ -171,6 +179,11 @@ const USlimeEcologyRules* UStatTableProvider::GetEcologyRules() const
 	return EcologyRules ? EcologyRules : GetDefault<USlimeEcologyRules>();
 }
 
+const USlimeWeaponRules* UStatTableProvider::GetWeaponRules() const
+{
+	return WeaponRules ? WeaponRules : GetDefault<USlimeWeaponRules>();
+}
+
 bool UStatTableProvider::GetSlimeStat(int32 Mass, FSlimeStatRow& Out) const
 {
 	if (!SlimeStatTable)
@@ -219,27 +232,6 @@ bool UStatTableProvider::GetWeaponStat(FName WeaponId, FWeaponStatRow& Out) cons
 	return true;
 }
 
-bool UStatTableProvider::GetAggroStat(FSlimeAggroStatRow& Out) const
-{
-	if (!AggroStatTable)
-	{
-		UE_LOG(LogSlimeWar, Warning, TEXT("GetAggroStat: aggro stat table is not loaded, returning defaults."));
-		return false;
-	}
-
-	const FName RowName = RunConfig && !RunConfig->AggroRowName.IsNone() ? RunConfig->AggroRowName : FName(TEXT("Default"));
-	const FSlimeAggroStatRow* Row = AggroStatTable->FindRow<FSlimeAggroStatRow>(RowName, TEXT("GetAggroStat"), false);
-	if (!Row)
-	{
-		UE_LOG(LogSlimeWar, Error, TEXT("GetAggroStat: row '%s' was not found in %s, returning defaults."),
-			*RowName.ToString(), *AggroStatTable->GetName());
-		return false;
-	}
-
-	Out = *Row;
-	return true;
-}
-
 void UStatTableProvider::DumpLoadedTables() const
 {
 	UE_LOG(LogSlimeWar, Log, TEXT("==== Slime data tables ===="));
@@ -266,6 +258,5 @@ void UStatTableProvider::DumpLoadedTables() const
 
 	DumpTable(SlimeStatTable, TEXT("DT_SlimeStats "));
 	DumpTable(WeaponStatTable, TEXT("DT_WeaponStats"));
-	DumpTable(AggroStatTable, TEXT("DT_AggroStats  "));
 	UE_LOG(LogSlimeWar, Log, TEXT("==========================="));
 }

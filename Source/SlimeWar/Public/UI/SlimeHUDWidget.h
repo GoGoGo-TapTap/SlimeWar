@@ -4,10 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Core/SlimeWarCoreTypes.h"
+#include "Ecology/SlimeEcologyGrenade.h"
+#include "Ecology/SlimeEcologyResourceTypes.h"
 #include "Blueprint/UserWidget.h"
 #include "SlimeHUDWidget.generated.h"
 
 class ASlimeRunGameState;
+class ASlimeWarCharacter;
 class USlimeHealthComponent;
 class USlimeWeaponComponent;
 
@@ -39,7 +42,11 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
 	void OnTimeUpdated(int32 RemainingSeconds);
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
+	/**
+	 * Deprecated compatibility hook for the existing WBP_SlimeHUD. The legacy spawn-point data
+	 * source is gone, so this is never called; M9 replaces it with an ecology-site event.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI|Deprecated")
 	void OnPointStateUpdated(int32 PointId, ESpawnPointState NewState);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
@@ -49,6 +56,17 @@ public:
 	void OnAmmoUpdated(int32 CurrentAmmo, int32 MagazineSize);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
+	void OnGrenadeInventoryUpdated(int32 Assimilation, int32 Tornado);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
+	void OnGrenadeSelectionUpdated(ESlimeGrenadeType Type, ESlimeFaction Faction);
+
+	/** Optional M9 hook: current A/B/C site status. Existing WBP may leave it unimplemented. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
+	void OnEcologySitesUpdated(const TArray<FSlimeSiteStatus>& Sites);
+
+	/** Deprecated compatibility hook; no runtime source since the batch design was retired. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI|Deprecated")
 	void OnBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn);
 
 	/**
@@ -78,13 +96,18 @@ protected:
 	UFUNCTION()
 	void HandleAmmoChanged(int32 CurrentAmmo, int32 MagazineSize);
 
+	UFUNCTION()
+	void HandleGrenadeInventoryChanged(int32 Assimilation, int32 Tornado);
+
+	UFUNCTION()
+	void HandleGrenadeSelectionChanged(ESlimeGrenadeType Type, ESlimeFaction Faction);
+
 	void HandleScoreChanged(int32 NewScore);
 	void HandleTimeChanged(int32 NewRemainingSeconds);
-	void HandlePointStateChanged(int32 PointId, ESpawnPointState NewState);
-	void HandleBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn);
 	void HandleFusionHint(FVector Location);
 	void HandleRunStateChanged(ESlimeRunState NewState);
 	void HandleRunEnded(ERunEndReason Reason);
+	void RefreshEcologySites();
 
 	ASlimeRunGameState* GetRunGameState() const;
 
@@ -93,6 +116,7 @@ protected:
 
 	TWeakObjectPtr<USlimeHealthComponent> BoundHealth;
 	TWeakObjectPtr<USlimeWeaponComponent> BoundWeapon;
+	TWeakObjectPtr<ASlimeWarCharacter> BoundCharacter;
 	TWeakObjectPtr<ASlimeRunGameState> BoundGameState;
 
 	/** Hints are once-per-run; the widget is rebuilt by the level reload between attempts. */
@@ -103,4 +127,6 @@ protected:
 
 	/** Previous score, so HandleScoreChanged can tell the WBP how much the last kill was worth. */
 	int32 LastKnownScore = 0;
+
+	FTimerHandle EcologyRefreshTimer;
 };

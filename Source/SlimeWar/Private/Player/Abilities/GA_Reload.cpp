@@ -43,6 +43,11 @@ void UGA_Reload::ActivateAbility(
 		return;
 	}
 
+	if (Character)
+	{
+		Character->BeginReloadVisuals(ReloadDuration);
+	}
+
 	UAbilityTask_WaitDelay* WaitTask = UAbilityTask_WaitDelay::WaitDelay(this, ReloadDuration);
 	if (!WaitTask)
 	{
@@ -56,8 +61,9 @@ void UGA_Reload::ActivateAbility(
 
 void UGA_Reload::HandleReloadFinished()
 {
-	if (const ASlimeWarCharacter* Character = Cast<ASlimeWarCharacter>(GetAvatarActorFromActorInfo()))
+	if (ASlimeWarCharacter* Character = Cast<ASlimeWarCharacter>(GetAvatarActorFromActorInfo()))
 	{
+		Character->EndReloadVisuals();
 		if (USlimeWeaponComponent* WeaponComponent = Character->GetWeaponComponent())
 		{
 			WeaponComponent->RefillMagazine();

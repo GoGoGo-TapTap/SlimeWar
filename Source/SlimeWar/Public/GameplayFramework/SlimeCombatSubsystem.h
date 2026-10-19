@@ -7,6 +7,7 @@
 #include "SlimeCombatSubsystem.generated.h"
 
 class AActor;
+class UPrimitiveComponent;
 
 /**
  * The single damage entry point for the whole project.
@@ -32,4 +33,12 @@ public:
 	/** Apply Amount damage to Target. Does nothing for a null target or a non positive amount. */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Combat")
 	void ApplyDamageTo(AActor* Target, float Amount, AActor* Causer);
+
+	/** Damage routed with the actual hit component; used for weakpoint execution. */
+	UFUNCTION(BlueprintCallable, Category = "Slime|Combat")
+	void ApplyDamageToComponent(
+		AActor* Target,
+		UPrimitiveComponent* HitComponent,
+		float Amount,
+		AActor* Causer);
 };
