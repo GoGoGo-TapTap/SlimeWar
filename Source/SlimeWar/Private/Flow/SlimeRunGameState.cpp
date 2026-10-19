@@ -30,7 +30,6 @@ void ASlimeRunGameState::PullSnapshot()
 		RunState = Run->GetRunState();
 		RemainingSeconds = Run->GetRemainingSeconds();
 		SelectedDropPoint = Run->GetSelectedDropPoint();
-		Run->GetPointSnapshot(PointIds, PointStates);
 	}
 
 	if (const UScoreSubsystem* Score = UScoreSubsystem::Get(this))
@@ -52,8 +51,6 @@ void ASlimeRunGameState::BindSubsystems()
 		Run->OnRunStateChanged.AddUObject(this, &ASlimeRunGameState::HandleRunStateChanged);
 		Run->OnRunEnded.AddUObject(this, &ASlimeRunGameState::HandleRunEnded);
 		Run->OnTimeChanged.AddUObject(this, &ASlimeRunGameState::HandleTimeChanged);
-		Run->OnPointStateChanged.AddUObject(this, &ASlimeRunGameState::HandlePointStateChanged);
-		Run->OnBatchIncoming.AddUObject(this, &ASlimeRunGameState::HandleBatchIncoming);
 		Run->OnFusionHint.AddUObject(this, &ASlimeRunGameState::HandleFusionHint);
 		BoundRunSubsystem = Run;
 	}
@@ -75,8 +72,6 @@ void ASlimeRunGameState::UnbindSubsystems()
 		Run->OnRunStateChanged.RemoveAll(this);
 		Run->OnRunEnded.RemoveAll(this);
 		Run->OnTimeChanged.RemoveAll(this);
-		Run->OnPointStateChanged.RemoveAll(this);
-		Run->OnBatchIncoming.RemoveAll(this);
 		Run->OnFusionHint.RemoveAll(this);
 	}
 	BoundRunSubsystem.Reset();
@@ -129,12 +124,6 @@ void ASlimeRunGameState::HandleTimeChanged(int32 NewRemainingSeconds)
 	OnTimeChanged.Broadcast(RemainingSeconds);
 }
 
-void ASlimeRunGameState::HandlePointStateChanged(int32 PointId, ESpawnPointState NewState)
-{
-	SetPointState(PointId, NewState);
-	OnPointStateChanged.Broadcast(PointId, NewState);
-}
-
 void ASlimeRunGameState::HandleRunStateChanged(ESlimeRunState NewState)
 {
 	RunState = NewState;
@@ -157,11 +146,6 @@ void ASlimeRunGameState::HandleRunEnded(ERunEndReason Reason)
 	OnRunEnded.Broadcast(Reason);
 }
 
-void ASlimeRunGameState::HandleBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn)
-{
-	OnBatchIncoming.Broadcast(BatchIndex, SecondsUntilSpawn);
-}
-
 void ASlimeRunGameState::HandleFusionHint(FVector Location)
 {
 	OnFusionHint.Broadcast(Location);
@@ -179,21 +163,3 @@ FSlimeRunResult ASlimeRunGameState::GetRunResult() const
 	return Empty;
 }
 
-void ASlimeRunGameState::SetPointState(int32 PointId, ESpawnPointState NewState)
-{
-	const int32 Index = PointIds.IndexOfByKey(PointId);
-	if (Index == INDEX_NONE)
-	{
-		PointIds.Add(PointId);
-		PointStates.Add(NewState);
-		return;
-	}
-
-	PointStates[Index] = NewState;
-}
-
-ESpawnPointState ASlimeRunGameState::GetPointState(int32 PointId) const
-{
-	const int32 Index = PointIds.IndexOfByKey(PointId);
-	return PointStates.IsValidIndex(Index) ? PointStates[Index] : ESpawnPointState::AwaitingDeploy;
-}

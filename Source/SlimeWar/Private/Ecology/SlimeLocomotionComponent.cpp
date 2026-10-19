@@ -319,8 +319,12 @@ bool USlimeLocomotionComponent::IsDirectPathClear(const FVector& From, const FVe
 
 	const FVector Side = FVector::CrossProduct(FVector::UpVector, Direction);
 	const float HalfWidth = Capsule->GetScaledCapsuleRadius() * 0.8f;
-	const FVector TraceStart = From + FVector(0.f, 0.f, LineProbeHeightOffset);
-	const FVector TraceEnd = To + FVector(0.f, 0.f, LineProbeHeightOffset);
+	// Probe at the body's current height. Using To.Z directly made every ground-level goal
+	// (minerals, delivery pads) end inside the floor and look "blocked", forcing a nav request
+	// even when the straight line was clear.
+	const float TraceZ = From.Z + LineProbeHeightOffset;
+	const FVector TraceStart(From.X, From.Y, TraceZ);
+	const FVector TraceEnd(To.X, To.Y, TraceZ);
 
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SlimeDirectPath), false, Enemy);
 	for (const float SideScale : {-1.f, 0.f, 1.f})

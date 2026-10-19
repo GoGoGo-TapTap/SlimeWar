@@ -40,6 +40,7 @@ void USlimePlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMo
 		{
 			if (ASlimeWarCharacter* Character = Cast<ASlimeWarCharacter>(GetOwningActor()))
 			{
+				Character->RecordDamageTaken(-Data.EvaluatedData.Magnitude);
 				Character->NotifyDamagedFrom(Data.EffectSpec.GetContext().GetInstigator());
 			}
 		}

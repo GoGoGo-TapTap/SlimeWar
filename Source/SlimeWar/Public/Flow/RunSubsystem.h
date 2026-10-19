@@ -8,7 +8,6 @@
 #include "RunSubsystem.generated.h"
 
 class ASlimeWarGameMode;
-class ASpawnPoint;
 class USlimeRunConfig;
 class USlimeSpawnLayout;
 class USlimeEcologySubsystem;
@@ -69,13 +68,19 @@ struct FSlimeRunResult
 
 	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
 	bool bPassed = false;
+
+	/** Seconds actually played before the run ended. */
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	float ElapsedTime = 0.f;
+
+	/** Damage actually taken by the player after hit protection. */
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	float PlayerDamageTaken = 0.f;
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeRunStateChanged, ESlimeRunState /*NewState*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeRunEnded, ERunEndReason /*Reason*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeRunTimeChanged, int32 /*SecondsRemaining*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeBatchIncoming, int32 /*BatchIndex*/, float /*SecondsUntilSpawn*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimePointStateChanged, int32 /*PointId*/, ESpawnPointState /*NewState*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeFusionHint, FVector /*Location*/);
 
 /**
@@ -166,13 +171,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Flow")
 	int32 GetRemainingSeconds() const;
 
-	UFUNCTION(BlueprintPure, Category = "Slime|Flow")
-	int32 GetBatchCount() const { return BatchCount; }
-
-	/** Highest batch that has been issued, or INDEX_NONE before the first one. */
-	UFUNCTION(BlueprintPure, Category = "Slime|Flow")
-	int32 GetLastIssuedBatch() const { return LastIssuedBatch; }
-
 	/** Successful fusions this run (statistics only, never score - design 4.4). */
 	UFUNCTION(BlueprintPure, Category = "Slime|Flow")
 	int32 GetEnemyFusedCount() const { return EnemyFusedCount; }
@@ -185,16 +183,11 @@ public:
 	 */
 	void DebugSetRemainingSeconds(float SecondsRemaining);
 
-	/** Registered points in ascending PointId order, with their current state. */
-	void GetPointSnapshot(TArray<int32>& OutPointIds, TArray<ESpawnPointState>& OutStates) const;
-
 	// -- UI binding surface (ASlimeRunGameState mirrors all of these) --
 
 	FSlimeRunStateChanged OnRunStateChanged;
 	FSlimeRunEnded OnRunEnded;
 	FSlimeRunTimeChanged OnTimeChanged;
-	FSlimeBatchIncoming OnBatchIncoming;
-	FSlimePointStateChanged OnPointStateChanged;
 
 	/**
 	 * Fires at most once per run: the first fusion that happened close enough to the player for the
@@ -210,14 +203,10 @@ protected:
 	void HandleEcologyExtinct();
 	void HandleEnemyKilled(const FSlimeKillContext& Context);
 	void HandleEnemyFused(const FSlimeFusionEvent& Event);
-	void HandlePointStateChanged(int32 PointId, ESpawnPointState NewState);
 
 	void BindDirectorEvents();
 	void UnbindDirectorEvents();
 
-	void CollectSpawnPoints(const USlimeRunConfig& RunConfig);
-	void IssueWarnings();
-	void IssueDueBatches();
 	void SetRunState(ESlimeRunState NewState);
 	void BroadcastRemainingSeconds(bool bForce);
 
@@ -238,10 +227,6 @@ protected:
 	const USlimeRunConfig* GetRunConfig() const;
 
 private:
-	/** Spawn points found in the level, ascending PointId. */
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<ASpawnPoint>> SpawnPoints;
-
 	TWeakObjectPtr<ASlimeWarGameMode> BoundGameMode;
 	TWeakObjectPtr<USlimeEcologySubsystem> BoundEcology;
 
@@ -250,15 +235,6 @@ private:
 	int32 SelectedDropPoint = INDEX_NONE;
 	float ElapsedTime = 0.f;
 	float RunDuration = 0.f;
-	int32 BatchCount = 0;
-	float BatchInterval = 0.f;
-	float WarningLead = 0.f;
-
-	/** Next batch waiting to be issued. */
-	int32 NextBatchToIssue = 0;
-	/** Last batch that already fired its "incoming" warning. Batch 0 never warns. */
-	int32 LastWarnedBatch = 0;
-	int32 LastIssuedBatch = INDEX_NONE;
 	/** Last whole second pushed to the UI, so the countdown does not broadcast every tick. */
 	int32 LastBroadcastSecond = INDEX_NONE;
 	int32 EnemyFusedCount = 0;

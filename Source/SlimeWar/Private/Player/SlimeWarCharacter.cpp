@@ -33,9 +33,9 @@
 #include "GameplayFramework/SlimeWarGameMode.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "InputActionValue.h"
+#include "InputCoreTypes.h"
 #include "Player/Abilities/GA_Die.h"
 #include "Player/Abilities/GA_ChargeFire.h"
-#include "Player/Abilities/GA_Fire.h"
 #include "Player/Abilities/GA_HitProtection.h"
 #include "Player/Abilities/GA_Reload.h"
 #include "Player/SlimeAbilityInputID.h"
@@ -94,6 +94,7 @@ void ASlimeWarCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	TotalDamageTaken = 0.f;
 	InitAbilitySystem();
 	ApplyRunConfig();
 }
@@ -168,7 +169,25 @@ void ASlimeWarCharacter::ApplyRunConfig()
 
 	if (RunConfig->PlayerMoveSpeed > 0.f)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = RunConfig->PlayerMoveSpeed;
+		CachedWalkSpeed = RunConfig->PlayerMoveSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = CachedWalkSpeed;
+	}
+
+	CachedSprintSpeed = RunConfig->PlayerSprintSpeed;
+	CachedAimSpeed = RunConfig->PlayerAimSpeed;
+
+	if (RunConfig->PlayerJumpSpeed > 0.f)
+	{
+		GetCharacterMovement()->JumpZVelocity = RunConfig->PlayerJumpSpeed;
+	}
+
+	if (RunConfig->PlayerGravity > 0.f && GetWorld())
+	{
+		const float WorldGravity = FMath::Abs(GetWorld()->GetGravityZ());
+		if (WorldGravity > KINDA_SMALL_NUMBER)
+		{
+			GetCharacterMovement()->GravityScale = RunConfig->PlayerGravity / WorldGravity;
+		}
 	}
 
 	if (RunConfig->PlayerTurnRateDegPerSec > 0.f)
@@ -191,19 +210,35 @@ void ASlimeWarCharacter::ApplyRunConfig()
 	{
 		if (RunConfig->CameraBoomLength > 0.f)
 		{
+			CachedNormalBoomLength = RunConfig->CameraBoomLength;
 			CameraBoom->TargetArmLength = RunConfig->CameraBoomLength;
 		}
 
 		if (!RunConfig->CameraSocketOffset.IsNearlyZero())
 		{
-			CameraBoom->SocketOffset = RunConfig->CameraSocketOffset;
+			CachedShoulderOffset = RunConfig->CameraSocketOffset;
+			ApplyShoulderOffset();
 		}
+
+		CachedAimBoomLength = RunConfig->CameraAimBoomLength;
 	}
 
-	if (FollowCamera && RunConfig->CameraFieldOfView > 0.f)
+	if (FollowCamera)
 	{
-		FollowCamera->SetFieldOfView(RunConfig->CameraFieldOfView);
+		if (RunConfig->CameraFieldOfView > 0.f)
+		{
+			CachedNormalFOV = RunConfig->CameraFieldOfView;
+			FollowCamera->SetFieldOfView(RunConfig->CameraFieldOfView);
+		}
+		else
+		{
+			// Keep the engine default so leaving aim can restore it.
+			CachedNormalFOV = FollowCamera->FieldOfView;
+		}
 	}
+	CachedAimFOV = RunConfig->CameraAimFieldOfView;
+
+	UpdateMovementSpeed();
 
 	if (Attributes)
 	{
@@ -325,6 +360,9 @@ void ASlimeWarCharacter::ApplyDeathEffects(bool bCancelAbilities)
 		AimAssist->ReleaseLock();
 	}
 	bIsAiming = false;
+        bIsSprinting = false;
+        UpdateMovementSpeed();
+        ApplyAimCamera(false);
 	bInputBlocked = true;
 
 	// Death locks movement (design 3.1).
@@ -383,6 +421,9 @@ void ASlimeWarCharacter::SetRunInputBlocked(bool bBlocked)
 			AimAssist->ReleaseLock();
 		}
 		bIsAiming = false;
+                bIsSprinting = false;
+                UpdateMovementSpeed();
+                ApplyAimCamera(false);
 		bUseControllerRotationYaw = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
@@ -410,6 +451,9 @@ void ASlimeWarCharacter::EnterResultState()
 		AimAssist->ReleaseLock();
 	}
 	bIsAiming = false;
+        bIsSprinting = false;
+        UpdateMovementSpeed();
+        ApplyAimCamera(false);
 
 	if (AbilitySystem)
 	{
@@ -622,6 +666,13 @@ void ASlimeWarCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 			TEXT("'%s' failed to find an Enhanced Input component. This project is built on the Enhanced Input system."),
 			*GetNameSafe(this));
 	}
+
+	// R1 controls do not need new input assets: bind the three direct keys in C++ so they remain
+	// available even when the Blueprint has not been updated.
+	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Pressed, this, &ASlimeWarCharacter::OnSprintPressed);
+	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Released, this, &ASlimeWarCharacter::OnSprintReleased);
+	PlayerInputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &ASlimeWarCharacter::OnJumpPressed);
+	PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ASlimeWarCharacter::OnSwitchShoulderPressed);
 }
 
 void ASlimeWarCharacter::BindAbilityActions(UInputComponent* PlayerInputComponent)
@@ -660,6 +711,7 @@ void ASlimeWarCharacter::BindAbilityActions(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ASlimeWarCharacter::SelectTornadoGrenade);
 	PlayerInputComponent->BindKey(EKeys::Z, IE_Pressed, this, &ASlimeWarCharacter::SelectFactionA);
 	PlayerInputComponent->BindKey(EKeys::X, IE_Pressed, this, &ASlimeWarCharacter::SelectFactionB);
+	PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &ASlimeWarCharacter::SelectFactionC);
 	PlayerInputComponent->BindKey(EKeys::G, IE_Pressed, this, &ASlimeWarCharacter::ThrowSelectedGrenade);
 }
 
@@ -725,6 +777,8 @@ void ASlimeWarCharacter::OnAimPressed()
 	}
 
 	bIsAiming = true;
+	UpdateMovementSpeed();
+	ApplyAimCamera(true);
 
 	// While aiming the character faces the camera (strafe shooting) instead of its movement.
 	bUseControllerRotationYaw = true;
@@ -739,6 +793,8 @@ void ASlimeWarCharacter::OnAimPressed()
 void ASlimeWarCharacter::OnAimReleased()
 {
 	bIsAiming = false;
+	UpdateMovementSpeed();
+	ApplyAimCamera(false);
 
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
@@ -747,6 +803,142 @@ void ASlimeWarCharacter::OnAimReleased()
 	{
 		AbilitySystem->AbilityLocalInputReleased(static_cast<int32>(EAbilityInputID::Aim));
 	}
+}
+
+void ASlimeWarCharacter::OnSprintPressed()
+{
+	if (bInputBlocked)
+	{
+		return;
+	}
+
+	bIsSprinting = true;
+	UpdateMovementSpeed();
+}
+
+void ASlimeWarCharacter::OnSprintReleased()
+{
+	bIsSprinting = false;
+	UpdateMovementSpeed();
+}
+
+void ASlimeWarCharacter::OnJumpPressed()
+{
+	if (bInputBlocked || !Health || Health->IsDead())
+	{
+		return;
+	}
+
+	if (GetCharacterMovement() && GetCharacterMovement()->IsMovingOnGround()
+		&& CanJump())
+	{
+		Jump();
+	}
+}
+
+void ASlimeWarCharacter::OnSwitchShoulderPressed()
+{
+	if (bInputBlocked)
+	{
+		return;
+	}
+
+	bIsLeftShoulder = !bIsLeftShoulder;
+	ApplyShoulderOffset();
+}
+
+void ASlimeWarCharacter::DebugSetSprinting(bool bEnabled)
+{
+	if (bEnabled)
+	{
+		OnSprintPressed();
+	}
+	else
+	{
+		OnSprintReleased();
+	}
+}
+
+void ASlimeWarCharacter::DebugSetAiming(bool bEnabled)
+{
+	if (bEnabled)
+	{
+		OnAimPressed();
+	}
+	else
+	{
+		OnAimReleased();
+	}
+}
+
+void ASlimeWarCharacter::DebugJump()
+{
+	OnJumpPressed();
+}
+
+void ASlimeWarCharacter::DebugSwitchShoulder()
+{
+	OnSwitchShoulderPressed();
+}
+
+void ASlimeWarCharacter::UpdateMovementSpeed()
+{
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (!Movement)
+	{
+		return;
+	}
+
+	float Speed = CachedWalkSpeed;
+	if (bIsSprinting && CachedSprintSpeed > 0.f)
+	{
+		Speed = CachedSprintSpeed;
+	}
+	if (bIsAiming && CachedAimSpeed > 0.f)
+	{
+		Speed = CachedAimSpeed;
+	}
+
+	if (Speed > 0.f)
+	{
+		Movement->MaxWalkSpeed = Speed;
+	}
+}
+
+void ASlimeWarCharacter::ApplyAimCamera(bool bAim)
+{
+	if (CameraBoom)
+	{
+		const float TargetBoom =
+			bAim && CachedAimBoomLength > 0.f ? CachedAimBoomLength : CachedNormalBoomLength;
+		if (TargetBoom > 0.f)
+		{
+			CameraBoom->TargetArmLength = TargetBoom;
+		}
+	}
+
+	if (FollowCamera)
+	{
+		const float TargetFOV =
+			bAim && CachedAimFOV > 0.f ? CachedAimFOV : CachedNormalFOV;
+		if (TargetFOV > 0.f)
+		{
+			FollowCamera->SetFieldOfView(TargetFOV);
+		}
+	}
+}
+
+void ASlimeWarCharacter::ApplyShoulderOffset()
+{
+	if (!CameraBoom)
+	{
+		return;
+	}
+
+	FVector Offset = CachedShoulderOffset;
+	const float SideOffset = FMath::Abs(Offset.Y);
+	Offset.Y = bIsLeftShoulder ? -SideOffset : SideOffset;
+	CameraBoom->SocketOffset = Offset;
 }
 
 void ASlimeWarCharacter::OnPausePressed()
@@ -771,14 +963,52 @@ void ASlimeWarCharacter::SelectTornadoGrenade()
 
 void ASlimeWarCharacter::SelectFactionA()
 {
+	if (!CanSelectFaction(ESlimeFaction::A))
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SelectFactionA: this level has no A faction site."));
+		return;
+	}
+
 	SelectedGrenadeFaction = ESlimeFaction::A;
 	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
 }
 
 void ASlimeWarCharacter::SelectFactionB()
 {
+	if (!CanSelectFaction(ESlimeFaction::B))
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SelectFactionB: this level has no B faction site."));
+		return;
+	}
+
 	SelectedGrenadeFaction = ESlimeFaction::B;
 	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
+}
+
+void ASlimeWarCharacter::SelectFactionC()
+{
+	if (!CanSelectFaction(ESlimeFaction::C))
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SelectFactionC: this level has no C faction site."));
+		return;
+	}
+
+	SelectedGrenadeFaction = ESlimeFaction::C;
+	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
+}
+
+bool ASlimeWarCharacter::CanSelectFaction(ESlimeFaction Faction) const
+{
+	const UWorld* World = GetWorld();
+	const USlimeEcologySubsystem* Ecology = World
+		? World->GetSubsystem<USlimeEcologySubsystem>()
+		: nullptr;
+	return Ecology && Ecology->HasFactionSite(Faction);
+}
+
+void ASlimeWarCharacter::RecordDamageTaken(float Amount)
+{
+	TotalDamageTaken += FMath::Max(0.f, Amount);
 }
 
 void ASlimeWarCharacter::ThrowSelectedGrenade()
@@ -1043,6 +1273,16 @@ bool ASlimeWarCharacter::PerformChargedShot(
 
 	const float Alpha = FMath::Clamp(ChargeAlpha, 0.f, 1.f);
 	const float Damage = Rules->BaseDamage * (1.f - Alpha);
+        const USlimeEcologyRules* EcologyRules = USlimeEcologyRules::GetFor(this);
+        ASlimeEcologyEnemy* DirectTarget = Cast<ASlimeEcologyEnemy>(Shot.TargetActor);
+        USlimeEcologyFusionComponent* DirectFusion =
+                DirectTarget ? DirectTarget->GetEcologyFusionComponent() : nullptr;
+        if (DirectFusion)
+        {
+                DirectFusion->ApplyShotFusionInterference(
+                        EcologyRules ? EcologyRules->ShotFusionCooldown : -1.f);
+        }
+
 	if (Shot.TargetActor && Damage > 0.f)
 	{
 		if (USlimeCombatSubsystem* Combat = USlimeCombatSubsystem::Get(this))
@@ -1055,8 +1295,7 @@ bool ASlimeWarCharacter::PerformChargedShot(
 		}
 	}
 
-	const USlimeEcologyRules* EcologyRules = USlimeEcologyRules::GetFor(this);
-	if (ASlimeEcologyEnemy* DirectTarget = Cast<ASlimeEcologyEnemy>(Shot.TargetActor))
+        if (DirectTarget)
 	{
 		if (USlimeBodyInteractionComponent* Body = DirectTarget->GetBodyInteraction())
 		{
@@ -1076,9 +1315,9 @@ bool ASlimeWarCharacter::PerformChargedShot(
 				{
 					Body->OpenImpactSplitWindow(EcologyRules->ImpactSplitWindow);
 				}
-				if (USlimeEcologyFusionComponent* Fusion = DirectTarget->GetEcologyFusionComponent())
+                                if (DirectFusion)
 				{
-					Fusion->InterruptFusion(EcologyRules->FusionInterruptedBlock);
+                                        DirectFusion->InterruptFusion(EcologyRules->FusionInterruptedBlock);
 				}
 			}
 		}
@@ -1144,8 +1383,10 @@ bool ASlimeWarCharacter::PerformChargedShot(
 						Body->OpenImpactSplitWindow(EcologyRules->ImpactSplitWindow);
 					}
 				}
-				if (USlimeEcologyFusionComponent* Fusion = Other->GetEcologyFusionComponent())
+                                if (USlimeEcologyFusionComponent* Fusion = Other->GetEcologyFusionComponent())
 				{
+                                        Fusion->ApplyShotFusionInterference(
+                                                EcologyRules ? EcologyRules->ShotFusionCooldown : -1.f);
 					Fusion->InterruptFusion(EcologyRules->FusionInterruptedBlock);
 				}
 			}

@@ -94,9 +94,6 @@ public:
 	/** Charge-impact split. Commits only when every fragment position is legal. */
 	bool TryImpactSplit(const FVector& ImpactPoint, const FVector& ImpactNormal);
 
-	/** Ecology bodies collide with the player; they never use the legacy movement ignore. */
-	virtual void IgnorePlayerForMovement() override;
-
 protected:
 	virtual void HandleDeath() override;
 	virtual void OnBodyStatsApplied(int32 NewMass, float BodyRadius) override;

@@ -6,7 +6,7 @@ import unreal
 ASSET_DIRECTORY = "/Game/_SlimeWar/Ecology"
 ASSET_NAME = "DA_EcologyRules"
 ASSET_PATH = f"{ASSET_DIRECTORY}/{ASSET_NAME}"
-RUN_CONFIG_PATH = "/Game/_SlimeWar/Core/Data/DA_RunConfig"
+RUN_CONFIG_PATH = "/Game/_SlimeWar/Core/Data/DA_RunConfig_DoublePoint"
 
 VALUES = {
     "perception_interval": 0.25,

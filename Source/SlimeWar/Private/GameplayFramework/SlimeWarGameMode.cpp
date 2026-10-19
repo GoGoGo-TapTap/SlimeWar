@@ -65,14 +65,6 @@ void ASlimeWarGameMode::OnEnemyFused(const FSlimeFusionEvent& Event)
 	OnEnemyFusedEvent.Broadcast(Event);
 }
 
-void ASlimeWarGameMode::OnPointStateChanged(int32 PointId, ESpawnPointState NewState)
-{
-	UE_LOG(LogSlimeWar, Verbose, TEXT("[BattleDirector] OnPointStateChanged: PointId=%d NewState=%d."),
-		PointId, static_cast<int32>(NewState));
-
-	OnPointStateChangedEvent.Broadcast(PointId, NewState);
-}
-
 void ASlimeWarGameMode::OnPlayerDied()
 {
 	UE_LOG(LogSlimeWar, Log, TEXT("[BattleDirector] OnPlayerDied: the run ends now."));

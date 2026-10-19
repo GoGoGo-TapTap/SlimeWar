@@ -9,7 +9,6 @@ SPAWN_LAYOUT_PATH = "/Game/_SlimeWar/Core/Data/DA_SpawnLayout_DoublePoint"
 LEVEL_DIRECTORY = "/Game/_SlimeWar/Core/Data/Levels"
 LEVEL_PATH = f"{LEVEL_DIRECTORY}/DA_Level_DoublePoint"
 RULES_PATH = "/Game/_SlimeWar/Ecology/DA_EcologyRules"
-BASE_RUN_CONFIG = "/Game/_SlimeWar/Core/Data/DA_RunConfig"
 
 D1 = unreal.Vector(-1100.0, -1800.0, 0.0)
 D2 = unreal.Vector(1100.0, 1800.0, 0.0)
@@ -65,21 +64,18 @@ def create_level_data_assets():
         "/Game/_SlimeWar/Core/Data",
         unreal.SlimeSpawnLayout,
     )
-    layout.set_editor_property("points", [])
     layout.set_editor_property("drop_points", [D1, D2])
     save_asset(layout)
 
     if not unreal.EditorAssetLibrary.does_asset_exist(RUN_CONFIG_PATH):
-        unreal.EditorAssetLibrary.duplicate_asset(BASE_RUN_CONFIG, RUN_CONFIG_PATH)
+        raise RuntimeError(
+            f"{RUN_CONFIG_PATH} is missing. Create it once with the full data table bindings; "
+            "this historical tool no longer duplicates the retired DA_RunConfig."
+        )
     run_config = unreal.EditorAssetLibrary.load_asset(RUN_CONFIG_PATH)
     run_config.set_editor_property("run_duration", 150.0)
     run_config.set_editor_property("target_score", 200)
     run_config.set_editor_property("auto_start_run", False)
-    run_config.set_editor_property("ecology_run", True)
-    run_config.set_editor_property("spawn_batch_count", 0)
-    run_config.set_editor_property("spawn_batch_interval", 0.0)
-    run_config.set_editor_property("spawn_normal_per_batch", 0)
-    run_config.set_editor_property("spawn_aggro_per_batch", 0)
     run_config.set_editor_property("spawn_layout", layout)
     if rules:
         run_config.set_editor_property("ecology_rules", rules)

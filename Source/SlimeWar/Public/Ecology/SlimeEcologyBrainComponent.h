@@ -30,7 +30,8 @@ enum class ESlimeEcologyBehavior : uint8
 	FusionSeek,
 	RecoverCargo,
 	ReturnCargo,
-	Gather
+	Gather,
+	SeekPaint
 };
 
 /** M2 perception, group and exploration decisions for one ecology slime. */
@@ -51,6 +52,7 @@ public:
 	void SetHome(const FVector& InHome, float InActivityRadius);
 	void ForceRefresh();
 	void ClearResourceMemory();
+	void DebugSetGatherRest(float Seconds);
 
 	ESlimeEcologyBehavior GetBehavior() const { return Behavior; }
 	const TCHAR* GetBehaviorName() const;
@@ -61,6 +63,8 @@ public:
 	int32 GetRefreshCount() const { return RefreshCount; }
 	bool IsPlayerVisible() const { return bPlayerVisible; }
 	float GetPlayerDistance() const { return PlayerDistance; }
+	float GetGatherRestRemaining() const { return GatherRestRemaining; }
+	int32 GetExplorationVisitCount() const { return ExplorationVisits.Num(); }
 
 	/** Cached-neighbour separation force used by the per-frame locomotion layer. */
 	FVector GetSeparationVector() const;
@@ -76,8 +80,11 @@ private:
 	FVector ChooseAvoidGoal(const FVector& AwayDirection) const;
 	FVector ChooseThreatAvoidGoal(const FVector& ThreatLocation) const;
 	bool HasLineOfSight(const AActor* Target) const;
+	bool HasLineOfSightToLocation(const FVector& Location) const;
 	bool ProjectToNavigation(const FVector& Desired, FVector& OutLocation) const;
 	bool UpdateResourceBehavior();
+	bool UpdateCarryingBehavior();
+	bool UpdatePaintBehavior();
 
 	ESlimeEcologyBehavior Behavior = ESlimeEcologyBehavior::Paused;
 	FVector HomeLocation = FVector::ZeroVector;
@@ -89,10 +96,12 @@ private:
 	float ExploreGoalAge = 0.f;
 	float AvoidGoalAge = 0.f;
 	float ResourceMemoryRemaining = 0.f;
+	float ResourceTargetHoldRemaining = 0.f;
 	float GatherTimeRemaining = 0.f;
 	float GatherRestRemaining = 0.f;
 	float PlayerDistance = TNumericLimits<float>::Max();
 	bool bPlayerVisible = false;
+	bool bWasAlerted = false;
 	bool bHasExploreGoal = false;
 	TArray<TWeakObjectPtr<ASlimeEcologyEnemy>> VisibleAllies;
 	TWeakObjectPtr<ASlimeMineralPatch> MineralTarget;
@@ -101,5 +110,6 @@ private:
 	TWeakObjectPtr<ASlimeEcologyEnemy> NearestEnemy;
 	TWeakObjectPtr<ASlimeEcologyEnemy> NearestHostileCore;
 	FRandomStream RandomStream;
+	TMap<FIntPoint, int32> ExplorationVisits;
 	int32 RefreshCount = 0;
 };

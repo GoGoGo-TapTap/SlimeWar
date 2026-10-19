@@ -64,6 +64,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Player")
 	bool IsAiming() const { return bIsAiming; }
 
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	bool IsSprinting() const { return bIsSprinting && !bIsAiming; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	bool IsUsingLeftShoulder() const { return bIsLeftShoulder; }
+
+	void DebugSetSprinting(bool bEnabled);
+	void DebugSetAiming(bool bEnabled);
+	void DebugJump();
+	void DebugSwitchShoulder();
+
         UFUNCTION(BlueprintPure, Category = "Slime|Player")
         ESlimeGrenadeType GetSelectedGrenadeType() const { return SelectedGrenadeType; }
 
@@ -75,6 +86,13 @@ public:
 
         UFUNCTION(BlueprintPure, Category = "Slime|Player")
         int32 GetTornadoGrenadeCount() const { return TornadoGrenades; }
+
+	/** Total damage taken this run, after hit protection. */
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	float GetTotalDamageTaken() const { return TotalDamageTaken; }
+
+	/** Called by the player AttributeSet with the actual negative health delta. */
+	void RecordDamageTaken(float Amount);
 
 	/**
 	 * Camera-space fire direction after aim assist. OutAssistTarget is set to the actor
@@ -168,12 +186,19 @@ protected:
 	UFUNCTION() void OnReloadPressed();
 	UFUNCTION() void OnAimPressed();
 	UFUNCTION() void OnAimReleased();
+	UFUNCTION() void OnSprintPressed();
+	UFUNCTION() void OnSprintReleased();
+	UFUNCTION() void OnJumpPressed();
+	UFUNCTION() void OnSwitchShoulderPressed();
 	UFUNCTION() void OnPausePressed();
         UFUNCTION() void SelectAssimilationGrenade();
         UFUNCTION() void SelectTornadoGrenade();
         UFUNCTION() void SelectFactionA();
         UFUNCTION() void SelectFactionB();
+        UFUNCTION() void SelectFactionC();
         UFUNCTION() void ThrowSelectedGrenade();
+
+	bool CanSelectFaction(ESlimeFaction Faction) const;
 
 	// -- GAS --
 	void InitAbilitySystem();
@@ -192,6 +217,9 @@ protected:
 	bool HasClearShot(const FVector& From, const AActor* Target) const;
 
 	const USlimeRunConfig* GetRunConfig() const;
+	void UpdateMovementSpeed();
+	void ApplyAimCamera(bool bAim);
+	void ApplyShoulderOffset();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystem;
@@ -249,6 +277,17 @@ protected:
 	/** Right mouse held: enables aim assist and strafe facing. */
 	bool bIsAiming = false;
 
+	bool bIsSprinting = false;
+	bool bIsLeftShoulder = false;
+	float CachedWalkSpeed = 0.f;
+	float CachedSprintSpeed = 0.f;
+	float CachedAimSpeed = 0.f;
+	float CachedNormalBoomLength = 0.f;
+	float CachedAimBoomLength = 0.f;
+	float CachedNormalFOV = 0.f;
+	float CachedAimFOV = 0.f;
+	FVector CachedShoulderOffset = FVector::ZeroVector;
+
 	/** Previous mirrored health, used to detect "just took damage" for hit protection. */
 	float LastMirroredHealth = 0.f;
 	bool bHasMirroredHealth = false;
@@ -268,4 +307,5 @@ protected:
         int32 AssimilationGrenades = 3;
         int32 TornadoGrenades = 3;
         float GrenadeCooldownRemaining = 0.f;
+	float TotalDamageTaken = 0.f;
 };

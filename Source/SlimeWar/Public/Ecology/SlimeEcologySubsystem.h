@@ -68,6 +68,7 @@ public:
 		const ASlimeEcologyEnemy* Enemy,
 		float MaxRange) const;
 	ASlimeFactionSite* GetSiteForFaction(ESlimeFaction Faction) const;
+	bool HasFactionSite(ESlimeFaction Faction) const;
 
 	TArray<FSlimeSiteStatus> GetSiteStatuses() const;
 	TArray<FSlimeMineralStatus> GetMineralStatuses() const;
@@ -126,6 +127,7 @@ private:
 	bool bExtinctionReported = false;
 	float ExtinctionCheckAccumulator = 0.f;
 	float LedgerLogAccumulator = 0.f;
+	float FallProbeAccumulator = 0.f;
 	int32 InitialMass = 0;
 	int32 DeliveredCargo = 0;
 	int32 RemovedMass = 0;

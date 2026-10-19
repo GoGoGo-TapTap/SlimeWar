@@ -4,11 +4,13 @@
 
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarLog.h"
+#include "Ecology/SlimeEcologySubsystem.h"
 #include "Flow/RunSubsystem.h"
 #include "Flow/SlimeRunGameState.h"
 #include "GameFramework/PlayerController.h"
 #include "Player/SlimeWarCharacter.h"
 #include "Player/SlimeWeaponComponent.h"
+#include "TimerManager.h"
 
 void USlimeHUDWidget::NativeConstruct()
 {
@@ -17,10 +19,26 @@ void USlimeHUDWidget::NativeConstruct()
 	BindRun();
 	BindPlayer();
 	UpdateAll();
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			EcologyRefreshTimer,
+			this,
+			&USlimeHUDWidget::RefreshEcologySites,
+			0.5f,
+			/*bLoop=*/true);
+	}
 }
 
 void USlimeHUDWidget::NativeDestruct()
 {
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(EcologyRefreshTimer);
+	}
+	EcologyRefreshTimer.Invalidate();
+
 	UnbindRun();
 	UnbindPlayer();
 
@@ -46,8 +64,6 @@ void USlimeHUDWidget::BindRun()
 
 	RunState->OnScoreChanged.AddUObject(this, &USlimeHUDWidget::HandleScoreChanged);
 	RunState->OnTimeChanged.AddUObject(this, &USlimeHUDWidget::HandleTimeChanged);
-	RunState->OnPointStateChanged.AddUObject(this, &USlimeHUDWidget::HandlePointStateChanged);
-	RunState->OnBatchIncoming.AddUObject(this, &USlimeHUDWidget::HandleBatchIncoming);
 	RunState->OnFusionHint.AddUObject(this, &USlimeHUDWidget::HandleFusionHint);
 	RunState->OnRunStateChanged.AddUObject(this, &USlimeHUDWidget::HandleRunStateChanged);
 	RunState->OnRunEnded.AddUObject(this, &USlimeHUDWidget::HandleRunEnded);
@@ -61,8 +77,6 @@ void USlimeHUDWidget::UnbindRun()
 	{
 		RunState->OnScoreChanged.RemoveAll(this);
 		RunState->OnTimeChanged.RemoveAll(this);
-		RunState->OnPointStateChanged.RemoveAll(this);
-		RunState->OnBatchIncoming.RemoveAll(this);
 		RunState->OnFusionHint.RemoveAll(this);
 		RunState->OnRunStateChanged.RemoveAll(this);
 		RunState->OnRunEnded.RemoveAll(this);
@@ -149,12 +163,6 @@ void USlimeHUDWidget::UpdateAll()
 	// Sync the fly-in baseline: showing the HUD is not a kill.
 	LastKnownScore = RunState->GetCurrentScore();
 
-	for (int32 Index = 0; Index < RunState->GetPointCount(); ++Index)
-	{
-		const int32 PointId = RunState->GetPointIdAt(Index);
-		OnPointStateUpdated(PointId, RunState->GetPointState(PointId));
-	}
-
 	if (const USlimeHealthComponent* Health = BoundHealth.Get())
 	{
 		OnHealthUpdated(Health->GetHealth(), Health->GetMaxHealth());
@@ -176,6 +184,7 @@ void USlimeHUDWidget::UpdateAll()
         }
 
 	EvaluateHints();
+	RefreshEcologySites();
 }
 
 void USlimeHUDWidget::EvaluateHints()
@@ -237,16 +246,6 @@ void USlimeHUDWidget::HandleTimeChanged(int32 NewRemainingSeconds)
 	}
 }
 
-void USlimeHUDWidget::HandlePointStateChanged(int32 PointId, ESpawnPointState NewState)
-{
-	OnPointStateUpdated(PointId, NewState);
-}
-
-void USlimeHUDWidget::HandleBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn)
-{
-	OnBatchIncoming(BatchIndex, SecondsUntilSpawn);
-}
-
 void USlimeHUDWidget::HandleFusionHint(FVector Location)
 {
 	// Design 7.5: "fused targets are worth more but take longer to kill".
@@ -296,4 +295,16 @@ void USlimeHUDWidget::HandleGrenadeSelectionChanged(
 	ESlimeFaction Faction)
 {
 	OnGrenadeSelectionUpdated(Type, Faction);
+}
+
+void USlimeHUDWidget::RefreshEcologySites()
+{
+	UWorld* World = GetWorld();
+	USlimeEcologySubsystem* Ecology = World
+		? World->GetSubsystem<USlimeEcologySubsystem>()
+		: nullptr;
+	if (Ecology)
+	{
+		OnEcologySitesUpdated(Ecology->GetSiteStatuses());
+	}
 }

@@ -36,10 +36,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Slime|Data")
 	bool GetWeaponStat(FName WeaponId, FWeaponStatRow& Out) const;
 
-	/** Look up the aggressive slime row (row name comes from USlimeRunConfig::AggroRowName). */
-	UFUNCTION(BlueprintCallable, Category = "Slime|Data")
-	bool GetAggroStat(FSlimeAggroStatRow& Out) const;
-
 	/** Dump table paths and row names to the log. Used by the CP-0 acceptance check. */
 	UFUNCTION(BlueprintCallable, Category = "Slime|Data")
 	void DumpLoadedTables() const;
@@ -82,9 +78,6 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDataTable> WeaponStatTable = nullptr;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UDataTable> AggroStatTable = nullptr;
 
 	UPROPERTY(Transient)
 	TObjectPtr<USlimeEcologyRules> EcologyRules = nullptr;

@@ -170,7 +170,9 @@ bool USlimeEcologyFusionComponent::CanRunAutonomous() const
 	return State == ESlimeEcologyFusionState::Idle
 		&& AutoReadyRemaining <= 0.f
 		&& CooldownRemaining <= 0.f
+                && ShotCooldownRemaining <= 0.f
 		&& BlockRemaining <= 0.f
+		&& SplitCalmRemaining <= 0.f
 		&& (!Body || !Body->BlocksVoluntaryMovement());
 }
 
@@ -184,16 +186,19 @@ bool USlimeEcologyFusionComponent::CanPairWith(
 	{
 		return false;
 	}
-	if (Other->GetFaction() != Owner->GetFaction() || CooldownRemaining > 0.f)
+        if (Other->GetFaction() != Owner->GetFaction() || CooldownRemaining > 0.f)
 	{
 		return false;
 	}
+        if (InPath != ESlimeEcologyFusionPath::Forced && ShotCooldownRemaining > 0.f)
+        {
+                return false;
+        }
 	if (InPath != ESlimeEcologyFusionPath::Forced
 		&& (Owner->GetCargo() > 0 || Other->GetCargo() > 0))
 	{
 		return false;
 	}
-
 	const USlimeHealthComponent* MyHealth = Owner->GetHealthComponent();
 	const USlimeHealthComponent* OtherHealth = Other->GetHealthComponent();
 	const USlimeEcologyFusionComponent* OtherFusion = Other->GetEcologyFusionComponent();
@@ -201,19 +206,31 @@ bool USlimeEcologyFusionComponent::CanPairWith(
 	{
 		return false;
 	}
+	if (SplitCalmRemaining > 0.f || OtherFusion->SplitCalmRemaining > 0.f)
+	{
+		return false;
+	}
 	if (OtherFusion == this || OtherFusion->IsEngaged() || OtherFusion->bResolving)
 	{
 		return false;
 	}
+        if (InPath == ESlimeEcologyFusionPath::Forced
+                && OtherFusion->ShotCooldownRemaining > 0.f
+                && !OtherFusion->bShotSnapshotReady)
+        {
+                return false;
+        }
 
 	const int32 TotalMass = Owner->GetMass() + Other->GetMass();
 	if (InPath == ESlimeEcologyFusionPath::Forced)
 	{
-		const USlimeBodyInteractionComponent* MyBody = GetBody();
-		const USlimeBodyInteractionComponent* OtherBody = Other->GetBodyInteraction();
+		// Displacement matchmaking is allowed while stun is pending or active. The
+		// split-calm timer above and the pre-shot cooldown snapshot are the gates.
 		return TotalMass <= Rules->FusionTotalMassCap
-			&& (!MyBody || (!MyBody->IsStunPending() && !MyBody->IsStunned()))
-			&& (!OtherBody || (!OtherBody->IsStunPending() && !OtherBody->IsStunned()));
+			&& CooldownRemaining <= 0.f
+			&& OtherFusion->CooldownRemaining <= 0.f
+                        && (ShotCooldownRemaining <= 0.f || bShotSnapshotReady)
+			&& (OtherFusion->ShotCooldownRemaining <= 0.f || OtherFusion->bShotSnapshotReady);
 	}
 
 	const USlimeBodyInteractionComponent* MyBody = GetBody();
@@ -413,7 +430,10 @@ bool USlimeEcologyFusionComponent::TryBeginAutonomousFusion()
 
 bool USlimeEcologyFusionComponent::TryBeginContactFusion()
 {
-	if (State != ESlimeEcologyFusionState::Idle || CooldownRemaining > 0.f || BlockRemaining > 0.f)
+        if (State != ESlimeEcologyFusionState::Idle
+                || CooldownRemaining > 0.f
+                || ShotCooldownRemaining > 0.f
+                || BlockRemaining > 0.f)
 	{
 		return false;
 	}
@@ -548,7 +568,7 @@ void USlimeEcologyFusionComponent::TickPairing(float DeltaTime)
 				(Owner->GetActorLocation() + Other->GetActorLocation()) * 0.5f);
 			if (USlimeLocomotionComponent* Loco = GetLocomotion())
 			{
-				Loco->SetMoveGoal(MeetingPoint, Rules->FusionAutoSeekSpeed, 10.f);
+                                Loco->SetMoveGoal(MeetingPoint, Rules->FusionAutoSeekSpeed, 10.f);
 			}
 		}
 	}
@@ -583,7 +603,16 @@ void USlimeEcologyFusionComponent::TickComponent(
 	}
 
 	CooldownRemaining = FMath::Max(0.f, CooldownRemaining - DeltaTime);
+        ShotCooldownRemaining = FMath::Max(0.f, ShotCooldownRemaining - DeltaTime);
+        if (ShotCooldownRemaining <= 0.f)
+        {
+                bShotSnapshotReady = false;
+        }
 	BlockRemaining = FMath::Max(0.f, BlockRemaining - DeltaTime);
+	if (!GetBody() || !GetBody()->IsStunned())
+	{
+		SplitCalmRemaining = FMath::Max(0.f, SplitCalmRemaining - DeltaTime);
+	}
         TemporaryContactReadyRemaining =
                 FMath::Max(0.f, TemporaryContactReadyRemaining - DeltaTime);
 	if (State == ESlimeEcologyFusionState::Cooldown && CooldownRemaining <= 0.f)
@@ -730,6 +759,15 @@ void USlimeEcologyFusionComponent::ResolvePairing()
             || (Other->GetCoreComponent() && Other->GetCoreComponent()->IsHostileCore())
             || (Survivor->GetAlertComponent() && Survivor->GetAlertComponent()->IsAlerted())
             || (Other->GetAlertComponent() && Other->GetAlertComponent()->IsAlerted());
+        const USlimeBodyInteractionComponent* SurvivorBody = Survivor->GetBodyInteraction();
+        const USlimeBodyInteractionComponent* OtherBody = Other->GetBodyInteraction();
+        const float CombinedStun = FMath::Max(
+                SurvivorBody
+                        ? FMath::Max(SurvivorBody->GetStunPending(), SurvivorBody->GetStunRemaining())
+                        : 0.f,
+                OtherBody
+                        ? FMath::Max(OtherBody->GetStunPending(), OtherBody->GetStunRemaining())
+                        : 0.f);
 
 	bResolving = true;
 	OtherFusion->bResolving = true;
@@ -747,6 +785,10 @@ void USlimeEcologyFusionComponent::ResolvePairing()
 	ContactTime = 0.f;
 	Survivor->ApplyStatRow(NewMass, HealthFraction);
 	Survivor->SetEcologyTotals(NewCargo, NewCredit);
+        if (CombinedStun > 0.f && Survivor->GetBodyInteraction())
+        {
+                Survivor->GetBodyInteraction()->ReceiveStun(CombinedStun);
+        }
         if (USlimeCoreComponent* Core = Survivor->GetCoreComponent())
         {
                 Core->ArmCore(bHostileCore
@@ -823,6 +865,15 @@ void USlimeEcologyFusionComponent::ResolveForcedPair(ASlimeEcologyEnemy* Other)
             || (Other->GetCoreComponent() && Other->GetCoreComponent()->IsHostileCore())
             || (Survivor->GetAlertComponent() && Survivor->GetAlertComponent()->IsAlerted())
             || (Other->GetAlertComponent() && Other->GetAlertComponent()->IsAlerted());
+        const USlimeBodyInteractionComponent* SurvivorBody = Survivor->GetBodyInteraction();
+        const USlimeBodyInteractionComponent* OtherBody = Other->GetBodyInteraction();
+        const float CombinedStun = FMath::Max(
+                SurvivorBody
+                        ? FMath::Max(SurvivorBody->GetStunPending(), SurvivorBody->GetStunRemaining())
+                        : 0.f,
+                OtherBody
+                        ? FMath::Max(OtherBody->GetStunPending(), OtherBody->GetStunRemaining())
+                        : 0.f);
 
 	USlimeEcologyFusionComponent* OtherFusion = Other->GetEcologyFusionComponent();
 	bResolving = true;
@@ -844,6 +895,10 @@ void USlimeEcologyFusionComponent::ResolveForcedPair(ASlimeEcologyEnemy* Other)
 
 	Survivor->ApplyStatRow(NewMass, HealthFraction);
 	Survivor->SetEcologyTotals(NewCargo, NewCredit);
+        if (CombinedStun > 0.f && Survivor->GetBodyInteraction())
+        {
+                Survivor->GetBodyInteraction()->ReceiveStun(CombinedStun);
+        }
         if (USlimeCoreComponent* Core = Survivor->GetCoreComponent())
         {
                 Core->ArmCore(bHostileCore
@@ -876,7 +931,7 @@ void USlimeEcologyFusionComponent::ResolveForcedPair(ASlimeEcologyEnemy* Other)
 	}
 
 	UE_LOG(LogSlimeWar, Log,
-		TEXT("EcologyFusion: forced %s + %s -> mass %d, health %.1f/%.1f, cargo %d, credit %d."),
+		TEXT("EcologyFusion: displacement %s + %s -> mass %d, health %.1f/%.1f, cargo %d, credit %d."),
 		*GetNameSafe(Survivor),
 		*GetNameSafe(Other),
 		NewMass,
@@ -910,6 +965,15 @@ bool USlimeEcologyFusionComponent::DebugForcedPair(ASlimeEcologyEnemy* Other)
 	return FusionCount > 0;
 }
 
+void USlimeEcologyFusionComponent::DebugSetSuccessCooldown(float Seconds)
+{
+	CooldownRemaining = FMath::Max(0.f, Seconds);
+	if (CooldownRemaining > 0.f)
+	{
+		SetState(ESlimeEcologyFusionState::Cooldown);
+	}
+}
+
 void USlimeEcologyFusionComponent::InterruptFusion(float BlockSeconds)
 {
 	const float Block = BlockSeconds >= 0.f
@@ -927,6 +991,25 @@ void USlimeEcologyFusionComponent::InterruptFusion(float BlockSeconds)
 	}
 }
 
+void USlimeEcologyFusionComponent::ApplyShotFusionInterference(float CooldownSeconds)
+{
+        const USlimeEcologyRules* Rules = GetRules();
+        if (ShotCooldownRemaining <= 0.f)
+        {
+                bShotSnapshotReady = CooldownRemaining <= 0.f;
+        }
+
+        const float Duration = CooldownSeconds >= 0.f
+                ? CooldownSeconds
+                : (Rules ? Rules->ShotFusionCooldown : 0.8f);
+        ShotCooldownRemaining = FMath::Max(ShotCooldownRemaining, Duration);
+}
+
+void USlimeEcologyFusionComponent::ApplySplitCalm(float Seconds)
+{
+	SplitCalmRemaining = FMath::Max(SplitCalmRemaining, FMath::Max(0.f, Seconds));
+}
+
 void USlimeEcologyFusionComponent::ResetForAssimilation()
 {
 	if (IsEngaged() || IsPaired())
@@ -937,7 +1020,10 @@ void USlimeEcologyFusionComponent::ResetForAssimilation()
 	State = ESlimeEcologyFusionState::Idle;
 	Path = ESlimeEcologyFusionPath::None;
 	CooldownRemaining = 0.f;
+        ShotCooldownRemaining = 0.f;
+        bShotSnapshotReady = false;
 	BlockRemaining = 0.f;
+	SplitCalmRemaining = 0.f;
 	ContactTime = 0.f;
 	SeekElapsed = 0.f;
 }

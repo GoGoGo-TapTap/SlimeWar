@@ -2,6 +2,7 @@
 
 #include "Debug/SlimeCheatManager.h"
 
+#include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -22,10 +23,7 @@
 #include "Ecology/SlimePaintSubsystem.h"
 #include "Ecology/SlimePaintField.h"
 #include "Ecology/SlimeWeakpointComponent.h"
-#include "Enemy/SlimeAggro.h"
 #include "Enemy/SlimeEnemyBase.h"
-#include "Enemy/SlimeFusionComponent.h"
-#include "Enemy/SlimeNormal.h"
 #include "Engine/GameInstance.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/StaticMesh.h"
@@ -34,12 +32,11 @@
 #include "EngineUtils.h"
 #include "Flow/RunSubsystem.h"
 #include "Flow/ScoreSubsystem.h"
-#include "Flow/SlimeEnemyManagerSubsystem.h"
 #include "Flow/SlimeFlowMath.h"
 #include "Flow/SlimeFlowNames.h"
-#include "Flow/SpawnPoint.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "GameplayFramework/SlimeCombatSubsystem.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "Math/NumericLimits.h"
@@ -91,12 +88,19 @@ namespace
 		{
 			const FVector Location = GetCheatSpawnBase(PlayerController, Index, Count, Spacing);
 
-			// Spawned pawns auto-possess ASlimeAIController (see ASlimeEnemyBase),
-			// which starts the StateTree, so the activity centre is set right after.
+			// Spawned ecology pawns auto-possess ASlimeEcologyAIController.
 			if (ASlimeEnemyBase* Slime = World->SpawnActor<ASlimeEnemyBase>(
 				SlimeClass, Location, FRotator::ZeroRotator, SpawnParameters))
 			{
-				Slime->InitializeFromSpawn(0, Location);
+				if (ASlimeEcologyEnemy* Ecology = Cast<ASlimeEcologyEnemy>(Slime))
+				{
+					Ecology->InitializeEcology(
+						ESlimeFaction::A, 0, Location, SlimeCheatSpawnDistance);
+				}
+				else
+				{
+					Slime->InitializeFromSpawn(0, Location);
+				}
 				Spawned.Add(Slime);
 			}
 		}
@@ -104,8 +108,8 @@ namespace
 		return Spawned;
 	}
 
-	/** Nearest live normal slime to the player, or null. */
-	ASlimeEnemyBase* FindNearestNormalSlime(UWorld* World, const APlayerController* PlayerController)
+	/** Nearest live ecology body to the player, or null. */
+	ASlimeEcologyEnemy* FindNearestEcologySlime(UWorld* World, const APlayerController* PlayerController)
 	{
 		if (!World)
 		{
@@ -115,13 +119,13 @@ namespace
 		const APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
 		const FVector Origin = PlayerPawn ? PlayerPawn->GetActorLocation() : FVector::ZeroVector;
 
-		ASlimeEnemyBase* Best = nullptr;
+		ASlimeEcologyEnemy* Best = nullptr;
 		float BestDistSq = TNumericLimits<float>::Max();
 
 		for (TActorIterator<ASlimeEnemyBase> It(World); It; ++It)
 		{
-			ASlimeEnemyBase* Enemy = *It;
-			if (!Enemy || Enemy->IsAggressive() || !Enemy->GetHealthComponent() || Enemy->GetHealthComponent()->IsDead())
+			ASlimeEcologyEnemy* Enemy = Cast<ASlimeEcologyEnemy>(*It);
+			if (!Enemy || !Enemy->GetHealthComponent() || Enemy->GetHealthComponent()->IsDead())
 			{
 				continue;
 			}
@@ -538,6 +542,64 @@ void USlimeCheatManager::SlimeSpawnEcology(int32 Count, int32 Faction, int32 Mas
 		*EcologyTestCentre.ToCompactString());
 }
 
+void USlimeCheatManager::SlimeEcologyGroundProbe()
+{
+	UWorld* World = GetWorld();
+	USlimeEcologySubsystem* Ecology = World
+		? World->GetSubsystem<USlimeEcologySubsystem>()
+		: nullptr;
+	if (!World || !Ecology)
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeEcologyGroundProbe: world/ecology unavailable."));
+		return;
+	}
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(SlimeGroundProbe), false);
+	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
+	for (const FSlimeSiteStatus& Site : Ecology->GetSiteStatuses())
+	{
+		FHitResult Hit;
+		const FVector Start = Site.Location + FVector(0.f, 0.f, 500.f);
+		const FVector End = Site.Location - FVector(0.f, 0.f, 2000.f);
+		const bool bHit = World->LineTraceSingleByChannel(
+			Hit, Start, End, ECC_WorldStatic, Params);
+		FNavLocation Projected;
+		const bool bNavHit = NavSystem && NavSystem->ProjectPointToNavigation(
+			Site.Location, Projected, FVector(200.f, 200.f, 500.f));
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("GroundProbe site=%s loc=%s hit=%s actor=%s impact=%s normal=%s nav=%s navLoc=%s"),
+			*Site.SiteId.ToString(),
+			*Site.Location.ToCompactString(),
+			bHit ? TEXT("yes") : TEXT("no"),
+			bHit ? *GetNameSafe(Hit.GetActor()) : TEXT("None"),
+			bHit ? *Hit.ImpactPoint.ToCompactString() : TEXT("None"),
+			bHit ? *Hit.ImpactNormal.ToCompactString() : TEXT("None"),
+			bNavHit ? TEXT("yes") : TEXT("no"),
+			bNavHit ? *Projected.Location.ToCompactString() : TEXT("None"));
+	}
+
+	for (const FSlimeMineralStatus& Mineral : Ecology->GetMineralStatuses())
+	{
+		FHitResult Hit;
+		const FVector Start = Mineral.Location + FVector(0.f, 0.f, 500.f);
+		const FVector End = Mineral.Location - FVector(0.f, 0.f, 2000.f);
+		const bool bHit = World->LineTraceSingleByChannel(
+			Hit, Start, End, ECC_WorldStatic, Params);
+		FNavLocation Projected;
+		const bool bNavHit = NavSystem && NavSystem->ProjectPointToNavigation(
+			Mineral.Location, Projected, FVector(200.f, 200.f, 500.f));
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("GroundProbe mineral=%s loc=%s hit=%s actor=%s impact=%s nav=%s navLoc=%s"),
+			*Mineral.PatchId.ToString(),
+			*Mineral.Location.ToCompactString(),
+			bHit ? TEXT("yes") : TEXT("no"),
+			bHit ? *GetNameSafe(Hit.GetActor()) : TEXT("None"),
+			bHit ? *Hit.ImpactPoint.ToCompactString() : TEXT("None"),
+			bNavHit ? TEXT("yes") : TEXT("no"),
+			bNavHit ? *Projected.Location.ToCompactString() : TEXT("None"));
+	}
+}
+
 void USlimeCheatManager::SlimeEcologyStatus()
 {
 	RefreshEcologyTestList();
@@ -785,6 +847,618 @@ void USlimeCheatManager::SlimeEcologyBodyTest()
 	}
 }
 
+void USlimeCheatManager::SlimeEcologySetCargo(int32 Amount)
+{
+	ASlimeEcologyEnemy* Enemy = FindNearestEcologyEnemy();
+	if (!Enemy)
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeEcologySetCargo: no ecology slime found."));
+		return;
+	}
+
+	Enemy->SetCargo(FMath::Max(0, Amount));
+	if (USlimeEcologyBrainComponent* Brain = Enemy->GetEcologyBrain())
+	{
+		Brain->ForceRefresh();
+	}
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("SlimeEcologySetCargo: %s cargo=%d."),
+		*GetNameSafe(Enemy),
+		Enemy->GetCargo());
+}
+
+void USlimeCheatManager::SlimeEcologyPriorityTest()
+{
+	SlimeSpawnEcology(2, static_cast<int32>(ESlimeFaction::A), 1);
+	if (EcologyTestSlimes.Num() == 0)
+	{
+		return;
+	}
+
+	EcologyPriorityCarrier = EcologyTestSlimes[0];
+	ASlimeEcologyEnemy* Carrier = EcologyPriorityCarrier.Get();
+	if (!Carrier)
+	{
+		return;
+	}
+
+	Carrier->SetCargo(1);
+	if (UWorld* World = GetWorld())
+	{
+		if (USlimeEcologySubsystem* Ecology = World->GetSubsystem<USlimeEcologySubsystem>())
+		{
+			Carrier->SetAssignedSite(Ecology->GetSiteForFaction(ESlimeFaction::A));
+		}
+	}
+	if (USlimeEcologyBrainComponent* Brain = Carrier->GetEcologyBrain())
+	{
+		Brain->ForceRefresh();
+	}
+
+	EcologyPriorityTestStage = 0;
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("SlimeEcologyPriorityTest: carrier=%s cargo=%d."),
+		*GetNameSafe(Carrier),
+		Carrier->GetCargo());
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			EcologyPriorityTestTimer,
+			this,
+			&USlimeCheatManager::AdvanceEcologyPriorityTest,
+			0.5f,
+			false);
+	}
+}
+
+void USlimeCheatManager::AdvanceEcologyPriorityTest()
+{
+	ASlimeEcologyEnemy* Carrier = EcologyPriorityCarrier.Get();
+	APawn* PlayerPawn = GetPlayerController() ? GetPlayerController()->GetPawn() : nullptr;
+	UWorld* World = GetWorld();
+	if (!Carrier || !World)
+	{
+		return;
+	}
+
+	const USlimeEcologyBrainComponent* Brain = Carrier->GetEcologyBrain();
+	const USlimeEcologyFusionComponent* Fusion = Carrier->GetEcologyFusionComponent();
+	const USlimeCoreComponent* Core = Carrier->GetCoreComponent();
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("EcologyPriority: stage=%d behavior=%s cargo=%d fusion=%d corePhase=%s playerDistance=%.1f"),
+		EcologyPriorityTestStage,
+		Brain ? Brain->GetBehaviorName() : TEXT("none"),
+		Carrier->GetCargo(),
+		Fusion ? static_cast<int32>(Fusion->GetState()) : -1,
+		Core ? Core->GetPhaseName() : TEXT("none"),
+		PlayerPawn
+			? FVector::Dist2D(PlayerPawn->GetActorLocation(), Carrier->GetActorLocation())
+			: -1.f);
+
+	if (EcologyPriorityTestStage == 0 && PlayerPawn)
+	{
+		FVector Target = Carrier->GetActorLocation() + FVector(-180.f, 0.f, 0.f);
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SlimeEcologyPriorityTest), false);
+		FHitResult Hit;
+		if (World->LineTraceSingleByChannel(
+			Hit,
+			Target + FVector(0.f, 0.f, 100.f),
+			Target - FVector(0.f, 0.f, 1000.f),
+			ECC_WorldStatic,
+			QueryParams))
+		{
+			Target.Z = Hit.ImpactPoint.Z + 90.f;
+		}
+		PlayerPawn->SetActorLocation(Target, false, nullptr, ETeleportType::TeleportPhysics);
+		if (Brain)
+		{
+			const_cast<USlimeEcologyBrainComponent*>(Brain)->ForceRefresh();
+		}
+		++EcologyPriorityTestStage;
+		World->GetTimerManager().SetTimer(
+			EcologyPriorityTestTimer,
+			this,
+			&USlimeCheatManager::AdvanceEcologyPriorityTest,
+			0.5f,
+			false);
+		return;
+	}
+
+	if (EcologyPriorityTestStage == 1 && PlayerPawn)
+	{
+		PlayerPawn->SetActorLocation(
+			Carrier->GetActorLocation() + FVector(700.f, 0.f, 90.f),
+			false,
+			nullptr,
+			ETeleportType::TeleportPhysics);
+		if (Brain)
+		{
+			const_cast<USlimeEcologyBrainComponent*>(Brain)->ForceRefresh();
+		}
+		++EcologyPriorityTestStage;
+		World->GetTimerManager().SetTimer(
+			EcologyPriorityTestTimer,
+			this,
+			&USlimeCheatManager::AdvanceEcologyPriorityTest,
+			0.5f,
+			false);
+		return;
+	}
+
+	++EcologyPriorityTestStage;
+	if (APlayerController* PlayerController = GetPlayerController())
+	{
+		PlayerController->ConsoleCommand(TEXT("HighResShot 1"));
+	}
+}
+
+void USlimeCheatManager::SlimeEcologyR5Test()
+{
+	SlimeSpawnEcology(1, static_cast<int32>(ESlimeFaction::A), 1);
+	EcologyR5Subject = EcologyTestSlimes.Num() > 0 ? EcologyTestSlimes[0] : nullptr;
+	ASlimeEcologyEnemy* Subject = EcologyR5Subject.Get();
+	if (!Subject)
+	{
+		return;
+	}
+
+	if (USlimeEcologyBrainComponent* Brain = Subject->GetEcologyBrain())
+	{
+		Brain->DebugSetGatherRest(5.f);
+		Brain->ForceRefresh();
+	}
+	// Creates six temporary splats around the player's forward point.
+	SlimePaintTest();
+	if (APlayerController* PlayerController = GetPlayerController())
+	{
+		if (APawn* PlayerPawn = PlayerController->GetPawn())
+		{
+			PlayerPawn->SetActorLocation(
+				Subject->GetActorLocation() + FVector(2000.f, 0.f, 90.f),
+				false,
+				nullptr,
+				ETeleportType::TeleportPhysics);
+		}
+	}
+	if (USlimeBodyInteractionComponent* Body = Subject->GetBodyInteraction())
+	{
+		Body->SetAimLocked(false);
+	}
+	if (USlimeEcologyBrainComponent* Brain = Subject->GetEcologyBrain())
+	{
+		Brain->ForceRefresh();
+	}
+	EcologyR5TestStage = 0;
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeEcologyR5Test: paint and initial rest prepared."));
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			EcologyR5TestTimer,
+			this,
+			&USlimeCheatManager::AdvanceEcologyR5Test,
+			0.7f,
+			false);
+	}
+}
+
+void USlimeCheatManager::AdvanceEcologyR5Test()
+{
+	ASlimeEcologyEnemy* Subject = EcologyR5Subject.Get();
+	const USlimeEcologyBrainComponent* Brain = Subject ? Subject->GetEcologyBrain() : nullptr;
+	const USlimePaintSubsystem* Paint = GetWorld()
+		? GetWorld()->GetSubsystem<USlimePaintSubsystem>()
+		: nullptr;
+	float NearestPaintDistance = -1.f;
+	if (Subject && Paint)
+	{
+		float BestSq = TNumericLimits<float>::Max();
+		for (const FSlimePaintSplat& Splat : Paint->GetSplatRecords())
+		{
+			const float DistanceSq =
+				FVector::DistSquared2D(Subject->GetActorLocation(), Splat.Location);
+			if (DistanceSq < BestSq)
+			{
+				BestSq = DistanceSq;
+				NearestPaintDistance = FMath::Sqrt(DistanceSq);
+			}
+		}
+	}
+
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("EcologyR5: stage=%d behavior=%s paintCount=%d nearestPaint=%.1f explorationVisits=%d ")
+		TEXT("gatherRest=%.2f bodyState=%d runFrozen=%s"),
+		EcologyR5TestStage,
+		Brain ? Brain->GetBehaviorName() : TEXT("none"),
+		Paint ? Paint->GetSplatCount() : -1,
+		NearestPaintDistance,
+		Brain ? Brain->GetExplorationVisitCount() : -1,
+		Brain ? Brain->GetGatherRestRemaining() : -1.f,
+		Subject && Subject->GetBodyInteraction()
+			? static_cast<int32>(Subject->GetBodyInteraction()->GetBodyState())
+			: -1,
+		Subject && Subject->IsRunFrozen() ? TEXT("yes") : TEXT("no"));
+
+	++EcologyR5TestStage;
+	if (EcologyR5TestStage == 1)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				EcologyR5TestTimer,
+				this,
+				&USlimeCheatManager::AdvanceEcologyR5Test,
+				2.5f,
+				false);
+		}
+	}
+	else if (EcologyR5TestStage == 2)
+	{
+		if (USlimePaintSubsystem* PaintSubsystem = GetWorld()
+			? GetWorld()->GetSubsystem<USlimePaintSubsystem>()
+			: nullptr)
+		{
+			PaintSubsystem->ResetPaint();
+		}
+		if (Subject)
+		{
+			if (USlimeAlertComponent* Alert = Subject->GetAlertComponent())
+			{
+				Alert->RaiseAlert(nullptr, false);
+			}
+		}
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				EcologyR5TestTimer,
+				this,
+				&USlimeCheatManager::AdvanceEcologyR5Test,
+				0.4f,
+				false);
+		}
+	}
+	else if (EcologyR5TestStage == 3)
+	{
+		if (Subject)
+		{
+			if (USlimeAlertComponent* Alert = Subject->GetAlertComponent())
+			{
+				Alert->ClearAlert();
+			}
+		}
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				EcologyR5TestTimer,
+				this,
+				&USlimeCheatManager::AdvanceEcologyR5Test,
+				0.6f,
+				false);
+		}
+	}
+	else if (EcologyR5TestStage == 4)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				EcologyR5TestTimer,
+				this,
+				&USlimeCheatManager::AdvanceEcologyR5Test,
+				1.f,
+				false);
+		}
+	}
+	else if (EcologyR5TestStage == 5)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				EcologyR5TestTimer,
+				this,
+				&USlimeCheatManager::AdvanceEcologyR5Test,
+				4.2f,
+				false);
+		}
+	}
+	else if (APlayerController* PlayerController = GetPlayerController())
+	{
+		PlayerController->ConsoleCommand(TEXT("HighResShot 1"));
+	}
+}
+
+void USlimeCheatManager::SlimeEcologyExternalConnectionTest()
+{
+	SlimeSpawnEcology(2, static_cast<int32>(ESlimeFaction::A), 1);
+	if (EcologyTestSlimes.Num() < 2)
+	{
+		return;
+	}
+
+	EcologyExternalFirst = EcologyTestSlimes[0];
+	EcologyExternalSecond = EcologyTestSlimes[1];
+	ASlimeEcologyEnemy* First = EcologyExternalFirst.Get();
+	ASlimeEcologyEnemy* Second = EcologyExternalSecond.Get();
+	if (!First || !Second)
+	{
+		return;
+	}
+
+	FVector Direction = Second->GetActorLocation() - First->GetActorLocation();
+	Direction.Z = 0.f;
+	Direction = Direction.GetSafeNormal2D();
+	FVector SecondLocation = First->GetActorLocation() + Direction * 150.f;
+	SecondLocation.Z = First->GetActorLocation().Z;
+	Second->SetActorLocation(SecondLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	if (USlimeBodyInteractionComponent* Body = First->GetBodyInteraction())
+	{
+		Body->ReceiveStun(4.f);
+		APawn* PlayerPawn = GetPlayerController() ? GetPlayerController()->GetPawn() : nullptr;
+		Body->ApplyExternalVelocity(Direction * 500.f, PlayerPawn);
+	}
+	if (USlimeEcologyBrainComponent* Brain = First->GetEcologyBrain())
+	{
+		Brain->ForceRefresh();
+	}
+	if (USlimeEcologyBrainComponent* Brain = Second->GetEcologyBrain())
+	{
+		Brain->ForceRefresh();
+	}
+
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("SlimeEcologyExternalConnectionTest: pair 150 cm apart; first pushed at 500 cm/s with 4 s stun."));
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			EcologyExternalConnectionTimer,
+			this,
+			&USlimeCheatManager::FinishEcologyExternalConnectionTest,
+			2.f,
+			false);
+	}
+}
+
+void USlimeCheatManager::FinishEcologyExternalConnectionTest()
+{
+	int32 FusionCount = 0;
+	int32 LiveCount = 0;
+	float SurvivorStun = 0.f;
+	for (const TWeakObjectPtr<ASlimeEcologyEnemy>& WeakEnemy : EcologyTestSlimes)
+	{
+		if (const ASlimeEcologyEnemy* Enemy = WeakEnemy.Get())
+		{
+			++LiveCount;
+			if (const USlimeEcologyFusionComponent* Fusion = Enemy->GetEcologyFusionComponent())
+			{
+				FusionCount += Fusion->GetFusionCount();
+			}
+			if (const USlimeBodyInteractionComponent* Body = Enemy->GetBodyInteraction())
+			{
+				SurvivorStun = FMath::Max(
+					SurvivorStun,
+					FMath::Max(Body->GetStunPending(), Body->GetStunRemaining()));
+			}
+		}
+	}
+
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("EcologyExternalConnection: fusions=%d live=%d survivorStun=%.2f"),
+		FusionCount,
+		LiveCount,
+		SurvivorStun);
+	if (APlayerController* PlayerController = GetPlayerController())
+	{
+		PlayerController->ConsoleCommand(TEXT("HighResShot 1"));
+	}
+}
+
+void USlimeCheatManager::SlimeEcologyShotCooldownTest()
+{
+	ASlimeEcologyEnemy* First = nullptr;
+	ASlimeEcologyEnemy* Second = nullptr;
+	if (!SpawnEcologyPairForTest(1, 50.f, First, Second))
+	{
+		return;
+	}
+
+	USlimeEcologyFusionComponent* FirstFusion = First->GetEcologyFusionComponent();
+	USlimeEcologyFusionComponent* SecondFusion = Second->GetEcologyFusionComponent();
+	if (!FirstFusion || !SecondFusion)
+	{
+		return;
+	}
+
+	SecondFusion->ApplyShotFusionInterference(0.8f);
+	const float ShotCooldown = SecondFusion->GetShotCooldownRemaining();
+	const bool bFused = FirstFusion->DebugForcedPair(Second);
+	RefreshEcologyTestList();
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("EcologyShotCooldown[ready]: shotCooldown=%.2f forcedFusion=%s live=%d"),
+		ShotCooldown,
+		bFused ? TEXT("yes") : TEXT("no"),
+		EcologyTestSlimes.Num());
+
+	if (!SpawnEcologyPairForTest(1, 50.f, First, Second))
+	{
+		return;
+	}
+	FirstFusion = First->GetEcologyFusionComponent();
+	SecondFusion = Second->GetEcologyFusionComponent();
+	if (!FirstFusion || !SecondFusion)
+	{
+		return;
+	}
+	SecondFusion->DebugSetSuccessCooldown(0.6f);
+	SecondFusion->ApplyShotFusionInterference(0.8f);
+	const bool bBypassed = FirstFusion->DebugForcedPair(Second);
+	RefreshEcologyTestList();
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("EcologyShotCooldown[old]: shotCooldown=%.2f snapshot=%s forcedFusion=%s live=%d"),
+		SecondFusion->GetShotCooldownRemaining(),
+		SecondFusion->IsShotSnapshotReady() ? TEXT("ready") : TEXT("blocked"),
+		bBypassed ? TEXT("yes") : TEXT("no"),
+		EcologyTestSlimes.Num());
+	if (APlayerController* PlayerController = GetPlayerController())
+	{
+		PlayerController->ConsoleCommand(TEXT("HighResShot 1"));
+	}
+}
+
+void USlimeCheatManager::SlimeEcologyCorePriorityTest()
+{
+	SlimeSpawnEcology(2, static_cast<int32>(ESlimeFaction::A), 1);
+	if (EcologyTestSlimes.Num() < 2)
+	{
+		return;
+	}
+
+	ASlimeEcologyEnemy* Core = EcologyTestSlimes[0].Get();
+	ASlimeEcologyEnemy* Rival = EcologyTestSlimes[1].Get();
+	APlayerController* PlayerController = GetPlayerController();
+	APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	if (!Core || !Rival || !PlayerPawn)
+	{
+		return;
+	}
+
+	Core->GetCoreComponent()->ArmCore(ESlimeCoreState::Hostile);
+	Rival->SetFaction(ESlimeFaction::B);
+
+	FVector Away = PlayerPawn->GetActorLocation() - Core->GetActorLocation();
+	Away.Z = 0.f;
+	Away = Away.GetSafeNormal2D();
+	if (Away.IsNearlyZero())
+	{
+		Away = FVector(-1.f, 0.f, 0.f);
+	}
+
+	const FVector CoreLocation = Core->GetActorLocation();
+	PlayerPawn->SetActorLocation(
+		CoreLocation + Away * 120.f,
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics);
+	Rival->SetActorLocation(
+		CoreLocation - Away * 220.f,
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics);
+	PlayerController->SetControlRotation(Away.Rotation());
+	if (USlimeAimAssistComponent* AimAssist =
+		PlayerPawn->FindComponentByClass<USlimeAimAssistComponent>())
+	{
+		AimAssist->ReleaseLock();
+	}
+	if (USlimeBodyInteractionComponent* Body = Core->GetBodyInteraction())
+	{
+		Body->SetAimLocked(false);
+	}
+
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("SlimeEcologyCorePriorityTest: player %.0f cm, rival %.0f cm."),
+		FVector::Dist2D(CoreLocation, PlayerPawn->GetActorLocation()),
+		FVector::Dist2D(CoreLocation, Rival->GetActorLocation()));
+
+	TWeakObjectPtr<ASlimeEcologyEnemy> WeakCore = Core;
+	TWeakObjectPtr<ASlimeEcologyEnemy> WeakRival = Rival;
+	TWeakObjectPtr<APawn> WeakPlayer = PlayerPawn;
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			EcologyCorePriorityTimer,
+			FTimerDelegate::CreateLambda([this, WeakCore, WeakRival, WeakPlayer]()
+			{
+				ASlimeEcologyEnemy* TestCore = WeakCore.Get();
+				ASlimeEcologyEnemy* TestRival = WeakRival.Get();
+				APawn* TestPlayer = WeakPlayer.Get();
+				if (!TestCore || !TestRival || !TestPlayer)
+				{
+					return;
+				}
+
+				if (USlimeBodyInteractionComponent* Body = TestCore->GetBodyInteraction())
+				{
+					Body->SetAimLocked(false);
+				}
+				if (USlimeAimAssistComponent* AimAssist =
+					TestPlayer->FindComponentByClass<USlimeAimAssistComponent>())
+				{
+					AimAssist->ReleaseLock();
+				}
+				USlimeCoreComponent* CoreComponent = TestCore->GetCoreComponent();
+				AActor* NearTarget = CoreComponent ? CoreComponent->GetCombatTarget() : nullptr;
+				UE_LOG(LogSlimeWar, Log,
+					TEXT("EcologyCorePriority[near]: target=%s isPlayer=%s phase=%s."),
+					*GetNameSafe(NearTarget),
+					NearTarget == TestPlayer ? TEXT("yes") : TEXT("no"),
+					CoreComponent ? CoreComponent->GetPhaseName() : TEXT("none"));
+
+				FVector FarAway = TestPlayer->GetActorLocation() - TestCore->GetActorLocation();
+				FarAway.Z = 0.f;
+				FarAway = FarAway.GetSafeNormal2D();
+				TestPlayer->SetActorLocation(
+					TestCore->GetActorLocation() + FarAway * 500.f,
+					false,
+					nullptr,
+					ETeleportType::TeleportPhysics);
+				TestRival->SetActorLocation(
+					TestCore->GetActorLocation() - FarAway * 200.f,
+					false,
+					nullptr,
+					ETeleportType::TeleportPhysics);
+				if (USlimeAimAssistComponent* AimAssist =
+					TestPlayer->FindComponentByClass<USlimeAimAssistComponent>())
+				{
+					AimAssist->ReleaseLock();
+				}
+
+				if (UWorld* LambdaWorld = GetWorld())
+				{
+					LambdaWorld->GetTimerManager().SetTimer(
+						EcologyCorePriorityTimer,
+						FTimerDelegate::CreateLambda([this, WeakCore, WeakRival, WeakPlayer]()
+						{
+							ASlimeEcologyEnemy* FinalCore = WeakCore.Get();
+							ASlimeEcologyEnemy* FinalRival = WeakRival.Get();
+							APawn* FinalPlayer = WeakPlayer.Get();
+							if (!FinalCore || !FinalRival || !FinalPlayer)
+							{
+								return;
+							}
+							if (USlimeBodyInteractionComponent* Body =
+								FinalCore->GetBodyInteraction())
+							{
+								Body->SetAimLocked(false);
+							}
+							if (USlimeAimAssistComponent* AimAssist =
+								FinalPlayer->FindComponentByClass<USlimeAimAssistComponent>())
+							{
+								AimAssist->ReleaseLock();
+							}
+							USlimeCoreComponent* CoreComponent =
+								FinalCore->GetCoreComponent();
+							AActor* FarTarget = CoreComponent
+								? CoreComponent->GetCombatTarget()
+								: nullptr;
+							UE_LOG(LogSlimeWar, Log,
+								TEXT("EcologyCorePriority[far]: target=%s isRival=%s phase=%s."),
+								*GetNameSafe(FarTarget),
+								FarTarget == FinalRival ? TEXT("yes") : TEXT("no"),
+								CoreComponent ? CoreComponent->GetPhaseName() : TEXT("none"));
+							if (APlayerController* PC = GetPlayerController())
+							{
+								PC->ConsoleCommand(TEXT("HighResShot 1"));
+							}
+						}),
+						1.6f,
+						false);
+				}
+			}),
+			2.2f,
+			false);
+	}
+}
+
 void USlimeCheatManager::AdvanceEcologyBodyTest()
 {
 	UE_LOG(LogSlimeWar, Log,
@@ -944,9 +1618,16 @@ void USlimeCheatManager::SlimeEcologyDisputeTest()
         Second->SetFaction(ESlimeFaction::B);
         if (USlimeAlertComponent* Alert = First->GetAlertComponent())
         {
+                Alert->SetDisputeCondition(true, 0.75f);
+                const float BeforeDecay = Alert->GetDisputeAccumulator();
+                Alert->SetDisputeCondition(false, 0.5f);
+                const float AfterDecay = Alert->GetDisputeAccumulator();
                 Alert->SetDisputeCondition(true, 1.6f);
                 UE_LOG(LogSlimeWar, Log,
-                        TEXT("SlimeEcologyDisputeTest: alerted=%s warning=%.2f cooldown=%.2f."),
+                        TEXT("SlimeEcologyDisputeTest: decay %.2f -> %.2f, alerted=%s ")
+                        TEXT("warning=%.2f cooldown=%.2f."),
+                        BeforeDecay,
+                        AfterDecay,
                         Alert->IsAlerted() ? TEXT("yes") : TEXT("no"),
                         Alert->GetWarningRemaining(),
                         Alert->GetDisputeCooldownRemaining());
@@ -1043,8 +1724,23 @@ void USlimeCheatManager::SlimeThrowGrenade(int32 Type)
         }
 }
 
-void USlimeCheatManager::SlimeGrenadeAssimilationTest()
+void USlimeCheatManager::SlimeGrenadeAssimilationTest(int32 Faction)
 {
+        const ESlimeFaction TargetFaction =
+                static_cast<ESlimeFaction>(FMath::Clamp(Faction, 0, 2));
+        UWorld* World = GetWorld();
+        USlimeEcologySubsystem* Ecology = World
+                ? World->GetSubsystem<USlimeEcologySubsystem>()
+                : nullptr;
+        if (!Ecology || !Ecology->HasFactionSite(TargetFaction))
+        {
+                UE_LOG(LogSlimeWar, Warning,
+                        TEXT("SlimeGrenadeAssimilationTest: faction %d has no site in this level."),
+                        static_cast<int32>(TargetFaction));
+                return;
+        }
+        EcologyGrenadeTestFaction = TargetFaction;
+
         SlimeSpawnEcology(3, static_cast<int32>(ESlimeFaction::A), 1);
         if (EcologyTestSlimes.Num() > 0)
         {
@@ -1053,7 +1749,6 @@ void USlimeCheatManager::SlimeGrenadeAssimilationTest()
                         Carrier->SetCargo(1);
                 }
         }
-        UWorld* World = GetWorld();
         if (!World)
         {
                 return;
@@ -1068,7 +1763,10 @@ void USlimeCheatManager::SlimeGrenadeAssimilationTest()
                 Params);
         if (Grenade)
         {
-                Grenade->Launch(ESlimeGrenadeType::Assimilation, ESlimeFaction::B, FVector::DownVector);
+                Grenade->Launch(
+                        ESlimeGrenadeType::Assimilation,
+                        EcologyGrenadeTestFaction,
+                        FVector::DownVector);
         }
         EcologyGrenadeTestStage = 0;
         World->GetTimerManager().SetTimer(
@@ -1178,8 +1876,8 @@ void USlimeCheatManager::SlimeGrenadeTornadoWallTest()
 void USlimeCheatManager::AdvanceEcologyGrenadeTest()
 {
         RefreshEcologyTestList();
-        int32 FactionBCount = 0;
-        int32 AssignedSiteBCount = 0;
+        int32 TargetFactionCount = 0;
+        int32 TargetSiteCount = 0;
         float MaxExternalSpeed = 0.f;
         for (const TWeakObjectPtr<ASlimeEcologyEnemy>& WeakEnemy : EcologyTestSlimes)
         {
@@ -1188,9 +1886,9 @@ void USlimeCheatManager::AdvanceEcologyGrenadeTest()
                 {
                         continue;
                 }
-                FactionBCount += Enemy->GetFaction() == ESlimeFaction::B ? 1 : 0;
-                AssignedSiteBCount += Enemy->GetAssignedSite()
-                        && Enemy->GetAssignedSite()->Faction == ESlimeFaction::B ? 1 : 0;
+                TargetFactionCount += Enemy->GetFaction() == EcologyGrenadeTestFaction ? 1 : 0;
+                TargetSiteCount += Enemy->GetAssignedSite()
+                        && Enemy->GetAssignedSite()->Faction == EcologyGrenadeTestFaction ? 1 : 0;
                 if (const USlimeBodyInteractionComponent* Body = Enemy->GetBodyInteraction())
                 {
                         MaxExternalSpeed =
@@ -1199,10 +1897,11 @@ void USlimeCheatManager::AdvanceEcologyGrenadeTest()
         }
 
         UE_LOG(LogSlimeWar, Log,
-                TEXT("SlimeGrenadeTest: stage=%d factionB=%d assignedB=%d maxExternalSpeed=%.1f."),
+                TEXT("SlimeGrenadeTest: stage=%d targetFaction=%d faction=%d assigned=%d maxExternalSpeed=%.1f."),
                 EcologyGrenadeTestStage,
-                FactionBCount,
-                AssignedSiteBCount,
+                static_cast<int32>(EcologyGrenadeTestFaction),
+                TargetFactionCount,
+                TargetSiteCount,
                 MaxExternalSpeed);
         SlimePaintStatus();
         if (EcologyGrenadeTestStage == 20)
@@ -1482,7 +2181,7 @@ void USlimeCheatManager::SlimeEcologyFusionStatus()
 
 		UE_LOG(LogSlimeWar, Log,
 			TEXT("EcologyFusion: %s mass=%d state=%s path=%s partner=%s contact=%.2f ")
-			TEXT("ready=%.2f cooldown=%.2f block=%.2f cargo=%d credit=%d health=%.1f/%.1f ")
+			TEXT("ready=%.2f cooldown=%.2f block=%.2f calm=%.2f cargo=%d credit=%d health=%.1f/%.1f ")
 			TEXT("position=%s velocity=%.1f brain=%s locoGoal=%s pathPoints=%d ")
 			TEXT("pathFailures=%d atGoal=%s"),
 			*GetNameSafe(Enemy),
@@ -1494,6 +2193,7 @@ void USlimeCheatManager::SlimeEcologyFusionStatus()
 			Fusion->GetAutoReadyRemaining(),
 			Fusion->GetCooldownRemaining(),
 			Fusion->GetBlockRemaining(),
+			Fusion->GetSplitCalmRemaining(),
 			Enemy->GetCargo(),
 			Enemy->GetBodyScoreCredit(),
 			Enemy->GetHealthComponent() ? Enemy->GetHealthComponent()->GetHealth() : 0.f,
@@ -3058,7 +3758,8 @@ void USlimeCheatManager::SlimeGroundingTest()
 	GroundingTestSlimes.Reset();
 	GroundingTestStage = 0;
 
-	const ASlimeEnemyBase* CDO = ASlimeNormal::StaticClass()->GetDefaultObject<ASlimeEnemyBase>();
+	const ASlimeEnemyBase* CDO =
+		ASlimeEcologyEnemy::StaticClass()->GetDefaultObject<ASlimeEnemyBase>();
 	const UCapsuleComponent* CDOCapsule = CDO ? CDO->GetCapsuleComponent() : nullptr;
 	const float SpawnHalfHeight =
 		CDOCapsule ? CDOCapsule->GetUnscaledCapsuleHalfHeight() : 90.f;
@@ -3093,8 +3794,8 @@ void USlimeCheatManager::SlimeGroundingTest()
 		SpawnParameters.SpawnCollisionHandlingOverride =
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		ASlimeEnemyBase* Slime = World->SpawnActor<ASlimeEnemyBase>(
-			ASlimeNormal::StaticClass(),
+		ASlimeEcologyEnemy* Slime = World->SpawnActor<ASlimeEcologyEnemy>(
+			ASlimeEcologyEnemy::StaticClass(),
 			SpawnLocation,
 			PlayerPawn->GetActorRotation(),
 			SpawnParameters);
@@ -3104,7 +3805,7 @@ void USlimeCheatManager::SlimeGroundingTest()
 			continue;
 		}
 
-		Slime->InitializeFromSpawn(0, SpawnLocation);
+		Slime->InitializeEcology(ESlimeFaction::A, 0, SpawnLocation, SlimeCheatSpawnDistance);
 		Slime->ApplyStatRow(TestMasses[Index]);
 		GroundingTestSlimes.Add(Slime);
 
@@ -3185,16 +3886,6 @@ void USlimeCheatManager::ApplyGroundingRuntimeMassChange()
 	FirstSlime->ApplyStatRow(8);
 }
 
-void USlimeCheatManager::SlimeSpawnNormal(int32 Count)
-{
-	SpawnSlimes(GetWorld(), GetPlayerController(), ASlimeNormal::StaticClass(), Count);
-}
-
-void USlimeCheatManager::SlimeSpawnAggro(int32 Count)
-{
-	SpawnSlimes(GetWorld(), GetPlayerController(), ASlimeAggro::StaticClass(), Count);
-}
-
 void USlimeCheatManager::SlimeClearEnemies()
 {
 	UWorld* World = GetWorld();
@@ -3245,6 +3936,145 @@ void USlimeCheatManager::SlimeKillPlayer()
 	CombatSubsystem->ApplyDamageTo(PlayerPawn, Health->GetMaxHealth(), PlayerPawn);
 }
 
+void USlimeCheatManager::SlimePlayerSprint(int32 Enabled)
+{
+	ASlimeWarCharacter* Character = GetPlayerController()
+		? Cast<ASlimeWarCharacter>(GetPlayerController()->GetPawn())
+		: nullptr;
+	if (!Character)
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SlimePlayerSprint: no SlimeWarCharacter pawn."));
+		return;
+	}
+
+	Character->DebugSetSprinting(Enabled != 0);
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimePlayerSprint: enabled=%d."), Enabled != 0);
+}
+
+void USlimeCheatManager::SlimePlayerAim(int32 Enabled)
+{
+	ASlimeWarCharacter* Character = GetPlayerController()
+		? Cast<ASlimeWarCharacter>(GetPlayerController()->GetPawn())
+		: nullptr;
+	if (!Character)
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SlimePlayerAim: no SlimeWarCharacter pawn."));
+		return;
+	}
+
+	Character->DebugSetAiming(Enabled != 0);
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimePlayerAim: enabled=%d."), Enabled != 0);
+}
+
+void USlimeCheatManager::SlimePlayerJump()
+{
+	ASlimeWarCharacter* Character = GetPlayerController()
+		? Cast<ASlimeWarCharacter>(GetPlayerController()->GetPawn())
+		: nullptr;
+	if (Character)
+	{
+		Character->DebugJump();
+	}
+}
+
+void USlimeCheatManager::SlimePlayerSwitchShoulder()
+{
+	ASlimeWarCharacter* Character = GetPlayerController()
+		? Cast<ASlimeWarCharacter>(GetPlayerController()->GetPawn())
+		: nullptr;
+	if (Character)
+	{
+		Character->DebugSwitchShoulder();
+	}
+}
+
+void USlimeCheatManager::SlimePlayerControlStatus()
+{
+	const ASlimeWarCharacter* Character = GetPlayerController()
+		? Cast<ASlimeWarCharacter>(GetPlayerController()->GetPawn())
+		: nullptr;
+	if (!Character)
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SlimePlayerControlStatus: no SlimeWarCharacter pawn."));
+		return;
+	}
+
+	const UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+	const USpringArmComponent* Boom = Character->GetCameraBoom();
+	const UCameraComponent* Camera = Character->GetFollowCamera();
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("PlayerControl: sprint=%s aim=%s shoulderLeft=%s maxWalk=%.1f velocity=%.1f ")
+		TEXT("vertical=%.1f falling=%s boom=%.1f fov=%.1f socketY=%.1f jumpZ=%.1f gravityScale=%.3f"),
+		Character->IsSprinting() ? TEXT("yes") : TEXT("no"),
+		Character->IsAiming() ? TEXT("yes") : TEXT("no"),
+		Character->IsUsingLeftShoulder() ? TEXT("yes") : TEXT("no"),
+		Movement ? Movement->MaxWalkSpeed : -1.f,
+		Character->GetVelocity().Size2D(),
+		Character->GetVelocity().Z,
+		Movement && Movement->IsFalling() ? TEXT("yes") : TEXT("no"),
+		Boom ? Boom->TargetArmLength : -1.f,
+		Camera ? Camera->FieldOfView : -1.f,
+		Boom ? Boom->SocketOffset.Y : 0.f,
+		Movement ? Movement->JumpZVelocity : -1.f,
+		Movement ? Movement->GravityScale : -1.f);
+}
+
+void USlimeCheatManager::SlimePlayerJumpTest()
+{
+	ASlimeWarCharacter* Character = GetPlayerController()
+		? Cast<ASlimeWarCharacter>(GetPlayerController()->GetPawn())
+		: nullptr;
+	if (!Character)
+	{
+		return;
+	}
+
+	PlayerJumpTestStage = 0;
+	Character->DebugJump();
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimePlayerJumpTest: jump requested."));
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			PlayerJumpTestTimer,
+			this,
+			&USlimeCheatManager::AdvancePlayerJumpTest,
+			0.2f,
+			false);
+	}
+}
+
+void USlimeCheatManager::AdvancePlayerJumpTest()
+{
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimePlayerJumpTest: stage %d."), PlayerJumpTestStage);
+	SlimePlayerControlStatus();
+	++PlayerJumpTestStage;
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	if (PlayerJumpTestStage == 1)
+	{
+		World->GetTimerManager().SetTimer(
+			PlayerJumpTestTimer,
+			this,
+			&USlimeCheatManager::AdvancePlayerJumpTest,
+			0.5f,
+			false);
+	}
+	else if (PlayerJumpTestStage == 2)
+	{
+		World->GetTimerManager().SetTimer(
+			PlayerJumpTestTimer,
+			this,
+			&USlimeCheatManager::AdvancePlayerJumpTest,
+			1.0f,
+			false);
+	}
+}
+
 void USlimeCheatManager::SlimeSpawnNormalAtMass(int32 Mass, int32 Count)
 {
 	UWorld* World = GetWorld();
@@ -3272,7 +4102,7 @@ void USlimeCheatManager::SlimeSpawnNormalAtMass(int32 Mass, int32 Count)
 	}
 
 	const TArray<ASlimeEnemyBase*> Spawned =
-		SpawnSlimes(World, GetPlayerController(), ASlimeNormal::StaticClass(), Count, Spacing);
+		SpawnSlimes(World, GetPlayerController(), ASlimeEcologyEnemy::StaticClass(), Count, Spacing);
 
 	for (ASlimeEnemyBase* Slime : Spawned)
 	{
@@ -3282,80 +4112,22 @@ void USlimeCheatManager::SlimeSpawnNormalAtMass(int32 Mass, int32 Count)
 		}
 	}
 
-	UE_LOG(LogSlimeWar, Log, TEXT("SlimeSpawnNormalAtMass: spawned %d normal slime(s) at mass %d."),
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeSpawnNormalAtMass: spawned %d ecology body(ies) at mass %d."),
 		Spawned.Num(), FMath::Max(1, Mass));
 }
 
 void USlimeCheatManager::SlimeSetMass(int32 Mass)
 {
-	ASlimeEnemyBase* Slime = FindNearestNormalSlime(GetWorld(), GetPlayerController());
+	ASlimeEcologyEnemy* Slime = FindNearestEcologySlime(GetWorld(), GetPlayerController());
 	if (!Slime)
 	{
-		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeSetMass: no live normal slime found."));
+		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeSetMass: no live ecology body found."));
 		return;
 	}
 
 	const int32 NewMass = FMath::Max(1, Mass);
 	Slime->ApplyStatRow(NewMass);
 	UE_LOG(LogSlimeWar, Log, TEXT("SlimeSetMass: %s is now mass %d."), *GetNameSafe(Slime), NewMass);
-}
-
-void USlimeCheatManager::SlimeForceFuse()
-{
-	UWorld* World = GetWorld();
-	ASlimeEnemyBase* First = FindNearestNormalSlime(World, GetPlayerController());
-	if (!World || !First)
-	{
-		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeForceFuse: no live normal slime found."));
-		return;
-	}
-
-	// The nearest other normal slime of the same spawn point (fusion never crosses points).
-	ASlimeEnemyBase* Second = nullptr;
-	float BestDistSq = TNumericLimits<float>::Max();
-
-	for (TActorIterator<ASlimeEnemyBase> It(World); It; ++It)
-	{
-		ASlimeEnemyBase* Candidate = *It;
-		if (!Candidate || Candidate == First || Candidate->IsAggressive())
-		{
-			continue;
-		}
-
-		if (Candidate->GetPointId() != First->GetPointId())
-		{
-			continue;
-		}
-
-		if (!Candidate->GetHealthComponent() || Candidate->GetHealthComponent()->IsDead())
-		{
-			continue;
-		}
-
-		const float DistSq = FVector::DistSquared(First->GetActorLocation(), Candidate->GetActorLocation());
-		if (DistSq < BestDistSq)
-		{
-			BestDistSq = DistSq;
-			Second = Candidate;
-		}
-	}
-
-	if (!Second)
-	{
-		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeForceFuse: need at least two normal slimes at the same point."));
-		return;
-	}
-
-	USlimeFusionComponent* Fusion = First->GetFusionComponent();
-	if (!Fusion || !Fusion->DebugForcePair(Second))
-	{
-		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeForceFuse: could not pair %s with %s."),
-			*GetNameSafe(First), *GetNameSafe(Second));
-		return;
-	}
-
-	UE_LOG(LogSlimeWar, Log, TEXT("SlimeForceFuse: forced %s (mass %d) + %s (mass %d)."),
-		*GetNameSafe(First), First->GetMass(), *GetNameSafe(Second), Second->GetMass());
 }
 
 void USlimeCheatManager::SlimeRunStart()
@@ -3405,7 +4177,7 @@ void USlimeCheatManager::SlimeRunStatus()
 
 	URunSubsystem* Run = URunSubsystem::Get(this);
 	UScoreSubsystem* Score = UScoreSubsystem::Get(this);
-	const USlimeEnemyManagerSubsystem* Manager = USlimeEnemyManagerSubsystem::Get(this);
+	const USlimeEcologySubsystem* Ecology = World->GetSubsystem<USlimeEcologySubsystem>();
 
 	if (!Run || !Score)
 	{
@@ -3414,12 +4186,10 @@ void USlimeCheatManager::SlimeRunStatus()
 	}
 
 	UE_LOG(LogSlimeWar, Log, TEXT("=== SlimeWar run status (CP-3) ==="));
-	UE_LOG(LogSlimeWar, Log, TEXT("state %s   elapsed %.1f s   remaining %d s   batch %d / %d"),
+	UE_LOG(LogSlimeWar, Log, TEXT("state %s   elapsed %.1f s   remaining %d s"),
 		SlimeFlowNames::RunState(Run->GetRunState()),
 		Run->GetElapsedTime(),
-		Run->GetRemainingSeconds(),
-		Run->GetLastIssuedBatch() == INDEX_NONE ? 0 : Run->GetLastIssuedBatch() + 1,
-		Run->GetBatchCount());
+		Run->GetRemainingSeconds());
 
 	// -- score, plus the per-mass breakdown the hand check compares against --
 	TArray<int32> KillsByMass;
@@ -3448,32 +4218,25 @@ void USlimeCheatManager::SlimeRunStatus()
 	UE_LOG(LogSlimeWar, Log, TEXT("normal kills %d   cleared points %d   fusions %d"),
 		Score->GetNormalKillCount(), Score->GetClearedPointCount(), Run->GetEnemyFusedCount());
 
-	if (Manager)
+	if (Ecology)
 	{
-		UE_LOG(LogSlimeWar, Log, TEXT("enemies live %d (normal %d / aggro %d)   peak %d"),
-			Manager->GetLiveEnemyCount(),
-			Manager->GetLiveCount(ETargetKind::Normal),
-			Manager->GetLiveCount(ETargetKind::Aggressive),
-			Manager->GetPeakLiveEnemyCount());
-	}
+		UE_LOG(LogSlimeWar, Log, TEXT("ecology registered %d   pending spawns %d   delivered cargo %d"),
+			Ecology->GetRegisteredCount(),
+			Ecology->GetPendingSpawnCount(),
+			Ecology->GetDeliveredCargo());
 
-	// -- per point: the numbers behind the four point states --
-	for (TActorIterator<ASpawnPoint> It(World); It; ++It)
-	{
-		const ASpawnPoint* Point = *It;
-		if (!Point)
+		for (const FSlimeSiteStatus& Site : Ecology->GetSiteStatuses())
 		{
-			continue;
+			UE_LOG(LogSlimeWar, Log,
+				TEXT("site %s: faction %d   live %d / mass %d   delivered %d   cores %d   pending %d"),
+				*Site.SiteId.ToString(),
+				static_cast<int32>(Site.Faction),
+				Site.LiveCount,
+				Site.LiveMass,
+				Site.DeliveredCount,
+				Site.CoreCount,
+				Site.PendingSpawns);
 		}
-
-		UE_LOG(LogSlimeWar, Log,
-			TEXT("point %d: %s   spawned normal %d / %d   live normal %d   live aggro %d   pending %d   supply done %s"),
-			Point->GetPointId(),
-			SlimeFlowNames::PointState(Point->GetState()),
-			Point->GetSpawnedNormalCount(), Point->GetTotalNormalSupply(),
-			Point->GetLiveNormalCount(), Point->GetLiveAggroCount(),
-			Point->GetPendingSpawnCount(),
-			Point->IsSupplyDone() ? TEXT("yes") : TEXT("no"));
 	}
 
 	UE_LOG(LogSlimeWar, Log, TEXT("=== end of run status ==="));
@@ -3528,6 +4291,10 @@ void USlimeCheatManager::SlimeRunResult()
                 Result.ChainKills,
                 Result.DeliveredCargo,
                 Result.Fusions);
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("elapsed %.1f s   player damage taken %.1f"),
+		Result.ElapsedTime,
+		Result.PlayerDamageTaken);
 	UE_LOG(LogSlimeWar, Log, TEXT("=== end of settlement ==="));
 }
 

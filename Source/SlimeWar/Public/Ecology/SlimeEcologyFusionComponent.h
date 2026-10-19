@@ -61,7 +61,10 @@ public:
 	bool TryBeginAutonomousFusion();
 	bool DebugForcePair(ASlimeEcologyEnemy* Other);
 	bool DebugForcedPair(ASlimeEcologyEnemy* Other);
+	void DebugSetSuccessCooldown(float Seconds);
 	void InterruptFusion(float BlockSeconds = -1.f);
+        void ApplyShotFusionInterference(float CooldownSeconds = -1.f);
+	void ApplySplitCalm(float Seconds);
 	void ResetForAssimilation();
 	void SetTemporaryContactReady(float Seconds);
 	void NotifyPartnerDied();
@@ -78,6 +81,9 @@ public:
 	float GetAutoReadyRemaining() const { return AutoReadyRemaining; }
 	float GetCooldownRemaining() const { return CooldownRemaining; }
 	float GetBlockRemaining() const { return BlockRemaining; }
+        float GetShotCooldownRemaining() const { return ShotCooldownRemaining; }
+	bool IsShotSnapshotReady() const { return bShotSnapshotReady; }
+	float GetSplitCalmRemaining() const { return SplitCalmRemaining; }
 	int32 GetFusionCount() const { return FusionCount; }
 
 private:
@@ -123,7 +129,9 @@ private:
 	FVector PreviousLocation = FVector::ZeroVector;
 	float AutoReadyRemaining = 0.f;
 	float CooldownRemaining = 0.f;
+        float ShotCooldownRemaining = 0.f;
 	float BlockRemaining = 0.f;
+	float SplitCalmRemaining = 0.f;
 	float ContactTime = 0.f;
 	float SeekElapsed = 0.f;
 	float SearchAccumulator = 0.f;
@@ -131,4 +139,5 @@ private:
 	int32 FusionCount = 0;
 	bool bInitiator = false;
 	bool bResolving = false;
+        bool bShotSnapshotReady = false;
 };

@@ -18,7 +18,6 @@
  */
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeEnemyKilledEvent, const FSlimeKillContext& /*Context*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeEnemyFusedEvent, const FSlimeFusionEvent& /*Event*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimePointStateChangedEvent, int32 /*PointId*/, ESpawnPointState /*NewState*/);
 DECLARE_MULTICAST_DELEGATE(FSlimePlayerDiedEvent);
 
 /**
@@ -38,13 +37,11 @@ public:
 	//~ Begin IBattleDirector
 	virtual void OnEnemyKilled(const FSlimeKillContext& Context) override;
 	virtual void OnEnemyFused(const FSlimeFusionEvent& Event) override;
-	virtual void OnPointStateChanged(int32 PointId, ESpawnPointState NewState) override;
 	virtual void OnPlayerDied() override;
 	//~ End IBattleDirector
 
 	FSlimeEnemyKilledEvent OnEnemyKilledEvent;
 	FSlimeEnemyFusedEvent OnEnemyFusedEvent;
-	FSlimePointStateChangedEvent OnPointStateChangedEvent;
 	FSlimePlayerDiedEvent OnPlayerDiedEvent;
 
 protected:

@@ -15,7 +15,6 @@
 #include "Flow/SlimeFlowMath.h"
 #include "Flow/SlimeFlowNames.h"
 #include "Flow/SlimeSessionSubsystem.h"
-#include "Flow/SpawnPoint.h"
 #include "GameplayFramework/SlimeRunConfig.h"
 #include "GameplayFramework/SlimeGameSettings.h"
 #include "GameplayFramework/SlimeLevelDefinition.h"
@@ -29,8 +28,7 @@
 namespace
 {
 	/**
-	 * Timeline granularity. Small enough that a batch never lands visibly late, and it is the only
-	 * clock in Phase C (the countdown, the warnings and the batches all read one ElapsedTime).
+	 * Timeline granularity for the countdown and the extinction check.
 	 */
 	constexpr float TimelineTickInterval = 0.1f;
 }
@@ -117,8 +115,6 @@ void URunSubsystem::Deinitialize()
 	TimelineTimerHandle.Invalidate();
 	ResultTimerHandle.Invalidate();
 
-	SpawnPoints.Reset();
-
 	Super::Deinitialize();
 }
 
@@ -144,7 +140,6 @@ void URunSubsystem::BindDirectorEvents()
 
 	GameMode->OnEnemyKilledEvent.AddUObject(this, &URunSubsystem::HandleEnemyKilled);
 	GameMode->OnEnemyFusedEvent.AddUObject(this, &URunSubsystem::HandleEnemyFused);
-	GameMode->OnPointStateChangedEvent.AddUObject(this, &URunSubsystem::HandlePointStateChanged);
 	GameMode->OnPlayerDiedEvent.AddUObject(this, &URunSubsystem::HandlePlayerDied);
 
 	BoundGameMode = GameMode;
@@ -160,71 +155,9 @@ void URunSubsystem::UnbindDirectorEvents()
 
 	GameMode->OnEnemyKilledEvent.RemoveAll(this);
 	GameMode->OnEnemyFusedEvent.RemoveAll(this);
-	GameMode->OnPointStateChangedEvent.RemoveAll(this);
 	GameMode->OnPlayerDiedEvent.RemoveAll(this);
 
 	BoundGameMode.Reset();
-}
-
-void URunSubsystem::CollectSpawnPoints(const USlimeRunConfig& RunConfig)
-{
-	SpawnPoints.Reset();
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	// The layout asset holds the slots, the centre and the radius; the anchor in the map only
-	// carries the PointId (plan 7.3: keep the binary map cheap to edit and merge).
-	const USlimeSpawnLayout* Layout = RunConfig.SpawnLayout.LoadSynchronous();
-	if (!Layout)
-	{
-		UE_LOG(LogSlimeWar, Error,
-			TEXT("URunSubsystem: DA_RunConfig::SpawnLayout is not set, no spawn point can be initialised."));
-		return;
-	}
-
-	for (TActorIterator<ASpawnPoint> It(World); It; ++It)
-	{
-		ASpawnPoint* Point = *It;
-		if (!Point)
-		{
-			continue;
-		}
-
-		const FSlimeSpawnPointDef* Definition = Layout->Points.FindByPredicate(
-			[Point](const FSlimeSpawnPointDef& Candidate)
-			{
-				return Candidate.PointId == Point->PointId;
-			});
-
-		if (!Definition)
-		{
-			UE_LOG(LogSlimeWar, Warning,
-				TEXT("URunSubsystem: spawn point %d has no FSlimeSpawnPointDef in DA_SpawnLayout, it stays idle."),
-				Point->PointId);
-			continue;
-		}
-
-		Point->InitializeRuntime(*Definition, RunConfig);
-		SpawnPoints.Add(Point);
-	}
-
-	// Deterministic order, so the GameState mirror and the logs are stable.
-	SpawnPoints.Sort([](const TObjectPtr<ASpawnPoint>& A, const TObjectPtr<ASpawnPoint>& B)
-	{
-		const int32 IdA = A ? A->PointId : TNumericLimits<int32>::Max();
-		const int32 IdB = B ? B->PointId : TNumericLimits<int32>::Max();
-		return IdA < IdB;
-	});
-
-	if (SpawnPoints.Num() == 0)
-	{
-		UE_LOG(LogSlimeWar, Error,
-			TEXT("URunSubsystem: no ASpawnPoint anchor was found in the level."));
-	}
 }
 
 void URunSubsystem::StartRun()
@@ -244,48 +177,32 @@ void URunSubsystem::StartRun()
 	}
 
 	RunDuration = RunConfig->RunDuration;
-	BatchCount = RunConfig->SpawnBatchCount;
-	BatchInterval = RunConfig->SpawnBatchInterval;
-	WarningLead = RunConfig->SpawnBatchWarningLead;
-	const bool bEcologyRun = RunConfig->bEcologyRun;
 
-	if (RunDuration <= 0.f
-		|| (!bEcologyRun && (BatchCount <= 0 || BatchInterval <= 0.f)))
+	if (RunDuration <= 0.f)
 	{
 		UE_LOG(LogSlimeWar, Error,
-			TEXT("URunSubsystem::StartRun: RunDuration or the selected spawn mode is not configured."));
+			TEXT("URunSubsystem::StartRun: RunDuration is not configured."));
 		return;
 	}
 
-	if (bEcologyRun)
+	if (USlimeEcologySubsystem* Ecology = BoundEcology.Get())
 	{
-		SpawnPoints.Reset();
-		if (USlimeEcologySubsystem* Ecology = BoundEcology.Get())
-		{
-			if (!Ecology->HasEcologySites())
-			{
-				UE_LOG(LogSlimeWar, Error,
-					TEXT("URunSubsystem::StartRun: ecology run has no ASlimeFactionSite actors."));
-				return;
-			}
-			Ecology->BeginRun();
-		}
-		else
+		if (!Ecology->HasEcologySites())
 		{
 			UE_LOG(LogSlimeWar, Error,
-				TEXT("URunSubsystem::StartRun: ecology subsystem is unavailable."));
+				TEXT("URunSubsystem::StartRun: ecology run has no ASlimeFactionSite actors."));
 			return;
 		}
+		Ecology->BeginRun();
 	}
 	else
 	{
-		CollectSpawnPoints(*RunConfig);
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("URunSubsystem::StartRun: ecology subsystem is unavailable."));
+		return;
 	}
 
 	ElapsedTime = 0.f;
-	NextBatchToIssue = 0;
-	LastWarnedBatch = 0;
-	LastIssuedBatch = INDEX_NONE;
 	LastBroadcastSecond = INDEX_NONE;
 	EnemyFusedCount = 0;
 
@@ -303,11 +220,6 @@ void URunSubsystem::StartRun()
 
 	SetRunState(ESlimeRunState::Running);
 
-	if (!bEcologyRun)
-	{
-		// Batch 0 is due at t = 0 (design 5.2: the first batch appears with player control).
-		IssueDueBatches();
-	}
 	BroadcastRemainingSeconds(/*bForce=*/true);
 
 	if (UWorld* World = GetWorld())
@@ -317,9 +229,7 @@ void URunSubsystem::StartRun()
 	}
 
 	UE_LOG(LogSlimeWar, Log,
-		TEXT("URunSubsystem: run started - %s mode, %d points, %.0f s total."),
-		bEcologyRun ? TEXT("ecology") : TEXT("legacy batch"),
-		SpawnPoints.Num(),
+		TEXT("URunSubsystem: run started - ecology mode, %.0f s total."),
 		RunDuration);
 }
 
@@ -459,6 +369,13 @@ FSlimeRunResult URunSubsystem::GetRunResult() const
 {
 	FSlimeRunResult Result;
 	Result.EndReason = EndReason;
+	Result.ElapsedTime = ElapsedTime;
+
+	if (const ASlimeWarCharacter* Character =
+		Cast<ASlimeWarCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
+	{
+		Result.PlayerDamageTaken = Character->GetTotalDamageTaken();
+	}
 
 	if (const UScoreSubsystem* Score = UScoreSubsystem::Get(this))
 	{
@@ -503,15 +420,6 @@ void URunSubsystem::EndRun(ERunEndReason Reason)
 	if (USlimeEcologySubsystem* Ecology = BoundEcology.Get())
 	{
 		Ecology->EndRun();
-	}
-
-	// Design 5.6: after the run ends nothing new is spawned and no new score is earned.
-	for (const TObjectPtr<ASpawnPoint>& Point : SpawnPoints)
-	{
-		if (Point)
-		{
-			Point->StopSpawning();
-		}
 	}
 
 	if (UScoreSubsystem* Score = UScoreSubsystem::Get(this))
@@ -621,54 +529,11 @@ void URunSubsystem::HandleTimelineTick()
 	const float Scale = FMath::Max(0.f, SlimeCVars::RunTimeScale);
 	ElapsedTime += TimelineTickInterval * Scale;
 
-	IssueWarnings();
-	IssueDueBatches();
 	BroadcastRemainingSeconds(/*bForce=*/false);
 
 	if (ElapsedTime >= RunDuration)
 	{
 		EndRun(ERunEndReason::TimeUp);
-	}
-}
-
-void URunSubsystem::IssueWarnings()
-{
-	SlimeFlowMath::FRunSchedule Schedule;
-	Schedule.BatchCount = BatchCount;
-	Schedule.BatchInterval = BatchInterval;
-	Schedule.WarningLead = WarningLead;
-
-	int32 Batch = Schedule.GetPendingWarningBatch(ElapsedTime, LastWarnedBatch);
-	while (Batch != INDEX_NONE)
-	{
-		// The warning of design 5.2: one second before the next batch, driven by data.
-		OnBatchIncoming.Broadcast(Batch, FMath::Max(0.f, Schedule.GetBatchTime(Batch) - ElapsedTime));
-		LastWarnedBatch = Batch;
-		Batch = Schedule.GetPendingWarningBatch(ElapsedTime, LastWarnedBatch);
-	}
-}
-
-void URunSubsystem::IssueDueBatches()
-{
-	SlimeFlowMath::FRunSchedule Schedule;
-	Schedule.BatchCount = BatchCount;
-	Schedule.BatchInterval = BatchInterval;
-	Schedule.WarningLead = WarningLead;
-
-	const int32 DueBatch = Schedule.GetLatestDueBatch(ElapsedTime);
-
-	while (NextBatchToIssue < BatchCount && DueBatch != INDEX_NONE && NextBatchToIssue <= DueBatch)
-	{
-		for (const TObjectPtr<ASpawnPoint>& Point : SpawnPoints)
-		{
-			if (Point)
-			{
-				Point->ExecuteBatch(NextBatchToIssue);
-			}
-		}
-
-		LastIssuedBatch = NextBatchToIssue;
-		++NextBatchToIssue;
 	}
 }
 
@@ -750,38 +615,6 @@ void URunSubsystem::HandleEnemyFused(const FSlimeFusionEvent& Event)
 
 	bFusionHintIssued = true;
         OnFusionHint.Broadcast(Event.Location);
-}
-
-void URunSubsystem::HandlePointStateChanged(int32 PointId, ESpawnPointState NewState)
-{
-	if (NewState == ESpawnPointState::Cleared)
-	{
-		if (UScoreSubsystem* Score = UScoreSubsystem::Get(this))
-		{
-			Score->AddClearedPoint();
-		}
-	}
-
-	OnPointStateChanged.Broadcast(PointId, NewState);
-}
-
-void URunSubsystem::GetPointSnapshot(TArray<int32>& OutPointIds, TArray<ESpawnPointState>& OutStates) const
-{
-	OutPointIds.Reset();
-	OutStates.Reset();
-	OutPointIds.Reserve(SpawnPoints.Num());
-	OutStates.Reserve(SpawnPoints.Num());
-
-	for (const TObjectPtr<ASpawnPoint>& Point : SpawnPoints)
-	{
-		if (!Point)
-		{
-			continue;
-		}
-
-		OutPointIds.Add(Point->PointId);
-		OutStates.Add(Point->GetState());
-	}
 }
 
 float URunSubsystem::GetRemainingTime() const

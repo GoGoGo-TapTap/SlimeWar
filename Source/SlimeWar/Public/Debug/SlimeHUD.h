@@ -7,12 +7,12 @@
 #include "SlimeHUD.generated.h"
 
 /**
- * Phase A debug HUD, all drawn in C++ so it needs no widget assets.
+ * Optional C++ debug HUD, all drawn in C++ so it needs no widget assets. Every draw path is off
+ * by default; the shipped HUD is the UMG widget from USlimeGameSettings::HUDWidgetClass.
  *
- *  - Slime.Debug.Crosshair 1        placeholder crosshair (Phase D replaces it with the real HUD)
- *  - Slime.Debug.DrawEnemyState 1   enemy state tags / activity radius / fusion target links
- *  - Slime.Debug.DrawFusion 1       fusion pairs, contact progress, meeting points, cooldowns
- *  - Slime.Debug.DrawAggroPath 1    aggro chase: planned nav path vs the trail actually walked
+ *  - Slime.Debug.Crosshair 0/1        C++ placeholder crosshair
+ *  - Slime.Debug.DrawEcologyState 0/1 ecology behavior, body state and core state
+ *  - Slime.Debug.DrawRun 0/1          score / time / faction sites / mineral ledger
  *
  * The aim assist visualisation lives on ASlimeWarCharacter (Slime.Debug.DrawAimAssist),
  * because that is where the camera and the assist query already are.
@@ -27,32 +27,10 @@ public:
 
 protected:
 	void DrawCrosshair();
-	void DrawEnemyStateDebug();
-	void DrawFusionDebug();
 	void DrawEcologyStateDebug();
-	void DrawAggroPathDebug();
 	void DrawWeaponDebug();
 	void DrawEcologyResourceDebug();
 
-	/** Phase C (PA-13): score, countdown, point states and live enemy counts. */
+	/** Score, countdown and faction-site summary. */
 	void DrawRunDebug();
-
-	/**
-	 * Breadcrumb of where an aggro slime actually went.
-	 *
-	 * The nav path only shows the plan; the Detour Crowd steering that makes a slime walk around a
-	 * blocker never shows up in it, so "did it route around or grind in place?" is only readable
-	 * from the trail.
-	 */
-	struct FSlimeTrail
-	{
-		TWeakObjectPtr<AActor> Actor;
-		TArray<FVector> Points;
-		float NextSampleTime = 0.f;
-	};
-
-	FSlimeTrail* FindOrAddTrail(AActor& Actor);
-	void PruneTrails();
-
-	TArray<FSlimeTrail> Trails;
 };

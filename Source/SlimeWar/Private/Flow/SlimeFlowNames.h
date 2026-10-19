@@ -32,15 +32,4 @@ namespace SlimeFlowNames
 		}
 	}
 
-	inline const TCHAR* PointState(ESpawnPointState State)
-	{
-		switch (State)
-		{
-		case ESpawnPointState::AwaitingDeploy:		return TEXT("AwaitingDeploy");
-		case ESpawnPointState::Spawning:			return TEXT("Spawning");
-		case ESpawnPointState::DepletedNotCleared:	return TEXT("DepletedNotCleared");
-		case ESpawnPointState::Cleared:				return TEXT("Cleared");
-		default:									return TEXT("?");
-		}
-	}
 }

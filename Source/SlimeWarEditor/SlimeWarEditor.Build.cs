@@ -36,6 +36,7 @@ public class SlimeWarEditor : ModuleRules
 			"ToolMenus",
 			"DeveloperSettings",
 			"GameplayTags",
+			"NavigationSystem",
 			"RenderCore"			// FPrimitiveDrawInterface / FCanvasItem back end
 		});
 	}

@@ -190,6 +190,22 @@ void USlimeCoreComponent::TickComponent(
 		}
 	}
 
+        if (Enemy->GetCargo() > 0)
+        {
+                // Carrying has priority over new attacks and chasing. An already running windup,
+                // pounce or recovery is still allowed to finish.
+                if (Phase != ESlimeCoreCombatPhase::Windup
+                        && Phase != ESlimeCoreCombatPhase::Pouncing
+                        && Phase != ESlimeCoreCombatPhase::Recovering)
+                {
+                        if (Phase == ESlimeCoreCombatPhase::Chasing)
+                        {
+                                Phase = ESlimeCoreCombatPhase::Idle;
+                        }
+                        return;
+                }
+        }
+
 	if (Phase == ESlimeCoreCombatPhase::Waking)
 	{
 		WakeRemaining = FMath::Max(0.f, WakeRemaining - DeltaTime);
@@ -275,9 +291,15 @@ void USlimeCoreComponent::TickComponent(
 
 	const float Distance = FVector::Dist2D(Enemy->GetActorLocation(), Target->GetActorLocation());
 	const UCapsuleComponent* Capsule = Enemy->GetCapsuleComponent();
+        const ACharacter* TargetCharacter = Cast<ACharacter>(Target);
+        const UCapsuleComponent* TargetCapsule = TargetCharacter
+                ? TargetCharacter->GetCapsuleComponent()
+                : nullptr;
 	const float PounceRange = FMath::Max(
 		Rules->PounceBaseRange,
-		(Capsule ? Capsule->GetScaledCapsuleRadius() : 20.f) + 65.f);
+                (Capsule ? Capsule->GetScaledCapsuleRadius() : 20.f)
+                        + (TargetCapsule ? TargetCapsule->GetScaledCapsuleRadius() : 20.f)
+                        + 65.f);
 	if (AttackCooldownRemaining <= 0.f
 		&& Distance <= PounceRange
 		&& HasLineOfSight(Target))
@@ -300,22 +322,29 @@ void USlimeCoreComponent::AcquireTarget()
 {
 	ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
 	const USlimeEcologyRules* Rules = GetRules();
-	if (!Enemy || !Rules)
+        if (!Enemy || !Rules || Enemy->GetCargo() > 0)
 	{
 		return;
 	}
 
 	APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+        bool bPlayerCandidate = false;
+        float PlayerDistance = TNumericLimits<float>::Max();
 	if (Player)
 	{
-		const float PlayerDistance = FVector::Dist2D(Enemy->GetActorLocation(), Player->GetActorLocation());
-		if ((PlayerDistance <= Rules->CorePlayerProximity || PlayerProvokedRemaining > 0.f)
-			&& HasLineOfSight(Player))
+                PlayerDistance = FVector::Dist2D(Enemy->GetActorLocation(), Player->GetActorLocation());
+                if (HasLineOfSight(Player))
 		{
-			CombatTarget = Player;
-			TargetLastSeenLocation = Player->GetActorLocation();
-			CombatMemoryRemaining = Rules->CoreCombatMemory;
-			return;
+                        if (PlayerDistance < Rules->CorePlayerPriorityProximity)
+                        {
+                                CombatTarget = Player;
+                                TargetLastSeenLocation = Player->GetActorLocation();
+                                CombatMemoryRemaining = Rules->CoreCombatMemory;
+                                return;
+                        }
+                        bPlayerCandidate =
+                                PlayerDistance <= Rules->CorePlayerProximity
+                                || PlayerProvokedRemaining > 0.f;
 		}
 	}
 
@@ -356,6 +385,13 @@ void USlimeCoreComponent::AcquireTarget()
 		CombatMemoryRemaining = Rules->CoreCombatMemory;
 		Phase = ESlimeCoreCombatPhase::Chasing;
 	}
+        else if (Player && bPlayerCandidate)
+        {
+                CombatTarget = Player;
+                TargetLastSeenLocation = Player->GetActorLocation();
+                CombatMemoryRemaining = Rules->CoreCombatMemory;
+                Phase = ESlimeCoreCombatPhase::Chasing;
+        }
 	else if (CombatTarget.IsValid())
 	{
 		CombatMemoryRemaining -= Rules->PerceptionInterval;
@@ -602,7 +638,6 @@ void USlimeCoreComponent::Devour(ASlimeEcologyEnemy* Victim)
 		: 1.f;
 	const int32 OwnerCargo = Enemy->GetCargo();
 	const int32 VictimCargo = Victim->GetCargo();
-	const int32 VictimMass = Victim->GetMass();
 	const FVector VictimLocation = Victim->GetActorLocation();
 
 	Enemy->ApplyStatRow(NewMass, HealthFraction);
@@ -623,7 +658,6 @@ void USlimeCoreComponent::Devour(ASlimeEcologyEnemy* Victim)
 		{
 			Ecology->DropCargo(VictimLocation, VictimCargo);
 		}
-		Ecology->NotifyAgentRemoved(Victim, VictimMass);
 	}
 	Victim->SetCargo(0);
 	Victim->Destroy();

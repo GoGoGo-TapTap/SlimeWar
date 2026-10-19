@@ -189,6 +189,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fusion")
 	float FusionSeekTimeout = 10.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fusion")
+	float ShotFusionCooldown = 0.8f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Core")
 	float CoreWakeTime = 1.2f;
 
@@ -206,6 +209,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Core")
 	float CorePlayerProximity = 240.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Core")
+	float CorePlayerPriorityProximity = 180.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Core")
 	float CorePlayerProvokedDuration = 6.f;
@@ -291,6 +297,9 @@ public:
 	float ResourceMemory = 28.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float ResourceTargetHold = 2.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
 	float GatherRange = 120.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
@@ -303,7 +312,26 @@ public:
 	float PickupRange = 110.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float PickupActionRange = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
 	float CargoSpeed = 115.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float ExploreSpeedWithResourceMemory = 90.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float InitialGatherRestMin = 0.1f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float InitialGatherRestMax = 1.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float MineralCrowdingRadius = 140.f;
+
+	/** Cost in metres added for each visible faction member near a mineral patch. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float MineralCrowdingPenalty = 1.8f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
 	float GatherRestMin = 2.f;
@@ -343,6 +371,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Alert")
 	float HostileCoreAvoidEmpty = 180.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Alert")
+	float AlertPostEmptyGatherRest = 4.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dispute")
 	float DisputeRange = 340.f;
@@ -400,6 +431,21 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
 	int32 MaxPaintSplatRecords = 2048;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
+	float PaintSenseRange = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
+	float PaintApproachSpeed = 65.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
+	float PaintStopRadius = 50.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Explore")
+	float ExplorationHistoryCellSize = 400.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Explore")
+	float ExplorationVisitPenalty = 5.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
 	FVector2D PaintWorldSize = FVector2D(3000.f, 4400.f);

@@ -29,7 +29,9 @@ bool USlimeAlertComponent::CanReceiveAlert() const
 		Enemy ? Enemy->GetEcologyFusionComponent() : nullptr;
 	return Enemy
 		&& (!Core || Core->GetCoreState() == ESlimeCoreState::None)
-		&& (!Fusion || Fusion->GetBlockRemaining() <= 0.f);
+		&& (!Fusion
+			|| (Fusion->GetBlockRemaining() <= 0.f
+				&& Fusion->GetSplitCalmRemaining() <= 0.f));
 }
 
 void USlimeAlertComponent::RaiseAlert(AActor* Source, bool bPropagate)

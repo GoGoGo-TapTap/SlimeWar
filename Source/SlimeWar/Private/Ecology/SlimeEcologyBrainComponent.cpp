@@ -15,6 +15,7 @@
 #include "Ecology/SlimeFactionSite.h"
 #include "Ecology/SlimeLocomotionComponent.h"
 #include "Ecology/SlimeMineralPatch.h"
+#include "Ecology/SlimePaintSubsystem.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
@@ -34,6 +35,12 @@ void USlimeEcologyBrainComponent::BeginPlay()
 		? FMath::FRandRange(0.f, FMath::Max(0.01f, Rules->PerceptionInterval))
 		: 0.f;
 	RandomStream.Initialize(FMath::Rand());
+        if (Rules)
+        {
+                GatherRestRemaining = RandomStream.FRandRange(
+                        Rules->InitialGatherRestMin,
+                        FMath::Max(Rules->InitialGatherRestMin, Rules->InitialGatherRestMax));
+        }
 
 	if (const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy())
 	{
@@ -86,7 +93,13 @@ void USlimeEcologyBrainComponent::ClearResourceMemory()
 	MineralTarget = nullptr;
 	CargoTarget = nullptr;
 	ResourceMemoryRemaining = 0.f;
+        ResourceTargetHoldRemaining = 0.f;
 	GatherTimeRemaining = 0.f;
+}
+
+void USlimeEcologyBrainComponent::DebugSetGatherRest(float Seconds)
+{
+        GatherRestRemaining = FMath::Max(0.f, Seconds);
 }
 
 void USlimeEcologyBrainComponent::TickComponent(
@@ -102,8 +115,21 @@ void USlimeEcologyBrainComponent::TickComponent(
 		return;
 	}
 
-	ResourceMemoryRemaining = FMath::Max(0.f, ResourceMemoryRemaining - DeltaTime);
-	GatherRestRemaining = FMath::Max(0.f, GatherRestRemaining - DeltaTime);
+        if (const USlimeAlertComponent* Alert = Enemy->GetAlertComponent())
+        {
+                const bool bAlertNow = Alert->IsAlerted();
+                if (bWasAlerted && !bAlertNow && Enemy->GetCargo() <= 0)
+                {
+                        const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+                        if (Rules)
+                        {
+                                GatherRestRemaining = FMath::Max(
+                                        GatherRestRemaining,
+                                        Rules->AlertPostEmptyGatherRest);
+                        }
+                }
+                bWasAlerted = bAlertNow;
+        }
 
         const USlimeHealthComponent* Health = Enemy->GetHealthComponent();
         const USlimeBodyInteractionComponent* Body = Enemy->GetBodyInteraction();
@@ -129,23 +155,26 @@ void USlimeEcologyBrainComponent::TickComponent(
                 return;
         }
 
+        ResourceMemoryRemaining = FMath::Max(0.f, ResourceMemoryRemaining - DeltaTime);
+        GatherRestRemaining = FMath::Max(0.f, GatherRestRemaining - DeltaTime);
+
 	if (const USlimeCoreComponent* Core = Enemy->GetCoreComponent())
 	{
-		if (Core->ShouldOverrideBrain())
+                const ESlimeCoreCombatPhase CorePhase = Core->GetCombatPhase();
+                const bool bActiveAttack =
+                        CorePhase == ESlimeCoreCombatPhase::Windup
+                        || CorePhase == ESlimeCoreCombatPhase::Pouncing
+                        || CorePhase == ESlimeCoreCombatPhase::Recovering;
+                if (bActiveAttack)
 		{
 			Behavior = ESlimeEcologyBehavior::CoreCombat;
 			return;
 		}
-	}
-
-	const USlimeEcologyFusionComponent* Fusion = Enemy->GetEcologyFusionComponent();
-	if (Fusion && Fusion->IsEngaged())
-	{
-		Behavior = ESlimeEcologyBehavior::FusionSeek;
-		DesiredGoal = Fusion->GetMeetingPoint();
-		const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
-		DesiredSpeed = Rules ? Rules->FusionAutoSeekSpeed : 75.f;
-		return;
+                if (Enemy->GetCargo() <= 0 && Core->ShouldOverrideBrain())
+                {
+                        Behavior = ESlimeEcologyBehavior::CoreCombat;
+                        return;
+                }
 	}
 
 	RefreshCountdown -= DeltaTime;
@@ -293,6 +322,26 @@ bool USlimeEcologyBrainComponent::HasLineOfSight(const AActor* Target) const
 		QueryParams);
 }
 
+bool USlimeEcologyBrainComponent::HasLineOfSightToLocation(const FVector& Location) const
+{
+        const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+        const UWorld* World = GetWorld();
+        if (!Enemy || !World)
+        {
+                return false;
+        }
+
+        FCollisionQueryParams QueryParams(
+                SCENE_QUERY_STAT(SlimeEcologyLocationSight), false, Enemy);
+        FHitResult Hit;
+        return !World->LineTraceSingleByChannel(
+                Hit,
+                Enemy->GetActorLocation(),
+                Location,
+                ECC_WorldStatic,
+                QueryParams);
+}
+
 void USlimeEcologyBrainComponent::UpdateBehavior()
 {
 	const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
@@ -303,7 +352,12 @@ void USlimeEcologyBrainComponent::UpdateBehavior()
 		return;
 	}
 
-	const USlimeAlertComponent* Alert = Enemy->GetAlertComponent();
+        if (Enemy->GetCargo() > 0 && UpdateCarryingBehavior())
+        {
+                return;
+        }
+
+        const USlimeAlertComponent* Alert = Enemy->GetAlertComponent();
 	if (Alert && Alert->IsWarning())
 	{
 		Behavior = ESlimeEcologyBehavior::AlertWait;
@@ -363,10 +417,24 @@ void USlimeEcologyBrainComponent::UpdateBehavior()
 
 	AvoidGoalAge = 0.f;
 
+        const USlimeEcologyFusionComponent* Fusion = Enemy->GetEcologyFusionComponent();
+        if (Fusion && Fusion->IsEngaged())
+        {
+                Behavior = ESlimeEcologyBehavior::FusionSeek;
+                DesiredGoal = Fusion->GetMeetingPoint();
+                DesiredSpeed = Rules->FusionAutoSeekSpeed;
+                return;
+        }
+
 	if (UpdateResourceBehavior())
 	{
 		return;
 	}
+
+        if (GatherRestRemaining > 0.f && UpdatePaintBehavior())
+        {
+                return;
+        }
 
 	if (Alert && Alert->IsAlerted())
 	{
@@ -421,11 +489,111 @@ void USlimeEcologyBrainComponent::UpdateBehavior()
 		ChooseExploreGoal();
 	}
 
-	DesiredSpeed = Rules->ExploreSpeed;
+	DesiredSpeed = ResourceMemoryRemaining > 0.f
+		? Rules->ExploreSpeedWithResourceMemory
+		: Rules->ExploreSpeed;
 	if (bHasExploreGoal)
 	{
 		Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
 	}
+}
+
+bool USlimeEcologyBrainComponent::UpdateCarryingBehavior()
+{
+        ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+        USlimeLocomotionComponent* Locomotion = GetLocomotion();
+        const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+        if (!Enemy || !Locomotion || !Rules || Enemy->GetCargo() <= 0)
+        {
+                return false;
+        }
+
+        const bool bWasAvoiding = Behavior == ESlimeEcologyBehavior::AvoidPlayer;
+        const bool bShouldAvoidPlayer = bPlayerVisible
+                && (bWasAvoiding
+                        ? PlayerDistance < Rules->PlayerAvoidExitDistance
+                        : PlayerDistance < Rules->PlayerAvoidEnterDistance);
+        if (bShouldAvoidPlayer)
+        {
+                APawn* Player = CachedPlayer.Get();
+                FVector Away = Player
+                        ? Enemy->GetActorLocation() - Player->GetActorLocation()
+                        : FVector::ForwardVector;
+                Away.Z = 0.f;
+                Away = Away.GetSafeNormal2D();
+                Behavior = ESlimeEcologyBehavior::AvoidPlayer;
+                DesiredGoal = ChooseAvoidGoal(Away);
+                DesiredSpeed = Rules->PlayerAvoidSpeed;
+                Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+                return true;
+        }
+
+        if (const ASlimeEcologyEnemy* HostileCore = NearestHostileCore.Get())
+        {
+                if (FVector::DistSquared2D(
+                        Enemy->GetActorLocation(),
+                        HostileCore->GetActorLocation())
+                        <= FMath::Square(Rules->HostileCoreAvoidCarrying))
+                {
+                        Behavior = ESlimeEcologyBehavior::AvoidHostileCore;
+                        DesiredGoal = ChooseThreatAvoidGoal(HostileCore->GetActorLocation());
+                        DesiredSpeed = Rules->AlertDangerSpeed;
+                        Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+                        return true;
+                }
+        }
+
+        return UpdateResourceBehavior();
+}
+
+bool USlimeEcologyBrainComponent::UpdatePaintBehavior()
+{
+        ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+        USlimeLocomotionComponent* Locomotion = GetLocomotion();
+        const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+        const USlimePaintSubsystem* Paint = GetWorld()
+                ? GetWorld()->GetSubsystem<USlimePaintSubsystem>()
+                : nullptr;
+        if (!Enemy || !Locomotion || !Rules || !Paint || Enemy->GetCargo() > 0)
+        {
+                return false;
+        }
+
+        const FSlimePaintSplat* Best = nullptr;
+        float BestDistanceSq = FMath::Square(Rules->PaintSenseRange);
+        for (const FSlimePaintSplat& Splat : Paint->GetSplatRecords())
+        {
+                const float DistanceSq =
+                        FVector::DistSquared2D(Enemy->GetActorLocation(), Splat.Location);
+                if (DistanceSq < BestDistanceSq && HasLineOfSightToLocation(Splat.Location))
+                {
+                        BestDistanceSq = DistanceSq;
+                        Best = &Splat;
+                }
+        }
+
+        if (!Best)
+        {
+                return false;
+        }
+
+        Behavior = ESlimeEcologyBehavior::SeekPaint;
+        DesiredGoal = Best->Location;
+        const float Distance = FMath::Sqrt(BestDistanceSq);
+        if (Distance <= Rules->PaintStopRadius)
+        {
+                DesiredSpeed = 0.f;
+                Locomotion->ClearMoveGoal();
+        }
+        else
+        {
+                DesiredSpeed = Rules->PaintApproachSpeed;
+                Locomotion->SetMoveGoal(
+                        DesiredGoal,
+                        DesiredSpeed,
+                        Rules->PaintStopRadius);
+        }
+        return true;
 }
 
 bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
@@ -483,7 +651,7 @@ bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
 			CargoTarget = nullptr;
 		}
 		else if (FVector::Dist2D(Enemy->GetActorLocation(), Pickup->GetActorLocation())
-			<= Rules->PickupRange)
+                        <= Rules->PickupActionRange)
 		{
 			if (Ecology->TryPickupCargo(Enemy, Pickup))
 			{
@@ -515,8 +683,33 @@ bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
 		}
 	}
 
-	ASlimeMineralPatch* Patch = MineralTarget.Get();
-	if (!Patch || Patch->Stock <= 0 || ResourceMemoryRemaining <= 0.f)
+        ResourceTargetHoldRemaining =
+                FMath::Max(0.f, ResourceTargetHoldRemaining - Rules->PerceptionInterval);
+
+        ASlimeMineralPatch* Patch = MineralTarget.Get();
+        const bool bTargetInvalid =
+                !Patch || Patch->Stock <= 0 || ResourceMemoryRemaining <= 0.f;
+        bool bShouldSelectTarget = bTargetInvalid;
+        if (!bTargetInvalid && ResourceTargetHoldRemaining <= 0.f)
+        {
+                ASlimeMineralPatch* BetterPatch =
+                        Ecology->FindBestMineralPatch(Enemy, Rules->ResourceSenseRange);
+                if (!BetterPatch)
+                {
+                        BetterPatch =
+                                Ecology->FindBestMineralPatch(Enemy, Rules->ResourceExplorationRange);
+                }
+                if (BetterPatch && BetterPatch != Patch)
+                {
+                        Patch = BetterPatch;
+                        MineralTarget = Patch;
+                        ResourceMemoryRemaining = Rules->ResourceMemory;
+                        GatherTimeRemaining = 0.f;
+                }
+                ResourceTargetHoldRemaining = Rules->ResourceTargetHold;
+        }
+
+        if (bShouldSelectTarget)
 	{
 		Patch = Ecology->FindBestMineralPatch(Enemy, Rules->ResourceSenseRange);
 		if (!Patch)
@@ -525,6 +718,7 @@ bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
 		}
 		MineralTarget = Patch;
 		ResourceMemoryRemaining = Patch ? Rules->ResourceMemory : 0.f;
+                ResourceTargetHoldRemaining = Patch ? Rules->ResourceTargetHold : 0.f;
 		GatherTimeRemaining = 0.f;
 	}
 
@@ -553,6 +747,7 @@ bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
 				Behavior = ESlimeEcologyBehavior::ReturnCargo;
 				MineralTarget = nullptr;
 				ResourceMemoryRemaining = 0.f;
+                                ResourceTargetHoldRemaining = 0.f;
 			}
 		}
 		return true;
@@ -577,6 +772,9 @@ void USlimeEcologyBrainComponent::ChooseExploreGoal()
 	const float MinRadius = FMath::Min(
 		MaxRadius,
 		FMath::Max(Rules->WanderRadiusMin, Rules->WanderMinimumDisplacement));
+        FVector BestCandidate = GroupCenter;
+        bool bHasBestCandidate = false;
+        float BestScore = -TNumericLimits<float>::Max();
 
 	for (int32 Attempt = 0; Attempt < Rules->WanderCandidateCount; ++Attempt)
 	{
@@ -615,15 +813,33 @@ void USlimeEcologyBrainComponent::ChooseExploreGoal()
 			continue;
 		}
 
-		DesiredGoal = Candidate;
-		bHasExploreGoal = true;
-		ExploreGoalAge = 0.f;
-		return;
+                const float CellSize = FMath::Max(100.f, Rules->ExplorationHistoryCellSize);
+                const FIntPoint Cell(
+                        FMath::FloorToInt(Candidate.X / CellSize),
+                        FMath::FloorToInt(Candidate.Y / CellSize));
+                const int32 Visits = ExplorationVisits.FindRef(Cell);
+                const float Score =
+                        FVector::Dist2D(Candidate, Enemy->GetActorLocation())
+                        - Visits * Rules->ExplorationVisitPenalty * 100.f;
+                if (Score > BestScore)
+                {
+                        BestScore = Score;
+                        BestCandidate = Candidate;
+                        bHasBestCandidate = true;
+                }
 	}
 
-	DesiredGoal = GroupCenter;
+        DesiredGoal = bHasBestCandidate ? BestCandidate : GroupCenter;
 	bHasExploreGoal = true;
 	ExploreGoalAge = 0.f;
+        if (bHasBestCandidate)
+        {
+                const float CellSize = FMath::Max(100.f, Rules->ExplorationHistoryCellSize);
+                const FIntPoint Cell(
+                        FMath::FloorToInt(DesiredGoal.X / CellSize),
+                        FMath::FloorToInt(DesiredGoal.Y / CellSize));
+                ++ExplorationVisits.FindOrAdd(Cell);
+        }
 }
 
 FVector USlimeEcologyBrainComponent::ChooseAvoidGoal(const FVector& AwayDirection) const
@@ -855,6 +1071,10 @@ FVector USlimeEcologyBrainComponent::GetSeparationVector() const
 
 const TCHAR* USlimeEcologyBrainComponent::GetBehaviorName() const
 {
+        if (Behavior == ESlimeEcologyBehavior::SeekPaint)
+        {
+                return TEXT("SeekPaint");
+        }
 	switch (Behavior)
 	{
 	case ESlimeEcologyBehavior::Paused:			return TEXT("Paused");

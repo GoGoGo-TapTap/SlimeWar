@@ -26,15 +26,6 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Weapon_Reloading);
 /** Granted by GE_FireCooldown while the weapon is between two shots (drives the fire rate). */
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Weapon_Cooldown);
 
-// -- Enemy AI state (driven by USlimeStateComponent, not GAS) --
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Normal_Idle);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Normal_Fusing);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Normal_MassLocked);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Aggro_Chasing);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Aggro_WindingUp);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Aggro_Recovering);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Enemy_Aggro_Cooling);
-
 // -- Reserved, defined now so future work never has to change the contract --
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Player_Stunned);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_Player_Shielded);

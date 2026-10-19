@@ -29,7 +29,6 @@ void UStatTableProvider::Deinitialize()
 	RunConfig = nullptr;
 	SlimeStatTable = nullptr;
 	WeaponStatTable = nullptr;
-	AggroStatTable = nullptr;
 	EcologyRules = nullptr;
 	WeaponRules = nullptr;
 
@@ -40,7 +39,6 @@ bool UStatTableProvider::LoadTables()
 {
 	SlimeStatTable = nullptr;
 	WeaponStatTable = nullptr;
-	AggroStatTable = nullptr;
 	EcologyRules = nullptr;
 	WeaponRules = nullptr;
 	RunConfig = nullptr;
@@ -72,13 +70,11 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 	{
 		SlimeStatTable = nullptr;
 		WeaponStatTable = nullptr;
-		AggroStatTable = nullptr;
 		return;
 	}
 
 	SlimeStatTable = RunConfig->SlimeStatTable.LoadSynchronous();
 	WeaponStatTable = RunConfig->WeaponStatTable.LoadSynchronous();
-	AggroStatTable = RunConfig->AggroStatTable.LoadSynchronous();
 	EcologyRules = RunConfig->EcologyRules.LoadSynchronous();
 	WeaponRules = RunConfig->WeaponRules.LoadSynchronous();
 
@@ -118,13 +114,6 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 	if (!WeaponStatTable)
 	{
 		UE_LOG(LogSlimeWar, Error, TEXT("StatTableProvider: WeaponStatTable is not set on %s."), *RunConfig->GetName());
-	}
-
-	if (!AggroStatTable)
-	{
-		UE_LOG(LogSlimeWar, Warning,
-			TEXT("StatTableProvider: AggroStatTable is not set on %s (aggressive slimes fall back to defaults)."),
-			*RunConfig->GetName());
 	}
 
 	UE_LOG(LogSlimeWar, Log,
@@ -243,27 +232,6 @@ bool UStatTableProvider::GetWeaponStat(FName WeaponId, FWeaponStatRow& Out) cons
 	return true;
 }
 
-bool UStatTableProvider::GetAggroStat(FSlimeAggroStatRow& Out) const
-{
-	if (!AggroStatTable)
-	{
-		UE_LOG(LogSlimeWar, Warning, TEXT("GetAggroStat: aggro stat table is not loaded, returning defaults."));
-		return false;
-	}
-
-	const FName RowName = RunConfig && !RunConfig->AggroRowName.IsNone() ? RunConfig->AggroRowName : FName(TEXT("Default"));
-	const FSlimeAggroStatRow* Row = AggroStatTable->FindRow<FSlimeAggroStatRow>(RowName, TEXT("GetAggroStat"), false);
-	if (!Row)
-	{
-		UE_LOG(LogSlimeWar, Error, TEXT("GetAggroStat: row '%s' was not found in %s, returning defaults."),
-			*RowName.ToString(), *AggroStatTable->GetName());
-		return false;
-	}
-
-	Out = *Row;
-	return true;
-}
-
 void UStatTableProvider::DumpLoadedTables() const
 {
 	UE_LOG(LogSlimeWar, Log, TEXT("==== Slime data tables ===="));
@@ -290,6 +258,5 @@ void UStatTableProvider::DumpLoadedTables() const
 
 	DumpTable(SlimeStatTable, TEXT("DT_SlimeStats "));
 	DumpTable(WeaponStatTable, TEXT("DT_WeaponStats"));
-	DumpTable(AggroStatTable, TEXT("DT_AggroStats  "));
 	UE_LOG(LogSlimeWar, Log, TEXT("==========================="));
 }

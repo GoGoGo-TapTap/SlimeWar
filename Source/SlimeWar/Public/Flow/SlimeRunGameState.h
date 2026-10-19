@@ -11,8 +11,6 @@
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateValueChanged, int32 /*Value*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateRunStateChanged, ESlimeRunState /*NewState*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateRunEnded, ERunEndReason /*Reason*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeGameStatePointChanged, int32 /*PointId*/, ESpawnPointState /*NewState*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeGameStateBatchIncoming, int32 /*BatchIndex*/, float /*SecondsUntilSpawn*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateFusionHint, FVector /*Location*/);
 
 /**
@@ -70,16 +68,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Run")
 	int32 GetSelectedDropPoint() const { return SelectedDropPoint; }
 
-	UFUNCTION(BlueprintPure, Category = "Slime|Run")
-	int32 GetPointCount() const { return PointIds.Num(); }
-
-	UFUNCTION(BlueprintPure, Category = "Slime|Run")
-	int32 GetPointIdAt(int32 Index) const { return PointIds.IsValidIndex(Index) ? PointIds[Index] : INDEX_NONE; }
-
-	/** Returns AwaitingDeploy for an unknown point id. */
-	UFUNCTION(BlueprintPure, Category = "Slime|Run")
-	ESpawnPointState GetPointState(int32 PointId) const;
-
 	// -- UI binding surface --
 
 	FSlimeGameStateValueChanged OnScoreChanged;
@@ -87,10 +75,8 @@ public:
 	FSlimeGameStateValueChanged OnTimeChanged;
 	FSlimeGameStateValueChanged OnNormalKillCountChanged;
 	FSlimeGameStateValueChanged OnClearedPointCountChanged;
-	FSlimeGameStatePointChanged OnPointStateChanged;
 	FSlimeGameStateRunStateChanged OnRunStateChanged;
 	FSlimeGameStateRunEnded OnRunEnded;
-	FSlimeGameStateBatchIncoming OnBatchIncoming;
 
 	/** Fires at most once per run: the first fusion close enough for the tutorial hint (PD-12). */
 	FSlimeGameStateFusionHint OnFusionHint;
@@ -107,13 +93,9 @@ protected:
 	void HandleNormalKillCountChanged(int32 NewCount);
 	void HandleClearedPointCountChanged(int32 NewCount);
 	void HandleTimeChanged(int32 NewRemainingSeconds);
-	void HandlePointStateChanged(int32 PointId, ESpawnPointState NewState);
 	void HandleRunStateChanged(ESlimeRunState NewState);
 	void HandleRunEnded(ERunEndReason Reason);
-	void HandleBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn);
 	void HandleFusionHint(FVector Location);
-
-	void SetPointState(int32 PointId, ESpawnPointState NewState);
 
 private:
 	ESlimeRunState RunState = ESlimeRunState::Idle;
@@ -125,9 +107,6 @@ private:
 	int32 NormalKillCount = 0;
 	int32 ClearedPointCount = 0;
 	int32 SelectedDropPoint = INDEX_NONE;
-
-	TArray<int32> PointIds;
-	TArray<ESpawnPointState> PointStates;
 
 	/** Which run world we bound to, so EndPlay only unbinds what we actually bound. */
 	TWeakObjectPtr<class URunSubsystem> BoundRunSubsystem;

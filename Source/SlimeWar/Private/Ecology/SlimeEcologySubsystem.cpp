@@ -2,9 +2,11 @@
 
 #include "Ecology/SlimeEcologySubsystem.h"
 
+#include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarLog.h"
 #include "Ecology/SlimeCargoPickup.h"
 #include "Ecology/SlimeCoreComponent.h"
+#include "Ecology/SlimeEcologyBrainComponent.h"
 #include "Ecology/SlimeEcologyEnemy.h"
 #include "Ecology/SlimeEcologyRules.h"
 #include "Ecology/SlimeFactionSite.h"
@@ -69,6 +71,31 @@ void USlimeEcologySubsystem::Tick(float DeltaTime)
 		{
 			LedgerLogAccumulator = 0.f;
 			CheckLedger(/*bLogResult=*/true, TEXT("periodic"));
+		}
+
+		FallProbeAccumulator += DeltaTime;
+		if (FallProbeAccumulator >= 1.f)
+		{
+			FallProbeAccumulator = 0.f;
+			for (const TWeakObjectPtr<ASlimeEcologyEnemy>& Entry : RegisteredAgents)
+			{
+				const ASlimeEcologyEnemy* Agent = Entry.Get();
+				const USlimeHealthComponent* Health = Agent ? Agent->GetHealthComponent() : nullptr;
+				if (Agent && (!Health || !Health->IsDead()) && Agent->GetActorLocation().Z < -200.f)
+				{
+					UE_LOG(LogSlimeWar, Warning,
+						TEXT("EcologyFallProbe: %s faction=%d site=%s loc=%s vel=%s behaviour=%s goal=%s."),
+						*GetNameSafe(Agent),
+						static_cast<int32>(Agent->GetFaction()),
+						Agent->GetAssignedSite() ? *Agent->GetAssignedSite()->SiteId.ToString() : TEXT("None"),
+						*Agent->GetActorLocation().ToCompactString(),
+						*Agent->GetVelocity().ToCompactString(),
+						Agent->GetEcologyBrain() ? Agent->GetEcologyBrain()->GetBehaviorName() : TEXT("None"),
+						Agent->GetEcologyBrain()
+							? *Agent->GetEcologyBrain()->GetDesiredGoal().ToCompactString()
+							: TEXT("None"));
+				}
+			}
 		}
 	}
 
@@ -164,10 +191,22 @@ void USlimeEcologySubsystem::BeginRun()
 		}
 	}
 
-	// Initial population is small (20 in the P0 level), so process it immediately.
-	for (int32 Pass = 0; Pass < 3 && PendingSpawns.Num() > 0; ++Pass)
+	// Process the whole initial population before the first ledger check. The double-point level
+	// has 20 bodies and the three-point level has 30; a fixed three-pass loop only drains 24 and
+	// makes the begin-run mass ledger look unbalanced until the next tick.
+	int32 SpawnPasses = 0;
+	const int32 MaxSpawnPasses = InitialMass + 16;
+	while (PendingSpawns.Num() > 0 && SpawnPasses++ < MaxSpawnPasses)
 	{
 		ProcessSpawnQueue();
+	}
+
+	if (PendingSpawns.Num() > 0)
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("EcologySubsystem: %d initial spawn request(s) are still pending after %d passes."),
+			PendingSpawns.Num(),
+			SpawnPasses);
 	}
 
 	CheckLedger(/*bLogResult=*/true, TEXT("begin run"));
@@ -337,8 +376,10 @@ ASlimeMineralPatch* USlimeEcologySubsystem::FindBestMineralPatch(
 		return nullptr;
 	}
 
-	ASlimeMineralPatch* Best = nullptr;
-	float BestDistanceSq = FMath::Square(MaxRange);
+        ASlimeMineralPatch* Best = nullptr;
+        float BestScore = MaxRange;
+        const USlimeEcologyRules* Rules = GetRules(GetWorld());
+        const UWorld* World = GetWorld();
 	for (ASlimeMineralPatch* Patch : MineralPatches)
 	{
 		if (!Patch || Patch->Stock <= 0)
@@ -346,11 +387,50 @@ ASlimeMineralPatch* USlimeEcologySubsystem::FindBestMineralPatch(
 			continue;
 		}
 
-		const float DistanceSq =
-			FVector::DistSquared2D(Enemy->GetActorLocation(), Patch->GetActorLocation());
-		if (DistanceSq <= BestDistanceSq)
+                const float Distance =
+                        FVector::Dist2D(Enemy->GetActorLocation(), Patch->GetActorLocation());
+                if (Distance > MaxRange)
 		{
-			BestDistanceSq = DistanceSq;
+                        continue;
+                }
+
+                float Crowding = 0.f;
+                if (Rules && World)
+                {
+                        TArray<ASlimeEcologyEnemy*> Neighbours;
+                        QueryAgentsAroundLocation(
+                                Patch->GetActorLocation(),
+                                Rules->MineralCrowdingRadius,
+                                Neighbours);
+                        for (const ASlimeEcologyEnemy* Neighbour : Neighbours)
+                        {
+                                if (!Neighbour || Neighbour == Enemy
+                                        || Neighbour->GetFaction() != Enemy->GetFaction())
+                                {
+                                        continue;
+                                }
+
+                                FCollisionQueryParams Params(
+                                        SCENE_QUERY_STAT(SlimeMineralCrowdingSight), false, Enemy);
+                                Params.AddIgnoredActor(Neighbour);
+                                FHitResult Hit;
+                                if (!World->LineTraceSingleByChannel(
+                                        Hit,
+                                        Enemy->GetActorLocation(),
+                                        Neighbour->GetActorLocation(),
+                                        ECC_WorldStatic,
+                                        Params))
+                                {
+                                        Crowding += 1.f;
+                                }
+                        }
+                }
+
+                const float Score =
+                        Distance + Crowding * (Rules ? Rules->MineralCrowdingPenalty * 100.f : 0.f);
+                if (Score < BestScore)
+                {
+                        BestScore = Score;
 			Best = Patch;
 		}
 	}
@@ -490,6 +570,11 @@ TArray<FSlimeSiteStatus> USlimeEcologySubsystem::GetSiteStatuses() const
 		}
 		Result.Add(Status);
 	}
+
+	Result.Sort([](const FSlimeSiteStatus& A, const FSlimeSiteStatus& B)
+	{
+		return static_cast<uint8>(A.Faction) < static_cast<uint8>(B.Faction);
+	});
 	return Result;
 }
 
@@ -513,6 +598,11 @@ TArray<FSlimeMineralStatus> USlimeEcologySubsystem::GetMineralStatuses() const
 		Status.RegrowRemaining = Patch->GetRegrowRemaining();
 		Result.Add(Status);
 	}
+
+	Result.Sort([](const FSlimeMineralStatus& A, const FSlimeMineralStatus& B)
+	{
+		return A.PatchId.ToString() < B.PatchId.ToString();
+	});
 	return Result;
 }
 
@@ -717,6 +807,11 @@ ASlimeFactionSite* USlimeEcologySubsystem::FindSiteForFaction(ESlimeFaction Fact
 ASlimeFactionSite* USlimeEcologySubsystem::GetSiteForFaction(ESlimeFaction Faction) const
 {
         return FindSiteForFaction(Faction);
+}
+
+bool USlimeEcologySubsystem::HasFactionSite(ESlimeFaction Faction) const
+{
+	return FindSiteForFaction(Faction) != nullptr;
 }
 
 FVector USlimeEcologySubsystem::ResolveSiteSpawnLocation(ASlimeFactionSite* Site) const

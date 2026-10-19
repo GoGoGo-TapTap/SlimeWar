@@ -6,7 +6,7 @@ import unreal
 ASSET_DIRECTORY = "/Game/_SlimeWar/Weapon"
 ASSET_NAME = "DA_Weapon_Rifle"
 ASSET_PATH = f"{ASSET_DIRECTORY}/{ASSET_NAME}"
-RUN_CONFIG_PATH = "/Game/_SlimeWar/Core/Data/DA_RunConfig"
+RUN_CONFIG_PATH = "/Game/_SlimeWar/Core/Data/DA_RunConfig_DoublePoint"
 
 VALUES = {
     "base_damage": 8.0,

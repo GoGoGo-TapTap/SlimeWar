@@ -34,9 +34,6 @@ public:
 	 */
 	virtual void OnEnemyFused(const FSlimeFusionEvent& Event) = 0;
 
-	/** A spawn point changed state. Drives HUD markers. */
-	virtual void OnPointStateChanged(int32 PointId, ESpawnPointState NewState) = 0;
-
 	/** The player died. Immediate run over (failure). */
 	virtual void OnPlayerDied() = 0;
 };

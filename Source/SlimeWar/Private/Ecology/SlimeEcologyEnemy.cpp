@@ -26,7 +26,6 @@
 
 ASlimeEcologyEnemy::ASlimeEcologyEnemy()
 {
-	TargetKind = ETargetKind::Normal;
 	Mass = 1;
 	AIControllerClass = ASlimeEcologyAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -184,12 +183,6 @@ void ASlimeEcologyEnemy::ApplyAssimilation(ESlimeFaction InFaction)
 void ASlimeEcologyEnemy::SetAssignedSite(ASlimeFactionSite* InSite)
 {
 	AssignedSite = InSite;
-}
-
-void ASlimeEcologyEnemy::IgnorePlayerForMovement()
-{
-	// New ecology bodies intentionally keep player collision. The legacy base implementation is
-	// for the old fusion prototype only.
 }
 
 void ASlimeEcologyEnemy::HandleDeath()
@@ -549,6 +542,7 @@ bool ASlimeEcologyEnemy::TryImpactSplit(
 		}
 		if (USlimeEcologyFusionComponent* FragmentFusion = Fragment->GetEcologyFusionComponent())
 		{
+			FragmentFusion->ApplySplitCalm(Rules->FusionInterruptedBlock);
 			FragmentFusion->InterruptFusion(Rules->FusionInterruptedBlock);
 		}
 		Spawned.Add(Fragment);

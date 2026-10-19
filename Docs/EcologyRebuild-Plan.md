@@ -51,7 +51,8 @@
 | M6 | 磁性瞄准、蓄力射击、击退、撞墙分裂 | `Passed`；自动测试与用户手动验收均通过 |
 | M7 | 双点 P0：地图、矿点、采集交付、150 秒/200 分 | `Passed`；自动验收与用户手动 Checklist 均通过 |
 | M8 | 警戒、争夺、敌对核心、吞噬、手雷、粘液、完整计分 | `Passed`；自动场景与用户手动 Checklist 均通过 |
-| M9 | 三阵营 60×50 扩展和完整 HUD/结算 | 三点地图完整回合通过 |
+| M8-cleanup | M9 前置：Phase E 旧分队/波次/StateTree/刷点清退 | `Passed`；见 `EcologyRebuild/TestLogs/LegacyPhaseE-cleanup.md` |
+| M9 | 三阵营 60×50 扩展和完整 HUD/结算 | `Passed`；自动、可见窗口 soak 与用户手动 Checklist 均通过 |
 | M10 | 表现、100 只压测、Windows Development 打包 | 性能基线和打包包体通过 |
 
 ### M1：贴地模块（Passed）
@@ -990,6 +991,112 @@ Ledger: resource OK, mass OK
 
 M8 结论：`Passed`。旧 StateTree/Normal/Aggro 归档清退作为 M9 前置步骤单独执行，不在 M8 内完成。
 
+### M8 前置：旧 Phase E 设计清退（Passed）
+
+用户确认 M8 手动测试通过后，执行了独立的旧设计清退。详细记录见 `Docs/EcologyRebuild/TestLogs/LegacyPhaseE-cleanup.md`。
+
+#### 删除
+
+- `ASlimeNormal`、`ASlimeAggro`、`ASlimeAIController`、`USlimeStateTreeAIComponent`、`SlimeStateTreeNodes`、旧 `USlimeFusionComponent`。
+- `ASpawnPoint`、`USlimeEnemyManagerSubsystem`、`SlimeSpawnLayoutEdit`、`USlimeSpawnSlotMarker`、`SlimeSlotResolver` 及编辑器 Details/Visualizer。
+- `USlimeStateComponent`、`ETargetKind`、`ESlimeSlotRole`、`FSlimeAggroStatRow`、`FSlimeSpawnSlot`、`FSlimeSpawnPointDef`。
+- `IBattleDirector::OnPointStateChanged`；`URunSubsystem` 的批次/预警/点位快照；`ASlimeRunGameState` 的点位/批次镜像。
+- 旧连发 `UGA_Fire`；M6 的 `UGA_ChargeFire` 保留。
+- `StateTreeModule` / `GameplayStateTreeModule` 构建依赖。
+
+#### 保留与迁移
+
+- `USlimeSpawnLayout` 只保留 `DropPoints`，类名和 `DA_SpawnLayout_DoublePoint` 路径不变，准备页/投放流程无需改资产。
+- `USlimeRunConfig` 保留 `SpawnLayout` 作为落点来源，删除 `bEcologyRun` 与全部旧 AI/批次字段；`URunSubsystem::StartRun` 现在固定走生态站点。
+- `ESpawnPointState`、`USlimeHUDWidget::OnPointStateUpdated/OnBatchIncoming`、`FSlimeRunResult::NormalKills/ClearedPoints` 作为无运行时来源的 WBP 兼容壳保留，M9 重建 HUD 后删除。
+- `SlimeSpawnNormalAtMass` / `SlimeSetMass` 重定向到生态个体；`SlimeForceFuse` 删除，统一使用 `SlimeEcologyForceFuse`。
+
+#### 资产归档
+
+以下资产移动到 `Content/Developers/Junk/LegacyPhaseE/`，不删除 Git 历史：
+
+- `ST_SlimeNormal`、`ST_SlimeAggro`、`DT_AggroStats`（uasset + csv）。
+- 旧一版 `DA_SpawnLayout`、旧全局 `DA_RunConfig`、`L_Sandbox_OnePoint`。
+
+`Config/DefaultGame.ini` 的全局 `RunConfig` 改为 `DA_RunConfig_DoublePoint`；该资产和双点布局/关卡资产已重存，清除已删除字段的序列化残留。
+
+#### 验证
+
+- 编译 `SlimeWarEditor Win64 Development`：0 error。
+- `SlimeWar.Flow` 自动化 4 项全部通过（DropPointSelection / RunPhase / RunResult / ScoringRules）；`Config/DefaultEngine.ini` 中旧的 `ExcludeTest=SlimeWar` 已移除，后续生态测试不再被全局跳过。
+- 可见窗口 `L_Ecology_DoublePoint` 运行 12 秒生态 soak：`resource OK`、`mass OK`、`penetrations=0`、`stuck>2s=0`。
+- 日志 `Saved/Logs/LegacyCleanup-Soak.log`，截图 `HighresScreenshot00086.png`。
+- HUD 已不再显示 `POINT` / `batch`，改为 `SITE A/B`、注册个体和资源/体量账本。
+
+清退结论：`Passed`。M9 可以从干净的新生态运行时开始。
+
+### M9：三阵营 60×50 生态关卡（Passed）
+
+M9 新增独立关卡 `L_Ecology_ThreePoint`，保留 `L_Ecology_DoublePoint` 作为回归关卡。目标为 60×50 米、A/B/C 各 10 只开局、5 个矿点、180 秒/160 分。旧 Phase E 设计已在 M8 前置清退中退出运行时。
+
+#### 地图与数据
+
+Godot → UE 坐标换算：`X_UE = -Z_godot × 100`、`Y_UE = X_godot × 100`。
+
+| 元素 | UE 坐标（cm） | 实际配置 |
+|---|---|---|
+| A 点 | `(-1000, -1300, 2)` | 青绿，10 只，活动半径 1200 |
+| B 点 | `(-1000, 1300, 2)` | 橙黄，10 只，活动半径 1200 |
+| C 点 | `(1500, 0, 2)` | 紫色，10 只，活动半径 1200 |
+| D1 / D2 | `(-1800,-2200)` / `(1800,2200)` | 复用现有投放演出 |
+| A_Near | `(-1400,-1300)` | 4/4，不再生 |
+| B_Near | `(-1400,1300)` | 4/4，不再生 |
+| C_Near | `(1900,0)` | 4/4，不再生 |
+| Center_North | `(0,700)` | 5/6，5 秒/份 |
+| Center_South | `(0,-700)` | 5/6，5 秒/份 |
+
+地板为 50×60 米，外墙 X=±2500、Y=±3000；内部分隔墙、柱子和货架由 `Tools/CreateEcologyThreePointContent.py` 创建。地图从已知可用的双点地图复制，以继承导航系统配置；角色和几何随后替换。
+
+新增资产：
+
+- `DA_RunConfig_ThreePoint`：180 秒、160 分、`AutoStartRun=false`。
+- `DA_SpawnLayout_ThreePoint`：D1/D2 两个落点。
+- `DA_Level_ThreePoint`：`ThreePoint` / `Three Point Arena`，准备页与演出留空以回退现有全局 WBP。
+- `Config/DefaultGame.ini` 在 DoublePoint 后追加 ThreePoint 关卡项。
+
+#### 运行时修正
+
+- `USlimeEcologySubsystem::BeginRun` 完整排空初始生成队列，30 只开局时首次账本即为 `30 initial = 30 live`。
+- `GetSiteStatuses` 按 A/B/C 排序，`GetMineralStatuses` 按 PatchId 排序。
+- 新增 `HasFactionSite`；A/B/C 选择只在当前关卡存在对应站点时生效。
+- `ASlimeWarCharacter` 新增 C 键选择、`TotalDamageTaken` 与 `GetTotalDamageTaken`；`USlimePlayerAttributeSet` 记录实际负向生命变化。
+- `USlimeHUDWidget` 新增可选 `OnEcologySitesUpdated`，每 0.5 秒刷新；现有事件和 WBP 字段保持不变。
+- `FSlimeRunResult` 末尾新增 `ElapsedTime`、`PlayerDamageTaken`；`GetRunResult` 填充全部生态统计。
+
+#### 实机调试中修复的问题
+
+- 地板第一次误写成 25×60 米，C 点和 A_Near 落在碰撞外；已修正为 50×60 米。
+- 命令行的 `RebuildNavigation` 不会完成烘焙；新增编辑器控制台命令 `SlimeBakeNav`，在真实编辑器 tick 中构建并保存 Recast 数据。`SlimeEcologyGroundProbe` 现可同时验证地面命中和 NavMesh 投影。
+- 直线路径检测使用目标点 Z，导致地面矿点的直线被地板误判为阻挡；改为同高度水平三线探测。
+- 吞噬把受害者质量转移给幸存者却同时计入 `RemovedMass`，导致体量账本虚高；吞噬只转移质量、不再计入移除。
+
+#### 当前验证
+
+- 编译：0 error。
+- `SlimeWar.Flow` 自动化 4 项全部通过。
+- 可见窗口 60 秒 soak：30 开局，资源 OK、体量 OK、`penetrations=0`、`stuck>2s=0`、`pathFailures=0`。
+- 三站点/五矿点 HUD 正常；C 同化测试 `faction=3 assigned=3`，携货返回 C 点。
+- 双点回归 12 秒：资源/体量 OK、`pathFailures=0`、`penetrations=0`；双点关卡 C 测试被正确拒绝。
+- 结算日志显示 `elapsed` 与 `player damage taken`。
+
+用户已于 2026-10-19 完成 `Docs/EcologyRebuild/M9-Checklist.md` 全部手动验收，覆盖：
+
+- 真实 PIE 中 `SlimeEcologyGroundProbe` 的 3 站点/5 矿点地面与导航命中。
+- A/B/C 各 10 只开局、HUD 三站点显示和 180/160 回合参数。
+- 采集、返程、交付、共享矿点再生与资源/体量账本。
+- `Z/X/C` 阵营选择、`1/2` 手雷选择、`G` 投掷和 C 阵营同化。
+- 同阵营融合、跨阵营竞争/警戒、敌对核心跃击/吞噬/爆裂。
+- 160 分不提前结束、时间/死亡/灭绝终局与完整结算字段。
+- 现有 `WBP_SlimeHUD` / `WBP_SlimeResult` 兼容，新增站点事件未实现时不报错。
+- 双点关卡 A/B 回归和 C 阵营选择拒绝。
+
+详细记录见 `Docs/EcologyRebuild/TestLogs/M9-three-point.md`。M9 结论：`Passed`。
+
 ### 后续模块关键实现
 
 - M2 新增 C++ 生态个体和大脑组件；0.25 秒感知刷新，邻居查询使用空间哈希；导航路径更新与每帧本地转向分离，禁止在战斗和融合中使用持续目的地追人。
@@ -1011,7 +1118,7 @@ M8 结论：`Passed`。旧 StateTree/Normal/Aggro 归档清退作为 M9 前置�
 - `USlimeLocomotionComponent`：路径跟随、自主速度、本地避让和排斥。
 - `USlimeEcologyBrainComponent`：感知记忆、行为优先级、采集/返程/聚群/战斗目标。
 - `USlimeBodyInteractionComponent`：外部速度、推挤、停稳、眩晕、撞击分裂窗口。
-- `USlimeFusionComponent`：三条融合路径、冷却、打断和生命/货物/分数继承。
+- `USlimeEcologyFusionComponent`：三条融合路径、冷却、打断和生命/货物/分数继承。
 - `USlimeCoreComponent` 与 `USlimeWeakpointComponent`：核心状态、跃击、吞噬、爆裂和弱点。
 - `USlimeAimAssistComponent`：磁性瞄准、身体/弱点候选和解锁切换。
 
@@ -1032,3 +1139,311 @@ M8 结论：`Passed`。旧 StateTree/Normal/Aggro 归档清退作为 M9 前置�
 - M1 只修贴地，不顺便调整体量平衡、武器或 AI。
 - 60×50 三阵营、完整表现、音频和正式美术在 P0/P1 规则稳定后处理。
 - 每完成一个模块即停止并报告测试结果；只有该模块门槛通过，才继续下一个模块。
+
+## 行为差异修复计划（R0–R5）
+
+### R0：一致性审查报告（Passed）
+
+报告：`Docs/EcologyRebuild/DesignConsistencyReport.md`。
+
+- 所有数值冲突标为 `Recorded – No Change`。
+- 行为差异拆分为 R1–R5。
+- Plan 内部历史矛盾单独列为 `Documentation`。
+
+### R1：玩家控制行为（Passed）
+
+只新增当前缺失的行为和数据字段：
+
+- 冲刺、跳跃、右键瞄准减速。
+- 瞄准优先于冲刺。
+- 空中继续受重力，只有落地可跳。
+- 瞄准相机距离/FOV 切换。
+- Q 换肩。
+
+不修改审查报告中 `Recorded – No Change` 的相机 220/90、加速度 2048 等数值。新增字段采用策划案值，并标注“新增，不替换旧值”。
+
+R1 验证：
+
+1. 编译 0 error。
+2. 可见 UE 窗口验证步行、冲刺、瞄准优先级、跳跃落地、相机距离/FOV、Q 换肩。
+3. 记录 `Docs/EcologyRebuild/TestLogs/R1-player-controls.md`。
+4. 手动输入项写入 `Docs/EcologyRebuild/R1-Checklist.md`。
+
+#### R1 实现与自动测试记录
+
+新增字段：
+
+- `PlayerSprintSpeed=900`
+- `PlayerAimSpeed=300`
+- `PlayerJumpSpeed=700`
+- `PlayerGravity=2000`
+- `CameraAimBoomLength=220`
+- `CameraAimFieldOfView=55`
+
+既有值保持不变：`PlayerMoveSpeed=600`、`PlayerAcceleration=2048`、`CameraBoomLength=220`、`CameraFieldOfView=0`。
+
+自动结果：
+
+- 初始 600；冲刺 900；瞄准 300；瞄准覆盖冲刺。
+- 结束瞄准恢复冲刺 900；结束冲刺恢复 600。
+- 瞄准 FOV 55、退出恢复 90；Q 换肩 SocketY `60 → -60`。
+- 跳跃后进入 Falling，随后落地。
+
+日志：
+
+- `Saved/Logs/R1-PlayerControls.log`
+- `Saved/Logs/R1-Jump.log`
+
+截图：`HighresScreenshot00096.png`、`HighresScreenshot00097.png`。
+
+详细记录：`Docs/EcologyRebuild/TestLogs/R1-player-controls.md`。
+
+R1 手动 Checklist 已由用户确认通过，标记为 `Passed`。
+
+### R2：自主行为优先级与观察暂停（Passed）
+
+已实现：
+
+- 主动核心前摇/跃击/恢复保持最高优先级。
+- 携货行为优先于新的核心追击、普通融合、警戒和普通采集。
+- 携货内部依次处理玩家避让、敌对核心避险、返程交付。
+- 核心空载攻击行为在首次预警和普通采集之前。
+- 普通资源行为先于“开始新融合”；已建立的融合连接优先于普通资源行为，避免采集目标把伙伴带走。
+- 锁定/眩晕期间不刷新感知、不更新行为目标，资源记忆和采集休息暂停。
+
+自动组合结果：
+
+- 携货个体在玩家接近时进入 `AvoidPlayer`，Cargo 保持 1。
+- 玩家离开后恢复 `ReturnCargo`。
+- 测试期间 Fusion 保持 Idle，核心保持 Idle。
+
+日志：`Saved/Logs/R2-Priority.log`
+截图：`HighresScreenshot00098.png`
+
+R2 手动 Checklist 已由用户确认完成，标记为 `Passed`。
+
+### R3：资源行为语义（Passed）
+
+已实现：
+
+- 出生随机初始采集休息。
+- 资源目标 2 秒保留，过期后才重新比较矿点。
+- 矿点拥挤代价：可见同族每只增加 1.8 米等效选点代价。
+- 拾取动作距离和结算距离分开。
+- 有资源记忆时探索速度切换。
+
+自动资源 soak：
+
+```text
+地图：L_Ecology_DoublePoint
+命令：SlimeRunStart,SlimeEcologyResourceSoakTest 20
+日志：Saved/Logs/R3-Resource.log
+截图：HighresScreenshot00099.png
+```
+
+结果：
+
+- 20 秒完成 8 次交付。
+- 资源：0 库存 + 12 携货 + 0 地面 + 8 已交付 = 18 初始 + 2 再生，平衡。
+- 体量：20 初始 + 8 交付 = 28 存活 + 0 移除，平衡。
+- 没有修改已登记数值冲突。
+
+R3 手动 Checklist 已由用户确认完成，标记为 `Passed`。
+
+### R4 前置批准项：N07 射击融合冷却
+
+用户已批准将 N07 从数值冲突白名单移入行为修复范围：
+
+- 射击打断融合时附加 0.8 秒融合冷却。
+- 在射击前记录是否已满足原有融合冷却。
+- 3 秒玩家撮合窗口内，如果射击前已满足旧冷却，本次射击附加冷却不能阻止撮合。
+- 旧冷却在射击前本来就未结束时，仍不能强行撮合。
+
+该规则在 R4 融合行为模块实施和验收。
+
+### R4：融合与核心行为语义（Active）
+
+R4 目标是把三条融合路径的资格检查拆开，并补齐射击冷却快照、融合眩晕合并和核心近身玩家优先规则。
+
+#### R4 设计
+
+外力/位移融合：
+
+- 玩家射击、身体推动和范围击退会给受影响个体打开 3 秒撮合窗口。
+- 每帧扫描个体上一位置到当前位置的线段；同阵营、无遮挡、未被其他配对占用、冷却满足时立即提交位移融合。
+- 待眩晕和眩晕不阻止位移融合；分裂平复、成功冷却和射击附加冷却快照仍参与资格检查。
+- 位移融合使用既有 `FusionForcedCaptureGap=8 cm`；不引入 N06 的 0.65 m 捕获间距。
+- 普通自主/接触融合继续使用既有 `FusionAutoSeekRange=400 cm`、`FusionAutoSeekSpeed=75 cm/s`、`FusionContactTolerance=18 cm`、`FusionContactTime=2.4 s`。
+
+射击附加冷却（N07，用户批准的行为修复）：
+
+- 射击命中时给目标融合组件附加 0.8 秒冷却。
+- 附加冷却前记录“射击前旧冷却是否已经满足”。
+- 3 秒撮合窗口内，如果旧冷却已满足，则本次附加冷却不阻止玩家撮合。
+- 如果旧冷却在射击前未结束，仍不能强行撮合。
+
+分裂平复：
+
+- 新增独立 `SplitCalmRemaining=5 s`，与打断禁用分开。
+- 平复期间拒绝自主、接触和位移融合，也拒绝普通警戒。
+- 平复在眩晕期间暂停消耗；瞄准锁定不暂停。
+
+融合结果：
+
+- 体量、剩余生命、Cargo、BodyScoreCredit 守恒。
+- 双方眩晕取较长剩余/待眩晕值。
+- 攻击性核心或警戒状态继续使融合体成为敌对核心。
+
+核心目标：
+
+- 玩家进入 180 cm 且可见时直接成为战斗目标。
+- 玩家更远时优先可见敌族；没有敌族时再使用 240 cm 近身玩家或受激玩家候选。
+- 跃击距离使用基础距离与双方胶囊半径组合值，避免大体量核心贴脸却无法起跳。
+
+#### R4 实现
+
+- `USlimeEcologyFusionComponent` 删除“外力配对后等待 2.4 秒”的分支，统一走扫掠即时位移融合。
+- `CanPairWith(Forced)` 不再拒绝待眩晕/眩晕，改为检查双方冷却快照和分裂平复。
+- 新增 `ApplySplitCalm()` / `GetSplitCalmRemaining()`；冲击分裂碎片写入平复计时。
+- `USlimeAlertComponent::CanReceiveAlert()` 增加平复检查。
+- 新增 `DebugSetSuccessCooldown()`、`IsShotSnapshotReady()` 用于验证 N07。
+- 新增 `SlimeEcologyCorePriorityTest`。
+- HUD 融合状态新增 `calm` 字段。
+- 已建立的融合连接现在优先于普通资源行为；修复接触融合伙伴被下一帧采集目标带走的问题。
+
+#### R4 自动实测
+
+编译：
+
+```text
+SlimeWarEditor Win64 Development：0 error
+```
+
+外力扫掠：
+
+```text
+地图：L_Ecology_DoublePoint
+命令：SlimeRunStart,SlimeRunTimeScale 0,SlimeEcologyExternalConnectionTest
+日志：Saved/Logs/R4-External-final.log
+截图：HighresScreenshot00107.png
+结果：fusions=1 live=1 survivorStun=2.57
+```
+
+射击冷却：
+
+```text
+命令：SlimeRunStart,SlimeRunTimeScale 0,SlimeEcologyShotCooldownTest
+日志：Saved/Logs/R4-ShotCooldown-final2.log
+截图：HighresScreenshot00114.png
+结果：
+  [ready] shotCooldown=0.80 forcedFusion=yes live=1
+  [old]   shotCooldown=0.80 snapshot=blocked forcedFusion=no live=2
+```
+
+核心优先：
+
+```text
+命令：SlimeRunStart,SlimeRunTimeScale 0,SlimeEcologyCorePriorityTest
+日志：Saved/Logs/R4-CorePriority-final.log
+截图：HighresScreenshot00109.png
+结果：
+  [near] target=BP_ThirdPersonCharacter_C_0 isPlayer=yes phase=Pouncing
+  [far]  target=SlimeEcologyEnemy_21 isRival=yes phase=Chasing
+```
+
+融合回归：
+
+```text
+普通接触：
+命令：SlimeRunStart,SlimeRunTimeScale 0,SlimeEcologyFusionTest
+日志：Saved/Logs/R4-FusionRegression-final2.log
+结果：Contacting 2.4 秒后融合为 mass 2，health 40/40，credit 8
+
+4+4 位移：
+命令：SlimeRunStart,SlimeRunTimeScale 0,SlimeEcologyForcedFusionTest
+日志：Saved/Logs/R4-ForcedRegression-final2.log
+结果：mass 8，health 160/160，credit 40
+
+R2 回归：
+日志：Saved/Logs/R4-R2Regression-final.log
+结果：carrier cargo=1 -> AvoidPlayer -> ReturnCargo
+
+R3 回归：
+日志：Saved/Logs/R4-R3Regression-final.log
+结果：20 秒完成 8 次交付；resource OK；mass OK（28 live）
+```
+
+#### R4 偏差与门禁
+
+- N06 的 0.65 m 捕获间距、0.45 m/s 连接拉近仍为 `Recorded – No Change`；本轮移除临时新增的 65/45 字段，未改变现有数值。
+- 内部枚举仍使用 `Forced` 表示位移/玩家撮合；运行日志已改为 `displacement`，避免和“外力连接”混淆。
+- 普通连接拉近没有引入 N06 的 0.45 m/s；当前保持既有 18 cm 接触容差和 2.4 秒接触时间。
+- 回归测试首次发现采集行为会覆盖已建立的接触连接；已将 `Fusion->IsEngaged()` 提到 `UpdateResourceBehavior()` 之前，复测通过。
+- 自动门禁通过，手动 Checklist 待执行；R4 保持 `Active`。
+
+### R5：警戒、粘液与探索行为（Active）
+
+R5 目标是补齐警戒结束后的采集休息、粘液趋近、探索历史惩罚和资源争夺累计消退。
+
+#### R5 设计
+
+- 警戒从 `IsAlerted()` 变为 false 且个体空载时，设置至少 4 秒采集休息。
+- 采集休息期间才寻找 6 米内可见粘液；接近到 50 cm 停止并停留，不参与采集目标抢占。
+- 探索候选记录 400 cm 网格访问次数；每次访问增加 5 米等效代价，优先较远、较少访问位置。
+- 资源争夺条件消失时累计值下降，触发后冷却保持 5 秒，不在条件消失时立刻清零。
+- 所有既有数值冲突继续只记录，不修改。
+
+#### R5 实现
+
+- `AlertPostEmptyGatherRest=4`
+- `PaintSenseRange=600`
+- `PaintApproachSpeed=65`
+- `PaintStopRadius=50`
+- `ExplorationHistoryCellSize=400`
+- `ExplorationVisitPenalty=5`
+- `ESlimeEcologyBehavior::SeekPaint`
+- 粘液移动显式使用 `PaintStopRadius` 作为到达半径，修复默认 70 cm 到达半径导致停在 66 cm 的问题。
+
+#### R5 自动实测
+
+```text
+地图：L_Ecology_DoublePoint
+命令：SlimeRunStart,SlimeRunTimeScale 0,SlimeEcologyR5Test
+日志：Saved/Logs/R5-Behavior-final2.log
+截图：HighresScreenshot00112.png、HighresScreenshot00113.png
+```
+
+结果：
+
+```text
+stage 0 behavior=SeekPaint nearestPaint=70.7 gatherRest=4.25
+stage 1 behavior=SeekPaint nearestPaint=49.6 gatherRest=1.75
+stage 2 behavior=AlertWait  paintCount=0
+stage 3 behavior=Explore   explorationVisits=1 gatherRest=3.40（ClearAlert 后 0.6 秒）
+stage 4 behavior=Explore   explorationVisits=1 gatherRest=2.40
+stage 5 behavior=Gather    gatherRest=0.00
+```
+
+资源争夺消退：
+
+```text
+命令：SlimeRunStart,SlimeRunTimeScale 0,SlimeEcologyDisputeTest
+日志：Saved/Logs/R5-Dispute-final.log
+结果：decay 0.75 -> 0.25, alerted=yes warning=1.00 cooldown=5.00
+```
+
+#### R5 偏差与门禁
+
+- 粘液停止圈首次测试停在 66.4 cm，原因是 `SetMoveGoal` 使用了默认 70 cm 到达半径；已改为显式 50 cm 并复测到 49.6 cm。
+- 警戒休息在 `ClearAlert` 后 0.6 秒读数为 3.40 秒，等价于清除瞬间的 4.0 秒；后续探索在休息耗尽后恢复。
+- 自动门禁通过，手动 Checklist 待执行；R5 保持 `Active`。
+
+#### R4/R5 手动验收
+
+- R4：`Docs/EcologyRebuild/R4-Checklist.md`
+- R5：`Docs/EcologyRebuild/R5-Checklist.md`
+
+详细日志：
+
+- `Docs/EcologyRebuild/TestLogs/R4-fusion-core.md`
+- `Docs/EcologyRebuild/TestLogs/R5-alert-paint-explore.md`
