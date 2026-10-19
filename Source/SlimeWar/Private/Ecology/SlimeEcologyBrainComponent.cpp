@@ -5,10 +5,16 @@
 #include "Components/CapsuleComponent.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Ecology/SlimeBodyInteractionComponent.h"
+#include "Ecology/SlimeAlertComponent.h"
+#include "Ecology/SlimeCargoPickup.h"
+#include "Ecology/SlimeCoreComponent.h"
 #include "Ecology/SlimeEcologyEnemy.h"
+#include "Ecology/SlimeEcologyFusionComponent.h"
 #include "Ecology/SlimeEcologyRules.h"
 #include "Ecology/SlimeEcologySubsystem.h"
+#include "Ecology/SlimeFactionSite.h"
 #include "Ecology/SlimeLocomotionComponent.h"
+#include "Ecology/SlimeMineralPatch.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
@@ -75,6 +81,14 @@ void USlimeEcologyBrainComponent::ForceRefresh()
 	RefreshCountdown = 0.f;
 }
 
+void USlimeEcologyBrainComponent::ClearResourceMemory()
+{
+	MineralTarget = nullptr;
+	CargoTarget = nullptr;
+	ResourceMemoryRemaining = 0.f;
+	GatherTimeRemaining = 0.f;
+}
+
 void USlimeEcologyBrainComponent::TickComponent(
 	float DeltaTime,
 	ELevelTick TickType,
@@ -88,11 +102,12 @@ void USlimeEcologyBrainComponent::TickComponent(
 		return;
 	}
 
-	const USlimeHealthComponent* Health = Enemy->GetHealthComponent();
-	const USlimeBodyInteractionComponent* Body = Enemy->GetBodyInteraction();
-	if (Enemy->IsRunFrozen()
-		|| (Health && Health->IsDead())
-		|| (Body && Body->BlocksVoluntaryMovement()))
+	ResourceMemoryRemaining = FMath::Max(0.f, ResourceMemoryRemaining - DeltaTime);
+	GatherRestRemaining = FMath::Max(0.f, GatherRestRemaining - DeltaTime);
+
+        const USlimeHealthComponent* Health = Enemy->GetHealthComponent();
+        const USlimeBodyInteractionComponent* Body = Enemy->GetBodyInteraction();
+        if (Enemy->IsRunFrozen() || (Health && Health->IsDead()))
 	{
 		Behavior = ESlimeEcologyBehavior::Paused;
 		DesiredSpeed = 0.f;
@@ -100,6 +115,36 @@ void USlimeEcologyBrainComponent::TickComponent(
 		{
 			Locomotion->ClearMoveGoal();
 		}
+		return;
+	}
+
+        if (Body && Body->BlocksVoluntaryMovement())
+        {
+                Behavior = ESlimeEcologyBehavior::Paused;
+                DesiredSpeed = 0.f;
+                if (USlimeLocomotionComponent* Locomotion = GetLocomotion())
+                {
+                        Locomotion->SuspendVoluntaryMovement();
+                }
+                return;
+        }
+
+	if (const USlimeCoreComponent* Core = Enemy->GetCoreComponent())
+	{
+		if (Core->ShouldOverrideBrain())
+		{
+			Behavior = ESlimeEcologyBehavior::CoreCombat;
+			return;
+		}
+	}
+
+	const USlimeEcologyFusionComponent* Fusion = Enemy->GetEcologyFusionComponent();
+	if (Fusion && Fusion->IsEngaged())
+	{
+		Behavior = ESlimeEcologyBehavior::FusionSeek;
+		DesiredGoal = Fusion->GetMeetingPoint();
+		const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+		DesiredSpeed = Rules ? Rules->FusionAutoSeekSpeed : 75.f;
 		return;
 	}
 
@@ -127,19 +172,28 @@ void USlimeEcologyBrainComponent::RefreshPerception()
 	}
 
 	VisibleAllies.Reset();
+	NearestEnemy.Reset();
+	NearestHostileCore.Reset();
 	FVector AllyPositionSum = Enemy->GetActorLocation();
 	int32 AllyCount = 1;
+	float NearestEnemyDistanceSq = TNumericLimits<float>::Max();
+	float NearestHostileCoreDistanceSq = TNumericLimits<float>::Max();
 
 	TArray<ASlimeEcologyEnemy*> Candidates;
 	if (Ecology)
 	{
-		Ecology->QueryNeighbors(Enemy, Rules->AllyPerceptionRadius, Candidates);
+		Ecology->QueryNeighbors(
+			Enemy,
+			FMath::Max(Rules->AllyPerceptionRadius, FMath::Max(
+				Rules->CoreSenseRadius,
+				Rules->CompetitorSenseRadius)),
+			Candidates);
 	}
 
 	for (ASlimeEcologyEnemy* Candidate : Candidates)
 	{
 		const USlimeHealthComponent* Health = Candidate ? Candidate->GetHealthComponent() : nullptr;
-		if (!Candidate || Candidate == Enemy || Candidate->GetFaction() != Enemy->GetFaction())
+		if (!Candidate || Candidate == Enemy)
 		{
 			continue;
 		}
@@ -152,12 +206,50 @@ void USlimeEcologyBrainComponent::RefreshPerception()
 			continue;
 		}
 
-		VisibleAllies.Add(Candidate);
-		AllyPositionSum += Candidate->GetActorLocation();
-		++AllyCount;
+		const float DistanceSq =
+			FVector::DistSquared2D(Enemy->GetActorLocation(), Candidate->GetActorLocation());
+		if (Candidate->GetFaction() == Enemy->GetFaction())
+		{
+			if (DistanceSq <= FMath::Square(Rules->AllyPerceptionRadius))
+			{
+				VisibleAllies.Add(Candidate);
+				AllyPositionSum += Candidate->GetActorLocation();
+				++AllyCount;
+			}
+			continue;
+		}
+
+		if (DistanceSq <= FMath::Square(Rules->CompetitorSenseRadius)
+			&& DistanceSq < NearestEnemyDistanceSq)
+		{
+			NearestEnemyDistanceSq = DistanceSq;
+			NearestEnemy = Candidate;
+		}
+
+		const USlimeCoreComponent* CandidateCore = Candidate->GetCoreComponent();
+		if (CandidateCore && CandidateCore->IsHostileCore()
+			&& DistanceSq <= FMath::Square(Rules->CoreSenseRadius)
+			&& DistanceSq < NearestHostileCoreDistanceSq)
+		{
+			NearestHostileCoreDistanceSq = DistanceSq;
+			NearestHostileCore = Candidate;
+		}
 	}
 
 	GroupCenter = AllyCount > 0 ? AllyPositionSum / static_cast<float>(AllyCount) : HomeLocation;
+
+	if (USlimeAlertComponent* Alert = Enemy->GetAlertComponent())
+	{
+		const ASlimeEcologyEnemy* Rival = NearestEnemy.Get();
+		const bool bDisputeCondition = Rival
+			&& FVector::DistSquared2D(Enemy->GetActorLocation(), Rival->GetActorLocation())
+				<= FMath::Square(Rules->DisputeRange)
+			&& (Enemy->GetCargo() > 0
+				|| MineralTarget.IsValid()
+				|| Rival->GetCargo() > 0
+				|| (Rival->GetCoreComponent() && Rival->GetCoreComponent()->IsHostileCore()));
+		Alert->SetDisputeCondition(bDisputeCondition, Rules->PerceptionInterval);
+	}
 
 	CachedPlayer = UGameplayStatics::GetPlayerPawn(this, 0);
 	APawn* Player = CachedPlayer.Get();
@@ -211,6 +303,32 @@ void USlimeEcologyBrainComponent::UpdateBehavior()
 		return;
 	}
 
+	const USlimeAlertComponent* Alert = Enemy->GetAlertComponent();
+	if (Alert && Alert->IsWarning())
+	{
+		Behavior = ESlimeEcologyBehavior::AlertWait;
+		DesiredSpeed = 0.f;
+		Locomotion->ClearMoveGoal();
+		return;
+	}
+
+	if (const ASlimeEcologyEnemy* HostileCore = NearestHostileCore.Get())
+	{
+		const float AvoidDistance = Enemy->GetCargo() > 0
+			? Rules->HostileCoreAvoidCarrying
+			: Rules->HostileCoreAvoidEmpty;
+		if (FVector::DistSquared2D(
+			Enemy->GetActorLocation(),
+			HostileCore->GetActorLocation()) <= FMath::Square(AvoidDistance))
+		{
+			Behavior = ESlimeEcologyBehavior::AvoidHostileCore;
+			DesiredGoal = ChooseThreatAvoidGoal(HostileCore->GetActorLocation());
+			DesiredSpeed = Rules->AlertDangerSpeed;
+			Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+			return;
+		}
+	}
+
 	const bool bWasAvoiding = Behavior == ESlimeEcologyBehavior::AvoidPlayer;
 	const bool bShouldAvoid = bPlayerVisible
 		&& (bWasAvoiding
@@ -244,6 +362,29 @@ void USlimeEcologyBrainComponent::UpdateBehavior()
 	}
 
 	AvoidGoalAge = 0.f;
+
+	if (UpdateResourceBehavior())
+	{
+		return;
+	}
+
+	if (Alert && Alert->IsAlerted())
+	{
+		if (const ASlimeEcologyEnemy* Rival = NearestEnemy.Get())
+		{
+			Behavior = ESlimeEcologyBehavior::AlertAvoidEnemy;
+			DesiredGoal = ChooseThreatAvoidGoal(Rival->GetActorLocation());
+			DesiredSpeed = Rules->AlertDangerSpeed;
+			Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+			return;
+		}
+
+		Behavior = ESlimeEcologyBehavior::AlertRegroup;
+		DesiredGoal = VisibleAllies.Num() > 0 ? GroupCenter : HomeLocation;
+		DesiredSpeed = Rules->RegroupSpeed;
+		Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+		return;
+	}
 
 	const float GroupDistance =
 		FVector::Dist2D(Enemy->GetActorLocation(), GroupCenter);
@@ -285,6 +426,139 @@ void USlimeEcologyBrainComponent::UpdateBehavior()
 	{
 		Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
 	}
+}
+
+bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
+{
+	ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	USlimeLocomotionComponent* Locomotion = GetLocomotion();
+	USlimeEcologySubsystem* Ecology = GetEcologySubsystem();
+	const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+	if (!Enemy || !Locomotion || !Ecology || !Rules)
+	{
+		return false;
+	}
+
+	if (Enemy->GetCargo() > 0)
+	{
+		ASlimeFactionSite* Site = Enemy->GetAssignedSite();
+		if (!Site)
+		{
+			return false;
+		}
+
+		const float SiteDistance =
+			FVector::Dist2D(Enemy->GetActorLocation(), Site->GetDeliveryLocation());
+		if (SiteDistance <= FMath::Max(Rules->DeliveryRange, Site->DeliveryRadius))
+		{
+			if (Ecology->TryDeliver(Enemy))
+			{
+				Behavior = ESlimeEcologyBehavior::Explore;
+				GatherRestRemaining =
+					RandomStream.FRandRange(Rules->GatherRestMin, Rules->GatherRestMax);
+				MineralTarget = nullptr;
+				CargoTarget = nullptr;
+				GatherTimeRemaining = 0.f;
+				bHasExploreGoal = false;
+				return true;
+			}
+		}
+
+		Behavior = ESlimeEcologyBehavior::ReturnCargo;
+		DesiredGoal = Site->GetDeliveryLocation();
+		DesiredSpeed = Rules->CargoSpeed;
+		Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+		return true;
+	}
+
+	if (GatherRestRemaining > 0.f)
+	{
+		return false;
+	}
+
+	if (ASlimeCargoPickup* Pickup = CargoTarget.Get())
+	{
+		if (Pickup->GetAmount() <= 0)
+		{
+			CargoTarget = nullptr;
+		}
+		else if (FVector::Dist2D(Enemy->GetActorLocation(), Pickup->GetActorLocation())
+			<= Rules->PickupRange)
+		{
+			if (Ecology->TryPickupCargo(Enemy, Pickup))
+			{
+				Behavior = ESlimeEcologyBehavior::ReturnCargo;
+				CargoTarget = nullptr;
+				return true;
+			}
+		}
+		else
+		{
+			Behavior = ESlimeEcologyBehavior::RecoverCargo;
+			DesiredGoal = Pickup->GetActorLocation();
+			DesiredSpeed = Rules->CargoSpeed;
+			Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+			return true;
+		}
+	}
+
+	if (!CargoTarget.IsValid())
+	{
+		CargoTarget = Ecology->FindNearestCargoPickup(Enemy, Rules->ResourceSenseRange);
+		if (ASlimeCargoPickup* Pickup = CargoTarget.Get())
+		{
+			Behavior = ESlimeEcologyBehavior::RecoverCargo;
+			DesiredGoal = Pickup->GetActorLocation();
+			DesiredSpeed = Rules->CargoSpeed;
+			Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+			return true;
+		}
+	}
+
+	ASlimeMineralPatch* Patch = MineralTarget.Get();
+	if (!Patch || Patch->Stock <= 0 || ResourceMemoryRemaining <= 0.f)
+	{
+		Patch = Ecology->FindBestMineralPatch(Enemy, Rules->ResourceSenseRange);
+		if (!Patch)
+		{
+			Patch = Ecology->FindBestMineralPatch(Enemy, Rules->ResourceExplorationRange);
+		}
+		MineralTarget = Patch;
+		ResourceMemoryRemaining = Patch ? Rules->ResourceMemory : 0.f;
+		GatherTimeRemaining = 0.f;
+	}
+
+	if (Patch)
+	{
+		const float Distance =
+			FVector::Dist2D(Enemy->GetActorLocation(), Patch->GetActorLocation());
+		if (Distance > Rules->GatherRange)
+		{
+			GatherTimeRemaining = 0.f;
+			Behavior = ESlimeEcologyBehavior::Gather;
+			DesiredGoal = Patch->GetActorLocation();
+			DesiredSpeed = Rules->CargoSpeed;
+			Locomotion->SetMoveGoal(DesiredGoal, DesiredSpeed);
+			return true;
+		}
+
+		Behavior = ESlimeEcologyBehavior::Gather;
+		Locomotion->ClearMoveGoal();
+		GatherTimeRemaining += Rules->PerceptionInterval;
+		if (GatherTimeRemaining >= Rules->GatherTime)
+		{
+			GatherTimeRemaining = 0.f;
+			if (Ecology->TryGather(Enemy, Patch))
+			{
+				Behavior = ESlimeEcologyBehavior::ReturnCargo;
+				MineralTarget = nullptr;
+				ResourceMemoryRemaining = 0.f;
+			}
+		}
+		return true;
+	}
+
+	return false;
 }
 
 void USlimeEcologyBrainComponent::ChooseExploreGoal()
@@ -421,6 +695,84 @@ FVector USlimeEcologyBrainComponent::ChooseAvoidGoal(const FVector& AwayDirectio
 	return Best;
 }
 
+FVector USlimeEcologyBrainComponent::ChooseThreatAvoidGoal(const FVector& ThreatLocation) const
+{
+	const ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+	USlimeEcologySubsystem* Ecology = GetEcologySubsystem();
+	if (!Enemy || !Rules)
+	{
+		return FVector::ZeroVector;
+	}
+
+	FVector Away = Enemy->GetActorLocation() - ThreatLocation;
+	Away.Z = 0.f;
+	Away = Away.GetSafeNormal2D();
+	if (Away.IsNearlyZero())
+	{
+		Away = Enemy->GetActorForwardVector().GetSafeNormal2D();
+	}
+
+	const int32 CandidateCount = FMath::Max(1, Rules->AvoidCandidateCount);
+	const float StepAngle = PI / 4.f;
+	const FVector Current = Enemy->GetActorLocation();
+	FVector Best = Current + Away * Rules->AvoidCandidateDistance;
+	float BestScore = -TNumericLimits<float>::Max();
+
+	for (int32 Index = 0; Index < CandidateCount; ++Index)
+	{
+		const float OffsetIndex =
+			static_cast<float>(Index) - (CandidateCount - 1) * 0.5f;
+		FVector Direction =
+			Away.RotateAngleAxis(OffsetIndex * StepAngle, FVector::UpVector);
+		Direction.Z = 0.f;
+		Direction = Direction.GetSafeNormal2D();
+
+		FVector Candidate = Current + Direction * Rules->AvoidCandidateDistance;
+		if (ActivityRadius > 0.f)
+		{
+			const FVector Offset = Candidate - HomeLocation;
+			if (Offset.Size2D() > ActivityRadius)
+			{
+				Candidate = HomeLocation + Offset.GetSafeNormal2D() * ActivityRadius;
+			}
+		}
+
+		FVector Projected = Candidate;
+		if (!ProjectToNavigation(Candidate, Projected))
+		{
+			continue;
+		}
+
+		float Crowding = 0.f;
+		if (Ecology)
+		{
+			TArray<ASlimeEcologyEnemy*> Neighbours;
+			Ecology->QueryNeighbors(Enemy, 250.f, Neighbours);
+			for (const ASlimeEcologyEnemy* Neighbour : Neighbours)
+			{
+				if (Neighbour
+					&& FVector::DistSquared2D(Projected, Neighbour->GetActorLocation())
+						< FMath::Square(200.f))
+				{
+					Crowding += 1.f;
+				}
+			}
+		}
+
+		const float Score =
+			FVector::DistSquared2D(Projected, ThreatLocation)
+			- Crowding * FMath::Square(100.f);
+		if (Score > BestScore)
+		{
+			BestScore = Score;
+			Best = Projected;
+		}
+	}
+
+	return Best;
+}
+
 bool USlimeEcologyBrainComponent::ProjectToNavigation(
 	const FVector& Desired,
 	FVector& OutLocation) const
@@ -466,11 +818,14 @@ FVector USlimeEcologyBrainComponent::GetSeparationVector() const
 	}
 
 	FVector Push = FVector::ZeroVector;
+	const USlimeEcologyFusionComponent* Fusion =
+		Enemy ? Enemy->GetEcologyFusionComponent() : nullptr;
+	const ASlimeEcologyEnemy* Partner = Fusion ? Fusion->GetPartner() : nullptr;
 	for (const TWeakObjectPtr<ASlimeEcologyEnemy>& WeakAlly : VisibleAllies)
 	{
 		const ASlimeEcologyEnemy* Ally = WeakAlly.Get();
 		const UCapsuleComponent* AllyCapsule = Ally ? Ally->GetCapsuleComponent() : nullptr;
-		if (!Ally || !AllyCapsule)
+		if (!Ally || !AllyCapsule || Ally == Partner)
 		{
 			continue;
 		}
@@ -503,9 +858,18 @@ const TCHAR* USlimeEcologyBrainComponent::GetBehaviorName() const
 	switch (Behavior)
 	{
 	case ESlimeEcologyBehavior::Paused:			return TEXT("Paused");
+	case ESlimeEcologyBehavior::CoreCombat:		return TEXT("CoreCombat");
+	case ESlimeEcologyBehavior::AlertWait:		return TEXT("AlertWait");
+	case ESlimeEcologyBehavior::AvoidHostileCore:	return TEXT("AvoidHostileCore");
+	case ESlimeEcologyBehavior::AlertAvoidEnemy:	return TEXT("AlertAvoidEnemy");
+	case ESlimeEcologyBehavior::AlertRegroup:	return TEXT("AlertRegroup");
 	case ESlimeEcologyBehavior::AvoidPlayer:	return TEXT("AvoidPlayer");
 	case ESlimeEcologyBehavior::Regroup:		return TEXT("Regroup");
 	case ESlimeEcologyBehavior::Explore:		return TEXT("Explore");
+	case ESlimeEcologyBehavior::FusionSeek:	return TEXT("FusionSeek");
+	case ESlimeEcologyBehavior::RecoverCargo:	return TEXT("RecoverCargo");
+	case ESlimeEcologyBehavior::ReturnCargo:	return TEXT("ReturnCargo");
+	case ESlimeEcologyBehavior::Gather:		return TEXT("Gather");
 	default:									return TEXT("Unknown");
 	}
 }

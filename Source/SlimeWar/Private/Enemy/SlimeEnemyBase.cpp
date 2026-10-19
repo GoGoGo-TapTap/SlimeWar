@@ -252,6 +252,8 @@ void ASlimeEnemyBase::ApplyStatRow(int32 NewMass, float HealthFraction)
 	{
 		Health->InitializeHealth(Row.MaxHealth, HealthFraction);
 	}
+
+	OnBodyStatsApplied(Mass, Row.BodyRadius);
 }
 
 FName ASlimeEnemyBase::GetAggroRowName() const
@@ -304,6 +306,8 @@ void ASlimeEnemyBase::ApplyAggroStatRow()
 	{
 		Health->InitializeHealth(Row.MaxHealth);
 	}
+
+	OnBodyStatsApplied(Mass, Row.BodyRadius);
 }
 
 void ASlimeEnemyBase::ApplyBodyRadius(float Radius)
@@ -372,6 +376,10 @@ void ASlimeEnemyBase::FitBodyMeshToBodyRadius(float Radius)
 		-Radius - VisualBottomFromPivot));
 }
 
+void ASlimeEnemyBase::OnBodyStatsApplied(int32 NewMass, float BodyRadius)
+{
+}
+
 void ASlimeEnemyBase::SetFusionTarget(ASlimeEnemyBase* InTarget)
 {
 	FusionTarget = InTarget;
@@ -438,6 +446,21 @@ void ASlimeEnemyBase::NotifyDirectorOnDeath()
 	// The director decides what a kill is worth; the enemy never touches the score system.
 	if (ASlimeWarGameMode* GameMode = GetSlimeGameMode(this))
 	{
-		GameMode->OnEnemyKilled(TargetKind, Mass);
+		GameMode->OnEnemyKilled(BuildKillContext());
 	}
+}
+
+FSlimeKillContext ASlimeEnemyBase::BuildKillContext() const
+{
+	FSlimeKillContext Context;
+	Context.Mass = Mass;
+	Context.BodyScoreCredit = Mass * 4;
+	Context.bHostileCore = IsAggressive();
+	Context.bKilledByPlayer = !IsAggressive();
+	Context.Location = GetActorLocation();
+	if (const USlimeHealthComponent* HealthComponent = GetHealthComponent())
+	{
+		Context.Causer = HealthComponent->GetLastDamageCauser();
+	}
+	return Context;
 }

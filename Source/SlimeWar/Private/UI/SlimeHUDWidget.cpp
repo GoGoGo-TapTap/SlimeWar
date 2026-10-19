@@ -95,6 +95,12 @@ void USlimeHUDWidget::BindPlayer()
 		Weapon->OnAmmoChanged.AddDynamic(this, &USlimeHUDWidget::HandleAmmoChanged);
 		BoundWeapon = Weapon;
 	}
+
+        Character->OnGrenadeInventoryChanged.AddDynamic(
+                this, &USlimeHUDWidget::HandleGrenadeInventoryChanged);
+        Character->OnGrenadeSelectionChanged.AddDynamic(
+                this, &USlimeHUDWidget::HandleGrenadeSelectionChanged);
+        BoundCharacter = Character;
 }
 
 void USlimeHUDWidget::UnbindPlayer()
@@ -110,6 +116,15 @@ void USlimeHUDWidget::UnbindPlayer()
 		Weapon->OnAmmoChanged.RemoveDynamic(this, &USlimeHUDWidget::HandleAmmoChanged);
 	}
 	BoundWeapon.Reset();
+
+        if (ASlimeWarCharacter* Character = BoundCharacter.Get())
+        {
+                Character->OnGrenadeInventoryChanged.RemoveDynamic(
+                        this, &USlimeHUDWidget::HandleGrenadeInventoryChanged);
+                Character->OnGrenadeSelectionChanged.RemoveDynamic(
+                        this, &USlimeHUDWidget::HandleGrenadeSelectionChanged);
+        }
+        BoundCharacter.Reset();
 }
 
 void USlimeHUDWidget::UpdateAll()
@@ -149,6 +164,16 @@ void USlimeHUDWidget::UpdateAll()
 	{
 		OnAmmoUpdated(Weapon->GetMagazineAmmo(), Weapon->GetMagazineSize());
 	}
+
+        if (const ASlimeWarCharacter* Character = BoundCharacter.Get())
+        {
+                OnGrenadeInventoryUpdated(
+                        Character->GetAssimilationGrenadeCount(),
+                        Character->GetTornadoGrenadeCount());
+                OnGrenadeSelectionUpdated(
+                        Character->GetSelectedGrenadeType(),
+                        Character->GetSelectedGrenadeFaction());
+        }
 
 	EvaluateHints();
 }
@@ -259,4 +284,16 @@ void USlimeHUDWidget::HandleAmmoChanged(int32 CurrentAmmo, int32 MagazineSize)
 		bShownReloadHint = true;
 		ShowTutorial(NSLOCTEXT("SlimeWar", "TutorialReload", "You can move and aim while reloading."));
 	}
+}
+
+void USlimeHUDWidget::HandleGrenadeInventoryChanged(int32 Assimilation, int32 Tornado)
+{
+	OnGrenadeInventoryUpdated(Assimilation, Tornado);
+}
+
+void USlimeHUDWidget::HandleGrenadeSelectionChanged(
+	ESlimeGrenadeType Type,
+	ESlimeFaction Faction)
+{
+	OnGrenadeSelectionUpdated(Type, Faction);
 }

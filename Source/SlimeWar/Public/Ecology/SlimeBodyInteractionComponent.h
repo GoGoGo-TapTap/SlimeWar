@@ -34,6 +34,9 @@ public:
 
 	void ReceiveBodyPush(const FVector& Direction, float Speed, AActor* Source);
 	void ApplyExternalVelocity(const FVector& DeltaVelocity, AActor* Source = nullptr);
+	void SetExternalVelocity(const FVector& InVelocity, AActor* Source = nullptr);
+	void OpenImpactSplitWindow(float Seconds = -1.f);
+	float GetImpactSplitWindowRemaining() const { return ImpactSplitWindowRemaining; }
 
 	void SetAimLocked(bool bLocked, AActor* Source = nullptr);
 	bool IsAimLocked() const { return AimLockSource.IsValid(); }
@@ -54,6 +57,7 @@ public:
 	float GetSettleTime() const { return SettleTime; }
 	float GetForcedFusionWindowRemaining() const { return ForcedFusionWindowRemaining; }
 	bool IsSettled() const { return StunPending > 0.f && SettleTime > 0.f; }
+	void ClearForcedFusionWindow() { ForcedFusionWindowRemaining = 0.f; }
 
 private:
 	const USlimeEcologyRules* GetRules() const;
@@ -69,5 +73,6 @@ private:
 	float StunRemaining = 0.f;
 	float SettleTime = 0.f;
 	float ForcedFusionWindowRemaining = 0.f;
+	float ImpactSplitWindowRemaining = 0.f;
 	float LastBodyPushTime = -100.f;
 };

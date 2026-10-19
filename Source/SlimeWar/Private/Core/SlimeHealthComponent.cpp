@@ -14,6 +14,7 @@ void USlimeHealthComponent::InitializeHealth(float InMaxHealth, float HealthFrac
 	MaxHealth = FMath::Max(0.f, InMaxHealth);
 	Health = MaxHealth * FMath::Clamp(HealthFraction, 0.f, 1.f);
 	bDead = false;
+	LastDamageCauser.Reset();
 	OnHealthChanged.Broadcast(Health, MaxHealth);
 }
 
@@ -34,6 +35,7 @@ void USlimeHealthComponent::ApplyDamage(float Amount, AActor* Causer)
 	}
 
 	Health = FMath::Max(0.f, Health - Amount);
+	LastDamageCauser = Causer;
 
 	if (SlimeCVars::DebugCombatLog != 0)
 	{
@@ -41,6 +43,7 @@ void USlimeHealthComponent::ApplyDamage(float Amount, AActor* Causer)
 			*GetNameSafe(GetOwner()), Amount, *GetNameSafe(Causer), Health, MaxHealth);
 	}
 
+	OnDamaged.Broadcast(Causer);
 	OnHealthChanged.Broadcast(Health, MaxHealth);
 	BroadcastDeathIfNeeded();
 }
@@ -49,6 +52,7 @@ void USlimeHealthComponent::RestoreToFull()
 {
 	Health = MaxHealth;
 	bDead = false;
+	LastDamageCauser.Reset();
 	OnHealthChanged.Broadcast(Health, MaxHealth);
 }
 

@@ -27,6 +27,7 @@ namespace SlimeFlowNames
 		{
 		case ERunEndReason::TimeUp:		return TEXT("TimeUp");
 		case ERunEndReason::PlayerDied:	return TEXT("PlayerDied");
+		case ERunEndReason::Extinction:	return TEXT("Extinction");
 		default:						return TEXT("None");
 		}
 	}

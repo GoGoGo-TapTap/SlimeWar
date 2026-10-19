@@ -29,7 +29,10 @@ protected:
 	void DrawCrosshair();
 	void DrawEnemyStateDebug();
 	void DrawFusionDebug();
+	void DrawEcologyStateDebug();
 	void DrawAggroPathDebug();
+	void DrawWeaponDebug();
+	void DrawEcologyResourceDebug();
 
 	/** Phase C (PA-13): score, countdown, point states and live enemy counts. */
 	void DrawRunDebug();

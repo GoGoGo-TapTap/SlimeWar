@@ -26,8 +26,9 @@ public:
 		ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
-	void SetMoveGoal(const FVector& InGoal, float InSpeed);
+	void SetMoveGoal(const FVector& InGoal, float InSpeed, float InArrivalRadius = -1.f);
 	void ClearMoveGoal();
+	void SuspendVoluntaryMovement();
 
 	bool HasMoveGoal() const { return bHasGoal; }
 	bool IsAtGoal() const { return bAtGoal; }
@@ -60,6 +61,7 @@ private:
 	bool bAtGoal = false;
 	bool bStuckExhausted = false;
 	bool bStopped = true;
+	bool bAutonomousSuspended = false;
 	FVector Goal = FVector::ZeroVector;
 	FVector CurrentWaypoint = FVector::ZeroVector;
 	FVector SmoothedDirection = FVector::ZeroVector;
@@ -68,6 +70,7 @@ private:
 	int32 PathFailures = 0;
 	int32 PathRequestCount = 0;
 	float DesiredSpeed = 0.f;
+	float GoalArrivalRadius = -1.f;
 	float PathRefreshRemaining = 0.f;
 	FVector ProgressAnchor = FVector::ZeroVector;
 	float TimeWithoutProgress = 0.f;

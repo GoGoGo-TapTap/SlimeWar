@@ -9,6 +9,7 @@
 
 class USlimeRunConfig;
 class USlimeEcologyRules;
+class USlimeWeaponRules;
 class UDataTable;
 
 /**
@@ -52,6 +53,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Slime|Data")
 	const USlimeEcologyRules* GetEcologyRules() const;
 
+	UFUNCTION(BlueprintPure, Category = "Slime|Data")
+	const USlimeWeaponRules* GetWeaponRules() const;
+
 	/**
 	 * Switch to the run config owned by a level, then reload the table references.
 	 *
@@ -84,4 +88,7 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USlimeEcologyRules> EcologyRules = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USlimeWeaponRules> WeaponRules = nullptr;
 };

@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Core/SlimeWarCoreTypes.h"
+#include "Ecology/SlimeEcologyGrenade.h"
 #include "Blueprint/UserWidget.h"
 #include "SlimeHUDWidget.generated.h"
 
 class ASlimeRunGameState;
+class ASlimeWarCharacter;
 class USlimeHealthComponent;
 class USlimeWeaponComponent;
 
@@ -49,6 +51,12 @@ public:
 	void OnAmmoUpdated(int32 CurrentAmmo, int32 MagazineSize);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
+	void OnGrenadeInventoryUpdated(int32 Assimilation, int32 Tornado);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
+	void OnGrenadeSelectionUpdated(ESlimeGrenadeType Type, ESlimeFaction Faction);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
 	void OnBatchIncoming(int32 BatchIndex, float SecondsUntilSpawn);
 
 	/**
@@ -78,6 +86,12 @@ protected:
 	UFUNCTION()
 	void HandleAmmoChanged(int32 CurrentAmmo, int32 MagazineSize);
 
+	UFUNCTION()
+	void HandleGrenadeInventoryChanged(int32 Assimilation, int32 Tornado);
+
+	UFUNCTION()
+	void HandleGrenadeSelectionChanged(ESlimeGrenadeType Type, ESlimeFaction Faction);
+
 	void HandleScoreChanged(int32 NewScore);
 	void HandleTimeChanged(int32 NewRemainingSeconds);
 	void HandlePointStateChanged(int32 PointId, ESpawnPointState NewState);
@@ -93,6 +107,7 @@ protected:
 
 	TWeakObjectPtr<USlimeHealthComponent> BoundHealth;
 	TWeakObjectPtr<USlimeWeaponComponent> BoundWeapon;
+	TWeakObjectPtr<ASlimeWarCharacter> BoundCharacter;
 	TWeakObjectPtr<ASlimeRunGameState> BoundGameState;
 
 	/** Hints are once-per-run; the widget is rebuilt by the level reload between attempts. */

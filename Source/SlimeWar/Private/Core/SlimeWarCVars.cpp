@@ -40,6 +40,14 @@ namespace SlimeCVars
 		TEXT("Draw fusion pairs (colour = state), contact progress, meeting points and cooldowns."),
 		ECVF_Cheat);
 
+	int32 DebugDrawEcologyState = 1;
+	static FAutoConsoleVariableRef CVarDebugDrawEcologyState(
+		TEXT("Slime.Debug.DrawEcologyState"),
+		DebugDrawEcologyState,
+		TEXT("Draw mass, health, fusion, brain, body, stun, cargo and credit state above ecology slimes. ")
+		TEXT("Default on; 0 = off."),
+		ECVF_Cheat);
+
 	int32 DebugDrawAggroPath = 1;
 	static FAutoConsoleVariableRef CVarDebugDrawAggroPath(
 		TEXT("Slime.Debug.DrawAggroPath"),
@@ -53,6 +61,13 @@ namespace SlimeCVars
 		TEXT("Slime.Debug.DrawRun"),
 		DebugDrawRun,
 		TEXT("Draw the Phase C run HUD: score, countdown, point states and live enemy counts. 0 = off."),
+		ECVF_Cheat);
+
+	int32 DebugPaint = 1;
+	static FAutoConsoleVariableRef CVarDebugPaint(
+		TEXT("Slime.Debug.Paint"),
+		DebugPaint,
+		TEXT("Draw accumulated paint splats while the art-owned paint material is not assigned."),
 		ECVF_Cheat);
 
 	float RunTimeScale = 1.f;

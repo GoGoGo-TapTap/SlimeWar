@@ -2,10 +2,18 @@
 
 #include "Ecology/SlimeEcologySubsystem.h"
 
+#include "Core/SlimeWarLog.h"
+#include "Ecology/SlimeCargoPickup.h"
+#include "Ecology/SlimeCoreComponent.h"
 #include "Ecology/SlimeEcologyEnemy.h"
 #include "Ecology/SlimeEcologyRules.h"
+#include "Ecology/SlimeFactionSite.h"
+#include "Ecology/SlimeMineralPatch.h"
 #include "Engine/GameInstance.h"
+#include "Engine/World.h"
 #include "GameplayFramework/StatTableProvider.h"
+#include "Kismet/GameplayStatics.h"
+#include "NavigationSystem.h"
 
 namespace
 {
@@ -51,6 +59,19 @@ void USlimeEcologySubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (bRunActive)
+	{
+		ProcessSpawnQueue();
+		EvaluateExtinction(DeltaTime);
+
+		LedgerLogAccumulator += DeltaTime;
+		if (LedgerLogAccumulator >= 10.f)
+		{
+			LedgerLogAccumulator = 0.f;
+			CheckLedger(/*bLogResult=*/true, TEXT("periodic"));
+		}
+	}
+
 	RefreshAccumulator += DeltaTime;
 	if (RefreshAccumulator < RefreshInterval)
 	{
@@ -59,6 +80,502 @@ void USlimeEcologySubsystem::Tick(float DeltaTime)
 
 	RefreshAccumulator = FMath::Fmod(RefreshAccumulator, RefreshInterval);
 	RebuildBuckets();
+}
+
+void USlimeEcologySubsystem::RegisterSite(ASlimeFactionSite* Site)
+{
+	if (Site)
+	{
+		Sites.AddUnique(Site);
+	}
+}
+
+void USlimeEcologySubsystem::UnregisterSite(ASlimeFactionSite* Site)
+{
+	Sites.RemoveAll([Site](const TObjectPtr<ASlimeFactionSite>& Entry)
+	{
+		return !Entry || Entry == Site;
+	});
+	PendingSpawns.RemoveAll([Site](const FPendingSpawn& Request)
+	{
+		return !Request.Site.IsValid() || Request.Site.Get() == Site;
+	});
+}
+
+void USlimeEcologySubsystem::RegisterMineralPatch(ASlimeMineralPatch* Patch)
+{
+	if (Patch)
+	{
+		MineralPatches.AddUnique(Patch);
+	}
+}
+
+void USlimeEcologySubsystem::UnregisterMineralPatch(ASlimeMineralPatch* Patch)
+{
+	MineralPatches.RemoveAll([Patch](const TObjectPtr<ASlimeMineralPatch>& Entry)
+	{
+		return !Entry || Entry == Patch;
+	});
+}
+
+void USlimeEcologySubsystem::RegisterCargoPickup(ASlimeCargoPickup* Pickup)
+{
+	if (Pickup)
+	{
+		CargoPickups.AddUnique(Pickup);
+	}
+}
+
+void USlimeEcologySubsystem::UnregisterCargoPickup(ASlimeCargoPickup* Pickup)
+{
+	CargoPickups.RemoveAll([Pickup](const TObjectPtr<ASlimeCargoPickup>& Entry)
+	{
+		return !Entry || Entry == Pickup;
+	});
+}
+
+void USlimeEcologySubsystem::BeginRun()
+{
+	if (bRunActive)
+	{
+		return;
+	}
+
+	bRunActive = true;
+	bExtinctionReported = false;
+	ExtinctionCheckAccumulator = 0.f;
+	LedgerLogAccumulator = 0.f;
+	DeliveredCargo = 0;
+	RemovedMass = 0;
+	InitialMass = 0;
+	PendingSpawns.Reset();
+
+	for (ASlimeFactionSite* Site : Sites)
+	{
+		if (!Site)
+		{
+			continue;
+		}
+
+		InitialMass += FMath::Max(0, Site->InitialPopulation);
+		for (int32 Index = 0; Index < Site->InitialPopulation; ++Index)
+		{
+			PendingSpawns.Add({Site});
+		}
+	}
+
+	// Initial population is small (20 in the P0 level), so process it immediately.
+	for (int32 Pass = 0; Pass < 3 && PendingSpawns.Num() > 0; ++Pass)
+	{
+		ProcessSpawnQueue();
+	}
+
+	CheckLedger(/*bLogResult=*/true, TEXT("begin run"));
+}
+
+void USlimeEcologySubsystem::EndRun()
+{
+	bRunActive = false;
+	PendingSpawns.Reset();
+	CheckLedger(/*bLogResult=*/true, TEXT("end run"));
+}
+
+bool USlimeEcologySubsystem::HasEcologySites() const
+{
+	for (const ASlimeFactionSite* Site : Sites)
+	{
+		if (Site)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool USlimeEcologySubsystem::TryGather(
+	ASlimeEcologyEnemy* Enemy,
+	ASlimeMineralPatch* Patch)
+{
+	const USlimeEcologyRules* Rules = GetRules(GetWorld());
+	if (!bRunActive || !Enemy || !Patch || !Rules || Enemy->GetCargo() > 0 || Patch->Stock <= 0)
+	{
+		return false;
+	}
+	if (FVector::Dist2D(Enemy->GetActorLocation(), Patch->GetActorLocation())
+		> Rules->GatherRange + 10.f)
+	{
+		return false;
+	}
+
+	if (Patch->ConsumeOne() != 1)
+	{
+		return false;
+	}
+
+	Enemy->AddCargo(1);
+	return true;
+}
+
+bool USlimeEcologySubsystem::TryDeliver(ASlimeEcologyEnemy* Enemy)
+{
+	const USlimeEcologyRules* Rules = GetRules(GetWorld());
+	ASlimeFactionSite* Site = Enemy ? Enemy->GetAssignedSite() : nullptr;
+	if (!bRunActive || !Enemy || !Site || !Rules || Enemy->GetCargo() <= 0
+		|| Site->Faction != Enemy->GetFaction()
+		|| FVector::Dist2D(Enemy->GetActorLocation(), Site->GetDeliveryLocation())
+			> FMath::Max(Rules->DeliveryRange, Site->DeliveryRadius))
+	{
+		return false;
+	}
+
+	if (!Enemy->ConsumeCargo(1))
+	{
+		return false;
+	}
+
+	++DeliveredCargo;
+	Site->NotifyDelivered();
+	PendingSpawns.Add({Site});
+	return true;
+}
+
+bool USlimeEcologySubsystem::TryPickupCargo(
+	ASlimeEcologyEnemy* Enemy,
+	ASlimeCargoPickup* Pickup)
+{
+	const USlimeEcologyRules* Rules = GetRules(GetWorld());
+	if (!bRunActive || !Enemy || !Pickup || !Rules || Enemy->GetCargo() > 0
+		|| Pickup->GetAmount() <= 0
+		|| FVector::Dist2D(Enemy->GetActorLocation(), Pickup->GetActorLocation())
+			> Rules->PickupRange + 10.f)
+	{
+		return false;
+	}
+
+	if (Pickup->TakeOne() != 1)
+	{
+		return false;
+	}
+
+	Enemy->AddCargo(1);
+	return true;
+}
+
+bool USlimeEcologySubsystem::DebugGrantCargoFromStock(ASlimeEcologyEnemy* Enemy)
+{
+	if (!bRunActive || !Enemy)
+	{
+		return false;
+	}
+
+	ASlimeMineralPatch* Patch = FindBestMineralPatch(Enemy, 100000.f);
+	if (!Patch || Patch->ConsumeOne() != 1)
+	{
+		return false;
+	}
+
+	Enemy->AddCargo(1);
+	return true;
+}
+
+void USlimeEcologySubsystem::DropCargo(const FVector& Location, int32 Amount)
+{
+	UWorld* World = GetWorld();
+	if (!bRunActive || !World || Amount <= 0)
+	{
+		return;
+	}
+
+	FVector SpawnLocation = Location;
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SlimeCargoDrop), false);
+	FHitResult GroundHit;
+	if (World->LineTraceSingleByChannel(
+		GroundHit,
+		SpawnLocation + FVector(0.f, 0.f, 80.f),
+		SpawnLocation - FVector(0.f, 0.f, 1000.f),
+		ECC_WorldStatic,
+		QueryParams))
+	{
+		SpawnLocation.Z = GroundHit.ImpactPoint.Z + 18.f;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ASlimeCargoPickup* Pickup = World->SpawnActor<ASlimeCargoPickup>(
+		ASlimeCargoPickup::StaticClass(),
+		SpawnLocation,
+		FRotator::ZeroRotator,
+		SpawnParameters))
+	{
+		Pickup->SetAmount(Amount);
+		UE_LOG(LogSlimeWar, Log,
+			TEXT("EcologyCargo: dropped %d at %s."),
+			Amount,
+			*SpawnLocation.ToCompactString());
+	}
+}
+
+void USlimeEcologySubsystem::NotifyAgentRemoved(
+	const ASlimeEcologyEnemy* Enemy,
+	int32 InRemovedMass)
+{
+	if (!Enemy || InRemovedMass <= 0)
+	{
+		return;
+	}
+
+	RemovedMass += InRemovedMass;
+}
+
+ASlimeMineralPatch* USlimeEcologySubsystem::FindBestMineralPatch(
+	const ASlimeEcologyEnemy* Enemy,
+	float MaxRange) const
+{
+	if (!Enemy)
+	{
+		return nullptr;
+	}
+
+	ASlimeMineralPatch* Best = nullptr;
+	float BestDistanceSq = FMath::Square(MaxRange);
+	for (ASlimeMineralPatch* Patch : MineralPatches)
+	{
+		if (!Patch || Patch->Stock <= 0)
+		{
+			continue;
+		}
+
+		const float DistanceSq =
+			FVector::DistSquared2D(Enemy->GetActorLocation(), Patch->GetActorLocation());
+		if (DistanceSq <= BestDistanceSq)
+		{
+			BestDistanceSq = DistanceSq;
+			Best = Patch;
+		}
+	}
+	return Best;
+}
+
+ASlimeCargoPickup* USlimeEcologySubsystem::FindNearestCargoPickup(
+	const ASlimeEcologyEnemy* Enemy,
+	float MaxRange) const
+{
+	if (!Enemy)
+	{
+		return nullptr;
+	}
+
+	ASlimeCargoPickup* Best = nullptr;
+	float BestDistanceSq = FMath::Square(MaxRange);
+	for (ASlimeCargoPickup* Pickup : CargoPickups)
+	{
+		if (!Pickup || Pickup->GetAmount() <= 0)
+		{
+			continue;
+		}
+
+		const float DistanceSq =
+			FVector::DistSquared2D(Enemy->GetActorLocation(), Pickup->GetActorLocation());
+		if (DistanceSq <= BestDistanceSq)
+		{
+			BestDistanceSq = DistanceSq;
+			Best = Pickup;
+		}
+	}
+	return Best;
+}
+
+int32 USlimeEcologySubsystem::GetLiveMass() const
+{
+	int32 Mass = 0;
+	for (const TWeakObjectPtr<ASlimeEcologyEnemy>& WeakAgent : RegisteredAgents)
+	{
+		if (const ASlimeEcologyEnemy* Agent = WeakAgent.Get())
+		{
+			Mass += Agent->GetMass();
+		}
+	}
+	return Mass;
+}
+
+int32 USlimeEcologySubsystem::GetCarriedCargo() const
+{
+	int32 Cargo = 0;
+	for (const TWeakObjectPtr<ASlimeEcologyEnemy>& WeakAgent : RegisteredAgents)
+	{
+		if (const ASlimeEcologyEnemy* Agent = WeakAgent.Get())
+		{
+			Cargo += Agent->GetCargo();
+		}
+	}
+	return Cargo;
+}
+
+int32 USlimeEcologySubsystem::GetGroundCargo() const
+{
+	int32 Cargo = 0;
+	for (const ASlimeCargoPickup* Pickup : CargoPickups)
+	{
+		if (Pickup)
+		{
+			Cargo += Pickup->GetAmount();
+		}
+	}
+	return Cargo;
+}
+
+int32 USlimeEcologySubsystem::GetPatchStock() const
+{
+	int32 Stock = 0;
+	for (const ASlimeMineralPatch* Patch : MineralPatches)
+	{
+		if (Patch)
+		{
+			Stock += Patch->Stock;
+		}
+	}
+	return Stock;
+}
+
+int32 USlimeEcologySubsystem::GetRegeneratedStock() const
+{
+	int32 Regenerated = 0;
+	for (const ASlimeMineralPatch* Patch : MineralPatches)
+	{
+		if (Patch)
+		{
+			Regenerated += Patch->GetRegeneratedCount();
+		}
+	}
+	return Regenerated;
+}
+
+TArray<FSlimeSiteStatus> USlimeEcologySubsystem::GetSiteStatuses() const
+{
+	TArray<FSlimeSiteStatus> Result;
+	for (const ASlimeFactionSite* Site : Sites)
+	{
+		if (!Site)
+		{
+			continue;
+		}
+
+		FSlimeSiteStatus Status;
+		Status.SiteId = Site->SiteId;
+		Status.Faction = Site->Faction;
+		Status.Location = Site->GetActorLocation();
+		Status.DeliveredCount = Site->GetDeliveredCount();
+		for (const TWeakObjectPtr<ASlimeEcologyEnemy>& WeakAgent : RegisteredAgents)
+		{
+			const ASlimeEcologyEnemy* Agent = WeakAgent.Get();
+                        if (!Agent || Agent->GetFaction() != Site->Faction)
+			{
+				continue;
+			}
+
+			++Status.LiveCount;
+			Status.LiveMass += Agent->GetMass();
+			if (Agent->GetCoreComponent() && Agent->GetCoreComponent()->IsCore())
+			{
+				++Status.CoreCount;
+			}
+		}
+		for (const FPendingSpawn& Request : PendingSpawns)
+		{
+			if (Request.Site.Get() == Site)
+			{
+				++Status.PendingSpawns;
+			}
+		}
+		Result.Add(Status);
+	}
+	return Result;
+}
+
+TArray<FSlimeMineralStatus> USlimeEcologySubsystem::GetMineralStatuses() const
+{
+	TArray<FSlimeMineralStatus> Result;
+	for (const ASlimeMineralPatch* Patch : MineralPatches)
+	{
+		if (!Patch)
+		{
+			continue;
+		}
+
+		FSlimeMineralStatus Status;
+		Status.PatchId = Patch->PatchId;
+		Status.Location = Patch->GetActorLocation();
+		Status.Stock = Patch->Stock;
+		Status.InitialStock = Patch->InitialStock;
+		Status.MaxStock = Patch->MaxStock;
+		Status.bRegenerates = Patch->bRegenerates;
+		Status.RegrowRemaining = Patch->GetRegrowRemaining();
+		Result.Add(Status);
+	}
+	return Result;
+}
+
+FSlimeEcologyLedger USlimeEcologySubsystem::BuildLedger() const
+{
+	FSlimeEcologyLedger Ledger;
+	Ledger.InitialStock = 0;
+	for (const ASlimeMineralPatch* Patch : MineralPatches)
+	{
+		if (Patch)
+		{
+			Ledger.InitialStock += Patch->InitialStock;
+		}
+	}
+	Ledger.RegeneratedStock = GetRegeneratedStock();
+	Ledger.StockInPatches = GetPatchStock();
+	Ledger.CargoCarried = GetCarriedCargo();
+	Ledger.CargoOnGround = GetGroundCargo();
+	Ledger.DeliveredCargo = DeliveredCargo;
+	Ledger.InitialMass = InitialMass;
+	Ledger.DeliveredMass = DeliveredCargo;
+	Ledger.LiveMass = GetLiveMass();
+	Ledger.RemovedMass = RemovedMass;
+	return Ledger;
+}
+
+bool USlimeEcologySubsystem::CheckLedger(
+	bool bLogResult,
+	const TCHAR* Context) const
+{
+	const FSlimeEcologyLedger Ledger = BuildLedger();
+	const bool bResourceOk = Ledger.IsResourceBalanced();
+	const bool bMassOk = Ledger.IsMassBalanced();
+	if (bLogResult)
+	{
+		const FString Message = FString::Printf(
+			TEXT("EcologyLedger[%s]: resource %s (%d stock + %d carried + %d ground + %d delivered ")
+			TEXT("= %d initial + %d regen); mass %s (%d initial + %d delivered = %d live + %d removed); ")
+			TEXT("pending=%d"),
+			Context ? Context : TEXT("check"),
+			bResourceOk ? TEXT("OK") : TEXT("BROKEN"),
+			Ledger.StockInPatches,
+			Ledger.CargoCarried,
+			Ledger.CargoOnGround,
+			Ledger.DeliveredCargo,
+			Ledger.InitialStock,
+			Ledger.RegeneratedStock,
+			bMassOk ? TEXT("OK") : TEXT("BROKEN"),
+			Ledger.InitialMass,
+			Ledger.DeliveredMass,
+			Ledger.LiveMass,
+			Ledger.RemovedMass,
+			PendingSpawns.Num());
+		if (bResourceOk && bMassOk)
+		{
+			UE_LOG(LogSlimeWar, Log, TEXT("%s"), *Message);
+		}
+		else
+		{
+			UE_LOG(LogSlimeWar, Warning, TEXT("%s"), *Message);
+		}
+	}
+	return bResourceOk && bMassOk;
 }
 
 void USlimeEcologySubsystem::RegisterAgent(ASlimeEcologyEnemy* Agent)
@@ -183,6 +700,203 @@ int32 USlimeEcologySubsystem::GetRegisteredCount() const
 		Count += Entry.IsValid() ? 1 : 0;
 	}
 	return Count;
+}
+
+ASlimeFactionSite* USlimeEcologySubsystem::FindSiteForFaction(ESlimeFaction Faction) const
+{
+	for (ASlimeFactionSite* Site : Sites)
+	{
+		if (Site && Site->Faction == Faction)
+		{
+			return Site;
+		}
+	}
+	return nullptr;
+}
+
+ASlimeFactionSite* USlimeEcologySubsystem::GetSiteForFaction(ESlimeFaction Faction) const
+{
+        return FindSiteForFaction(Faction);
+}
+
+FVector USlimeEcologySubsystem::ResolveSiteSpawnLocation(ASlimeFactionSite* Site) const
+{
+	UWorld* World = GetWorld();
+	const USlimeEcologyRules* Rules = GetRules(World);
+	if (!World || !Site || !Rules)
+	{
+		return FVector::ZeroVector;
+	}
+
+	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
+	const APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+	const FVector Centre = Site->GetActorLocation();
+	const float RingMin = FMath::Max(0.f, Site->SpawnRingMin > 0.f
+		? Site->SpawnRingMin
+		: Rules->SiteSpawnRingMin);
+	const float RingMax = FMath::Max(RingMin, Site->SpawnRingMax > 0.f
+		? Site->SpawnRingMax
+		: Rules->SiteSpawnRingMax);
+	int32 NavFailures = 0;
+	int32 PlayerFailures = 0;
+	int32 StaticFailures = 0;
+	int32 AgentFailures = 0;
+
+	for (int32 Attempt = 0; Attempt < 16; ++Attempt)
+	{
+		const float Angle = FMath::FRandRange(0.f, 2.f * PI);
+		const float Ring = FMath::FRandRange(RingMin, RingMax);
+		FVector Candidate = Centre + FVector(
+			FMath::Cos(Angle) * Ring,
+			FMath::Sin(Angle) * Ring,
+			0.f);
+
+		FNavLocation Projected;
+		const bool bProjected = NavSystem && NavSystem->ProjectPointToNavigation(
+			Candidate,
+			Projected,
+			FVector(250.f, 250.f, 500.f));
+		if (!bProjected)
+		{
+			++NavFailures;
+		}
+		else
+		{
+			Candidate = Projected.Location;
+		}
+
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SlimeSiteSpawn), false);
+		FHitResult GroundHit;
+		if (World->LineTraceSingleByChannel(
+			GroundHit,
+			Candidate + FVector(0.f, 0.f, 100.f),
+			Candidate - FVector(0.f, 0.f, 1000.f),
+			ECC_WorldStatic,
+			QueryParams))
+		{
+			Candidate.Z = GroundHit.ImpactPoint.Z + 22.f;
+		}
+
+		if (Player && FVector::Dist2D(Candidate, Player->GetActorLocation())
+			< Rules->SiteSpawnPlayerMinDistance)
+		{
+			++PlayerFailures;
+			continue;
+		}
+
+		if (World->OverlapBlockingTestByChannel(
+			Candidate,
+			FQuat::Identity,
+			ECC_WorldStatic,
+			FCollisionShape::MakeSphere(18.f),
+			QueryParams))
+		{
+			++StaticFailures;
+			continue;
+		}
+
+		TArray<ASlimeEcologyEnemy*> Neighbours;
+		QueryAgentsAroundLocation(Candidate, 80.f, Neighbours);
+		if (Neighbours.Num() > 0)
+		{
+			++AgentFailures;
+			continue;
+		}
+
+		return Candidate;
+	}
+
+	UE_LOG(LogSlimeWar, Warning,
+		TEXT("EcologySpawn: site %s found no location (nav=%d player=%d static=%d agents=%d)."),
+		*Site->SiteId.ToString(),
+		NavFailures,
+		PlayerFailures,
+		StaticFailures,
+		AgentFailures);
+	return FVector::ZeroVector;
+}
+
+bool USlimeEcologySubsystem::SpawnOneAtSite(ASlimeFactionSite* Site)
+{
+	UWorld* World = GetWorld();
+	if (!World || !Site)
+	{
+		return false;
+	}
+
+	const FVector Location = ResolveSiteSpawnLocation(Site);
+	if (Location.IsNearlyZero())
+	{
+		return false;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ASlimeEcologyEnemy* Enemy = World->SpawnActor<ASlimeEcologyEnemy>(
+		ASlimeEcologyEnemy::StaticClass(),
+		Location,
+		FRotator::ZeroRotator,
+		SpawnParameters);
+	if (!Enemy)
+	{
+		return false;
+	}
+
+	Enemy->ApplyStatRow(1);
+	Enemy->InitializeEcology(
+		Site->Faction,
+		static_cast<int32>(GetTypeHash(Site->SiteId) & 0x7fffffff),
+		Site->GetActorLocation(),
+		Site->ActivityRadius);
+	Enemy->SetAssignedSite(Site);
+	return true;
+}
+
+void USlimeEcologySubsystem::ProcessSpawnQueue()
+{
+	if (!bRunActive || PendingSpawns.Num() == 0)
+	{
+		return;
+	}
+
+	const USlimeEcologyRules* Rules = GetRules(GetWorld());
+	const int32 MaxPerFrame = Rules ? FMath::Max(1, Rules->SpawnRequestsPerFrame) : 8;
+	const int32 Attempts = FMath::Min(MaxPerFrame, PendingSpawns.Num());
+
+	for (int32 Attempt = 0; Attempt < Attempts && PendingSpawns.Num() > 0; ++Attempt)
+	{
+		const int32 Index = PendingSpawns.Num() - 1;
+		ASlimeFactionSite* Site = PendingSpawns[Index].Site.Get();
+		if (!Site || SpawnOneAtSite(Site))
+		{
+			PendingSpawns.RemoveAt(Index);
+		}
+	}
+}
+
+void USlimeEcologySubsystem::EvaluateExtinction(float DeltaTime)
+{
+	if (!bRunActive || bExtinctionReported)
+	{
+		return;
+	}
+
+	ExtinctionCheckAccumulator += DeltaTime;
+	if (ExtinctionCheckAccumulator < 0.5f)
+	{
+		return;
+	}
+	ExtinctionCheckAccumulator = 0.f;
+
+	if (GetRegisteredCount() > 0 || PendingSpawns.Num() > 0 || GetGroundCargo() > 0)
+	{
+		return;
+	}
+
+	bExtinctionReported = true;
+	OnExtinction.Broadcast();
+	UE_LOG(LogSlimeWar, Log, TEXT("EcologySubsystem: extinction detected."));
 }
 
 FIntPoint USlimeEcologySubsystem::ToCell(const FVector& Location) const

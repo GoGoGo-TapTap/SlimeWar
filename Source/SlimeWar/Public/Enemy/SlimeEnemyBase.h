@@ -171,6 +171,8 @@ protected:
 	/** Death: notify the battle director. Only normal targets award score. */
 	void NotifyDirectorOnDeath();
 
+	virtual FSlimeKillContext BuildKillContext() const;
+
 	/** Authoritative health. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	TObjectPtr<USlimeHealthComponent> Health;
@@ -192,6 +194,9 @@ protected:
 
 	/** Fit and centre the static mesh so its visual bottom matches the capsule bottom. */
 	void FitBodyMeshToBodyRadius(float Radius);
+
+	/** Derived ecology bodies refresh weakpoints/cores after every mass/size change. */
+	virtual void OnBodyStatsApplied(int32 NewMass, float BodyRadius);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slime|Enemy")
 	ETargetKind TargetKind = ETargetKind::Normal;

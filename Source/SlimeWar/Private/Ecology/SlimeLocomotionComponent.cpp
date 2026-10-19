@@ -64,13 +64,17 @@ const USlimeEcologyRules* USlimeLocomotionComponent::GetRules() const
 	return USlimeEcologyRules::GetFor(GetOwner());
 }
 
-void USlimeLocomotionComponent::SetMoveGoal(const FVector& InGoal, float InSpeed)
+void USlimeLocomotionComponent::SetMoveGoal(
+	const FVector& InGoal,
+	float InSpeed,
+	float InArrivalRadius)
 {
 	const bool bNewGoal =
 		!bHasGoal || FVector::DistSquared2D(Goal, InGoal) > FMath::Square(25.f);
 
-	Goal = InGoal;
 	DesiredSpeed = FMath::Max(0.f, InSpeed);
+	GoalArrivalRadius = InArrivalRadius;
+        bAutonomousSuspended = false;
 	bHasGoal = true;
 	bAtGoal = false;
 	bStuckExhausted = false;
@@ -78,6 +82,7 @@ void USlimeLocomotionComponent::SetMoveGoal(const FVector& InGoal, float InSpeed
 
 	if (bNewGoal || PathPoints.Num() == 0)
 	{
+                Goal = InGoal;
 		PathFailures = 0;
 		PathIndex = 0;
 		PathRefreshRemaining = 0.f;
@@ -95,12 +100,43 @@ void USlimeLocomotionComponent::ClearMoveGoal()
 	CurrentWaypoint = FVector::ZeroVector;
 	SmoothedDirection = FVector::ZeroVector;
 	PathFailures = 0;
+	GoalArrivalRadius = -1.f;
+        bAutonomousSuspended = false;
 
 	if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
 	{
 		Character->GetCharacterMovement()->StopMovementImmediately();
 	}
 	bStopped = true;
+}
+
+void USlimeLocomotionComponent::SuspendVoluntaryMovement()
+{
+        if (bAutonomousSuspended)
+        {
+                return;
+        }
+
+        bHasGoal = false;
+        bAtGoal = false;
+        bStuckExhausted = false;
+        PathPoints.Reset();
+        PathIndex = 0;
+        CurrentWaypoint = FVector::ZeroVector;
+        SmoothedDirection = FVector::ZeroVector;
+        PathFailures = 0;
+        GoalArrivalRadius = -1.f;
+        bAutonomousSuspended = true;
+        bStopped = true;
+
+        if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+        {
+                UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+                FVector Velocity = Movement->Velocity;
+                Velocity.X = 0.f;
+                Velocity.Y = 0.f;
+                Movement->Velocity = Velocity;
+        }
 }
 
 bool USlimeLocomotionComponent::ConsumeStuckExhausted()
@@ -126,8 +162,14 @@ void USlimeLocomotionComponent::TickComponent(
 
 	UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
 	const USlimeBodyInteractionComponent* Body = GetBodyInteraction();
-	if (!bHasGoal || Enemy->IsRunFrozen()
-		|| (Body && Body->BlocksVoluntaryMovement()))
+        if (Body && Body->BlocksVoluntaryMovement())
+        {
+                SuspendVoluntaryMovement();
+                return;
+        }
+
+        bAutonomousSuspended = false;
+        if (!bHasGoal || Enemy->IsRunFrozen())
 	{
 		if (!bStopped)
 		{
@@ -144,7 +186,10 @@ void USlimeLocomotionComponent::TickComponent(
 	}
 
 	const FVector Location = Enemy->GetActorLocation();
-	if (FVector::DistSquared2D(Location, Goal) <= FMath::Square(Rules->WanderArrivalRadius))
+	const float ArrivalRadius = GoalArrivalRadius >= 0.f
+		? GoalArrivalRadius
+		: Rules->WanderArrivalRadius;
+	if (FVector::DistSquared2D(Location, Goal) <= FMath::Square(ArrivalRadius))
 	{
 		StopAtGoal();
 		return;
@@ -152,10 +197,17 @@ void USlimeLocomotionComponent::TickComponent(
 
 	PathRefreshRemaining -= DeltaTime;
 
-	while (PathPoints.IsValidIndex(PathIndex)
-		&& FVector::DistSquared2D(Location, PathPoints[PathIndex])
-			<= FMath::Square(Rules->WaypointAcceptanceRadius))
+	while (PathPoints.IsValidIndex(PathIndex))
 	{
+		const bool bLastWaypoint = PathIndex == PathPoints.Num() - 1;
+		const float WaypointRadius = bLastWaypoint
+			? FMath::Min(Rules->WaypointAcceptanceRadius, ArrivalRadius)
+			: Rules->WaypointAcceptanceRadius;
+		if (FVector::DistSquared2D(Location, PathPoints[PathIndex])
+			> FMath::Square(WaypointRadius))
+		{
+			break;
+		}
 		++PathIndex;
 	}
 

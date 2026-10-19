@@ -8,6 +8,7 @@
 #include "SlimeWarCoreTypes.generated.h"
 
 class UStaticMesh;
+class AActor;
 
 /** Ecology allegiance. C is reserved for the later three-site layout. */
 UENUM(BlueprintType)
@@ -16,6 +17,75 @@ enum class ESlimeFaction : uint8
 	A UMETA(DisplayName = "Faction A"),
 	B UMETA(DisplayName = "Faction B"),
 	C UMETA(DisplayName = "Faction C")
+};
+
+/** Whether a body has an armed core, and whether that core is hostile. */
+UENUM(BlueprintType)
+enum class ESlimeCoreState : uint8
+{
+	None,
+	Neutral,
+	Hostile
+};
+
+/** Per-death scoring and statistics payload. */
+USTRUCT(BlueprintType)
+struct FSlimeKillContext
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	int32 Mass = 1;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	int32 Cargo = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	int32 BodyScoreCredit = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	ESlimeFaction Faction = ESlimeFaction::A;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	ESlimeCoreState CoreState = ESlimeCoreState::None;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	bool bHostileCore = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	bool bKilledByPlayer = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	bool bDetonated = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	bool bChainKill = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Score")
+	FVector Location = FVector::ZeroVector;
+
+	TWeakObjectPtr<AActor> Causer;
+};
+
+USTRUCT(BlueprintType)
+struct FSlimeFusionEvent
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Fusion")
+	int32 ResultMass = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Fusion")
+	int32 Cargo = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Fusion")
+	int32 BodyScoreCredit = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Fusion")
+	bool bHostileCore = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Fusion")
+	FVector Location = FVector::ZeroVector;
 };
 
 /**
@@ -45,7 +115,8 @@ enum class ERunEndReason : uint8
 {
 	None		UMETA(DisplayName = "None"),
 	TimeUp		UMETA(DisplayName = "Time Up"),
-	PlayerDied	UMETA(DisplayName = "Player Died")
+	PlayerDied	UMETA(DisplayName = "Player Died"),
+	Extinction	UMETA(DisplayName = "Ecology Extinction")
 };
 
 /**

@@ -11,6 +11,7 @@ class ASlimeWarGameMode;
 class ASpawnPoint;
 class USlimeRunConfig;
 class USlimeSpawnLayout;
+class USlimeEcologySubsystem;
 
 /**
  * Settlement data (PD-03).
@@ -35,6 +36,30 @@ struct FSlimeRunResult
 
 	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
 	int32 NormalKills = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 PlayerKills = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 NpcKills = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 PlayerCargoScored = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 HostileKills = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 Detonations = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 ChainKills = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 DeliveredCargo = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
+	int32 Fusions = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Slime|Run")
 	int32 ClearedPoints = 0;
@@ -182,8 +207,9 @@ protected:
 	void HandleTimelineTick();
 
 	void HandlePlayerDied();
-	void HandleEnemyKilled(ETargetKind Kind, int32 Mass);
-	void HandleEnemyFused(int32 ResultMass, const FVector& Location);
+	void HandleEcologyExtinct();
+	void HandleEnemyKilled(const FSlimeKillContext& Context);
+	void HandleEnemyFused(const FSlimeFusionEvent& Event);
 	void HandlePointStateChanged(int32 PointId, ESpawnPointState NewState);
 
 	void BindDirectorEvents();
@@ -217,6 +243,7 @@ private:
 	TArray<TObjectPtr<ASpawnPoint>> SpawnPoints;
 
 	TWeakObjectPtr<ASlimeWarGameMode> BoundGameMode;
+	TWeakObjectPtr<USlimeEcologySubsystem> BoundEcology;
 
 	ESlimeRunState RunState = ESlimeRunState::Idle;
 	ERunEndReason EndReason = ERunEndReason::None;

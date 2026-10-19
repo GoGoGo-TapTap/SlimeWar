@@ -9,6 +9,7 @@
 class UDataTable;
 class USlimeSpawnLayout;
 class USlimeEcologyRules;
+class USlimeWeaponRules;
 
 /**
  * Single source of truth for run numbers and data table references (DA_RunConfig).
@@ -46,6 +47,10 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Run")
 	bool bAutoStartRun = true;
+
+	/** M7: use the ecology site/mineral loop instead of the legacy spawn batches. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Run")
+	bool bEcologyRun = false;
 
 	// -- Tutorial (Phase D, PD-12) --
 
@@ -180,6 +185,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
 	TSoftObjectPtr<USlimeEcologyRules> EcologyRules;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
+	TSoftObjectPtr<USlimeWeaponRules> WeaponRules;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
 	TSoftObjectPtr<USlimeSpawnLayout> SpawnLayout;

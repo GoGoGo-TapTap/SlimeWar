@@ -3,6 +3,7 @@
 #include "GameplayFramework/StatTableProvider.h"
 #include "Core/SlimeWarLog.h"
 #include "Ecology/SlimeEcologyRules.h"
+#include "Player/SlimeWeaponRules.h"
 #include "Engine/DataTable.h"
 #include "GameplayFramework/SlimeGameSettings.h"
 #include "GameplayFramework/SlimeLevelDefinition.h"
@@ -30,6 +31,7 @@ void UStatTableProvider::Deinitialize()
 	WeaponStatTable = nullptr;
 	AggroStatTable = nullptr;
 	EcologyRules = nullptr;
+	WeaponRules = nullptr;
 
 	Super::Deinitialize();
 }
@@ -40,6 +42,7 @@ bool UStatTableProvider::LoadTables()
 	WeaponStatTable = nullptr;
 	AggroStatTable = nullptr;
 	EcologyRules = nullptr;
+	WeaponRules = nullptr;
 	RunConfig = nullptr;
 
 	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
@@ -77,12 +80,27 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 	WeaponStatTable = RunConfig->WeaponStatTable.LoadSynchronous();
 	AggroStatTable = RunConfig->AggroStatTable.LoadSynchronous();
 	EcologyRules = RunConfig->EcologyRules.LoadSynchronous();
+	WeaponRules = RunConfig->WeaponRules.LoadSynchronous();
 
 	if (!EcologyRules)
 	{
 		EcologyRules = LoadObject<USlimeEcologyRules>(
 			nullptr,
 			TEXT("/Game/_SlimeWar/Ecology/DA_EcologyRules.DA_EcologyRules"));
+	}
+
+	if (!WeaponRules)
+	{
+		WeaponRules = LoadObject<USlimeWeaponRules>(
+			nullptr,
+			TEXT("/Game/_SlimeWar/Weapon/DA_Weapon_Rifle.DA_Weapon_Rifle"));
+	}
+
+	if (!WeaponRules)
+	{
+		WeaponRules = GetMutableDefault<USlimeWeaponRules>();
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("StatTableProvider: DA_Weapon_Rifle is missing; using USlimeWeaponRules defaults."));
 	}
 
 	if (!EcologyRules)
@@ -110,11 +128,12 @@ void UStatTableProvider::LoadTablesFromRunConfig()
 	}
 
 	UE_LOG(LogSlimeWar, Log,
-		TEXT("StatTableProvider: loaded run config %s (slime table: %s, weapon table: %s, ecology rules: %s)"),
+		TEXT("StatTableProvider: loaded run config %s (slime table: %s, weapon table: %s, ecology rules: %s, weapon rules: %s)"),
 		*RunConfig->GetName(),
 		SlimeStatTable ? *SlimeStatTable->GetName() : TEXT("none"),
 		WeaponStatTable ? *WeaponStatTable->GetName() : TEXT("none"),
-		EcologyRules ? *EcologyRules->GetName() : TEXT("none"));
+		EcologyRules ? *EcologyRules->GetName() : TEXT("none"),
+		WeaponRules ? *WeaponRules->GetName() : TEXT("none"));
 }
 
 bool UStatTableProvider::SelectLevel(FName LevelId)
@@ -169,6 +188,11 @@ bool UStatTableProvider::ReloadTables()
 const USlimeEcologyRules* UStatTableProvider::GetEcologyRules() const
 {
 	return EcologyRules ? EcologyRules : GetDefault<USlimeEcologyRules>();
+}
+
+const USlimeWeaponRules* UStatTableProvider::GetWeaponRules() const
+{
+	return WeaponRules ? WeaponRules : GetDefault<USlimeWeaponRules>();
 }
 
 bool UStatTableProvider::GetSlimeStat(int32 Mass, FSlimeStatRow& Out) const

@@ -8,17 +8,29 @@
 
 class APawn;
 class ASlimeEcologyEnemy;
+class ASlimeCargoPickup;
+class ASlimeMineralPatch;
 class USlimeEcologyRules;
 class USlimeEcologySubsystem;
 class USlimeLocomotionComponent;
+class USlimeAlertComponent;
 
 UENUM(BlueprintType)
 enum class ESlimeEcologyBehavior : uint8
 {
 	Paused,
+	CoreCombat,
+	AlertWait,
+	AvoidHostileCore,
+	AlertAvoidEnemy,
+	AlertRegroup,
 	AvoidPlayer,
 	Regroup,
-	Explore
+	Explore,
+	FusionSeek,
+	RecoverCargo,
+	ReturnCargo,
+	Gather
 };
 
 /** M2 perception, group and exploration decisions for one ecology slime. */
@@ -38,6 +50,7 @@ public:
 
 	void SetHome(const FVector& InHome, float InActivityRadius);
 	void ForceRefresh();
+	void ClearResourceMemory();
 
 	ESlimeEcologyBehavior GetBehavior() const { return Behavior; }
 	const TCHAR* GetBehaviorName() const;
@@ -61,8 +74,10 @@ private:
 	void UpdateBehavior();
 	void ChooseExploreGoal();
 	FVector ChooseAvoidGoal(const FVector& AwayDirection) const;
+	FVector ChooseThreatAvoidGoal(const FVector& ThreatLocation) const;
 	bool HasLineOfSight(const AActor* Target) const;
 	bool ProjectToNavigation(const FVector& Desired, FVector& OutLocation) const;
+	bool UpdateResourceBehavior();
 
 	ESlimeEcologyBehavior Behavior = ESlimeEcologyBehavior::Paused;
 	FVector HomeLocation = FVector::ZeroVector;
@@ -73,11 +88,18 @@ private:
 	float RefreshCountdown = 0.f;
 	float ExploreGoalAge = 0.f;
 	float AvoidGoalAge = 0.f;
+	float ResourceMemoryRemaining = 0.f;
+	float GatherTimeRemaining = 0.f;
+	float GatherRestRemaining = 0.f;
 	float PlayerDistance = TNumericLimits<float>::Max();
 	bool bPlayerVisible = false;
 	bool bHasExploreGoal = false;
 	TArray<TWeakObjectPtr<ASlimeEcologyEnemy>> VisibleAllies;
+	TWeakObjectPtr<ASlimeMineralPatch> MineralTarget;
+	TWeakObjectPtr<ASlimeCargoPickup> CargoTarget;
 	TWeakObjectPtr<APawn> CachedPlayer;
+	TWeakObjectPtr<ASlimeEcologyEnemy> NearestEnemy;
+	TWeakObjectPtr<ASlimeEcologyEnemy> NearestHostileCore;
 	FRandomStream RandomStream;
 	int32 RefreshCount = 0;
 };

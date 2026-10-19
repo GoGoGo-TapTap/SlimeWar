@@ -514,7 +514,10 @@ void USlimeFusionComponent::ResolvePairing()
 	if (ASlimeWarGameMode* GameMode = GetSlimeGameMode(Survivor))
 	{
 		// The location rides along for the Phase D "first fusion nearby" hint (design 7.5).
-		GameMode->OnEnemyFused(Survivor->GetMass(), Survivor->GetActorLocation());
+                FSlimeFusionEvent Event;
+                Event.ResultMass = Survivor->GetMass();
+                Event.Location = Survivor->GetActorLocation();
+                GameMode->OnEnemyFused(Event);
 	}
 
 	StartCooldown(ESlimeFusionCancelReason::None, PostFusionDelay);

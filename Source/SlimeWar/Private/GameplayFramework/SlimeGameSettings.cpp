@@ -3,6 +3,7 @@
 #include "GameplayFramework/SlimeGameSettings.h"
 
 #include "GameplayFramework/SlimeLevelDefinition.h"
+#include "Misc/Paths.h"
 
 const USlimeLevelDefinition* USlimeGameSettings::FindLevelByIndex(int32 Index) const
 {
@@ -27,6 +28,32 @@ const USlimeLevelDefinition* USlimeGameSettings::FindLevelById(FName LevelId) co
 	{
 		const USlimeLevelDefinition* Definition = Entry.LoadSynchronous();
 		if (Definition && Definition->LevelId == LevelId)
+		{
+			return Definition;
+		}
+	}
+
+	return nullptr;
+}
+
+const USlimeLevelDefinition* USlimeGameSettings::FindLevelByMapName(const FString& MapName) const
+{
+	if (MapName.IsEmpty())
+	{
+		return nullptr;
+	}
+
+	for (const TSoftObjectPtr<USlimeLevelDefinition>& Entry : Levels)
+	{
+		const USlimeLevelDefinition* Definition = Entry.LoadSynchronous();
+		if (!Definition || Definition->MapAsset.IsNull())
+		{
+			continue;
+		}
+
+		const FString LevelMapName =
+			FPaths::GetBaseFilename(Definition->MapAsset.GetLongPackageName());
+		if (LevelMapName.Equals(MapName, ESearchCase::IgnoreCase))
 		{
 			return Definition;
 		}

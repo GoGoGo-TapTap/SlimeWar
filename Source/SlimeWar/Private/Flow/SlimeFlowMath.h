@@ -82,6 +82,22 @@ namespace SlimeFlowMath
 		return Kind == ETargetKind::Normal ? FMath::Max(0, KillScoreFromTable) : 0;
 	}
 
+	inline int32 EcologyKillScore(const FSlimeKillContext& Context)
+	{
+		if (!Context.bKilledByPlayer)
+		{
+			return 0;
+		}
+
+		const int32 Mass = FMath::Max(1, Context.Mass);
+		const int32 LargeBonus = FMath::Max(0, Mass - 2);
+		const int32 Body = FMath::Max(
+			Mass * 4 + LargeBonus * LargeBonus,
+			FMath::Max(0, Context.BodyScoreCredit));
+		const int32 Full = Body + FMath::Max(0, Context.Cargo) * 6;
+		return Context.bHostileCore ? Full / 2 : Full;
+	}
+
 	/**
 	 * Legal run phase moves (Phase D).
 	 *
