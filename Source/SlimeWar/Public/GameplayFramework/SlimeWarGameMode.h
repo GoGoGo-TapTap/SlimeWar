@@ -16,9 +16,8 @@
  * point this way (plan section 3.1 / rule 3). It is also what keeps this class a thin forwarder
  * (plan section 4.3, risk 7) instead of turning into the assembly point of the whole game.
  */
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeEnemyKilledEvent, ETargetKind /*Kind*/, int32 /*Mass*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimeEnemyFusedEvent, int32 /*ResultMass*/, const FVector& /*Location*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FSlimePointStateChangedEvent, int32 /*PointId*/, ESpawnPointState /*NewState*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeEnemyKilledEvent, const FSlimeKillContext& /*Context*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeEnemyFusedEvent, const FSlimeFusionEvent& /*Event*/);
 DECLARE_MULTICAST_DELEGATE(FSlimePlayerDiedEvent);
 
 /**
@@ -36,15 +35,13 @@ public:
 	virtual void PreInitializeComponents() override;
 
 	//~ Begin IBattleDirector
-	virtual void OnEnemyKilled(ETargetKind Kind, int32 Mass) override;
-	virtual void OnEnemyFused(int32 ResultMass, const FVector& Location) override;
-	virtual void OnPointStateChanged(int32 PointId, ESpawnPointState NewState) override;
+	virtual void OnEnemyKilled(const FSlimeKillContext& Context) override;
+	virtual void OnEnemyFused(const FSlimeFusionEvent& Event) override;
 	virtual void OnPlayerDied() override;
 	//~ End IBattleDirector
 
 	FSlimeEnemyKilledEvent OnEnemyKilledEvent;
 	FSlimeEnemyFusedEvent OnEnemyFusedEvent;
-	FSlimePointStateChangedEvent OnPointStateChangedEvent;
 	FSlimePlayerDiedEvent OnPlayerDiedEvent;
 
 protected:

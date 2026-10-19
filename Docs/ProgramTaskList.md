@@ -1074,6 +1074,29 @@ public:
 
 **禁止**：不打招呼直接在对方模块里加函数；直接改 `Public/Core/*`。
 
+#### 契约变更记录：2026-10-19 Phase G 生态重构（M8 清退）
+
+| 原契约 | 新契约 | 原因 |
+|---|---|---|
+| `IBattleDirector::OnEnemyKilled(ETargetKind, int32)` | `IBattleDirector::OnEnemyKilled(const FSlimeKillContext&)` | 生态击杀需要体量、货物、核心、来源和爆炸上下文；旧 `ETargetKind` 删除 |
+| `IBattleDirector::OnEnemyFused(int32 ResultMass)` | `IBattleDirector::OnEnemyFused(const FSlimeFusionEvent&)` | 融合事件需要结果体量、阵营、核心状态、位置和路径 |
+| `IBattleDirector::OnPointStateChanged(int32, ESpawnPointState)` | 删除 | 波次点位生命周期退出运行时；站点数据由 `USlimeEcologySubsystem` 提供 |
+| `USlimeSpawnLayout::Points`（`FSlimeSpawnPointDef` / `FSlimeSpawnSlot`） | 仅保留 `DropPoints` | 刷点 Actor/槽位/编辑器工具已归档；布局资产只服务投放 |
+| `USlimeRunConfig` 的 `bEcologyRun`、AI/Normal、AI/Aggro、旧 Fusion、Spawn 批次字段 | 删除；`RunSubsystem` 固定走生态站点 | Phase E 分队/波次设计废弃 |
+
+兼容说明：`ESpawnPointState` 与 `USlimeHUDWidget` 的两个旧事件暂无运行时来源，仅为现有 WBP 编译保留，M9 重建 HUD 后删除。
+
+#### 契约变更记录：2026-10-19 M9 三阵营扩展
+
+| 契约 | 变更 | 兼容性 |
+|---|---|---|
+| `FSlimeRunResult` | 末尾追加 `ElapsedTime`、`PlayerDamageTaken` | 只追加字段，现有 WBP/调用方按名称读取，不破坏 |
+| `USlimeEcologySubsystem` | 新增 `HasFactionSite(ESlimeFaction)` | 只新增查询 |
+| `ASlimeWarCharacter` | 新增 `SelectFactionC()`、`GetTotalDamageTaken()`、`RecordDamageTaken(float)` | 玩家输入/统计增量 |
+| `USlimeHUDWidget` | 新增 `OnEcologySitesUpdated(const TArray<FSlimeSiteStatus>&)` | 可选 BlueprintImplementableEvent；现有 WBP 不实现也不报错 |
+
+M9 不修改 `OnGrenadeSelectionUpdated`、`OnPointStateUpdated`、`OnBatchIncoming` 等现有 WBP 签名。
+
 ### 7.5 责任人不存在时的兜底
 
 | 情况 | 处理 |

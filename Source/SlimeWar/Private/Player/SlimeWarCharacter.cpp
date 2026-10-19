@@ -14,8 +14,11 @@
 #include "DrawDebugHelpers.h"
 #include "Ecology/SlimeBodyInteractionComponent.h"
 #include "Ecology/SlimeEcologyEnemy.h"
+#include "Ecology/SlimeEcologyFusionComponent.h"
 #include "Ecology/SlimeEcologyRules.h"
 #include "Ecology/SlimeEcologySubsystem.h"
+#include "Ecology/SlimeEcologyGrenade.h"
+#include "Ecology/SlimeWeakpointComponent.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/OverlapResult.h"
@@ -30,13 +33,16 @@
 #include "GameplayFramework/SlimeWarGameMode.h"
 #include "GameplayFramework/StatTableProvider.h"
 #include "InputActionValue.h"
+#include "InputCoreTypes.h"
 #include "Player/Abilities/GA_Die.h"
-#include "Player/Abilities/GA_Fire.h"
+#include "Player/Abilities/GA_ChargeFire.h"
 #include "Player/Abilities/GA_HitProtection.h"
 #include "Player/Abilities/GA_Reload.h"
 #include "Player/SlimeAbilityInputID.h"
+#include "Player/SlimeAimAssistComponent.h"
 #include "Player/SlimePlayerAttributeSet.h"
 #include "Player/SlimeWeaponComponent.h"
+#include "Player/SlimeWeaponRules.h"
 
 ASlimeWarCharacter::ASlimeWarCharacter()
 {
@@ -76,6 +82,7 @@ ASlimeWarCharacter::ASlimeWarCharacter()
 	Health->bAuthoritative = false;
 
 	Weapon = CreateDefaultSubobject<USlimeWeaponComponent>(TEXT("Weapon"));
+	AimAssist = CreateDefaultSubobject<USlimeAimAssistComponent>(TEXT("AimAssist"));
 }
 
 UAbilitySystemComponent* ASlimeWarCharacter::GetAbilitySystemComponent() const
@@ -87,6 +94,7 @@ void ASlimeWarCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	TotalDamageTaken = 0.f;
 	InitAbilitySystem();
 	ApplyRunConfig();
 }
@@ -120,7 +128,7 @@ void ASlimeWarCharacter::InitAbilitySystem()
 
 	// Input ids line up with EAbilityInputID so AbilityLocalInputPressed reaches them.
 	AbilitySystem->GiveAbility(FGameplayAbilitySpec(
-		UGA_Fire::StaticClass(), 1, static_cast<int32>(EAbilityInputID::Fire)));
+		UGA_ChargeFire::StaticClass(), 1, INDEX_NONE));
 	AbilitySystem->GiveAbility(FGameplayAbilitySpec(
 		UGA_Reload::StaticClass(), 1, static_cast<int32>(EAbilityInputID::Reload)));
 
@@ -152,9 +160,34 @@ void ASlimeWarCharacter::ApplyRunConfig()
 		return;
 	}
 
+	if (const USlimeEcologyRules* EcologyRules = USlimeEcologyRules::GetFor(this))
+	{
+		AssimilationGrenades = EcologyRules->GrenadesPerType;
+		TornadoGrenades = EcologyRules->GrenadesPerType;
+		OnGrenadeInventoryChanged.Broadcast(AssimilationGrenades, TornadoGrenades);
+	}
+
 	if (RunConfig->PlayerMoveSpeed > 0.f)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = RunConfig->PlayerMoveSpeed;
+		CachedWalkSpeed = RunConfig->PlayerMoveSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = CachedWalkSpeed;
+	}
+
+	CachedSprintSpeed = RunConfig->PlayerSprintSpeed;
+	CachedAimSpeed = RunConfig->PlayerAimSpeed;
+
+	if (RunConfig->PlayerJumpSpeed > 0.f)
+	{
+		GetCharacterMovement()->JumpZVelocity = RunConfig->PlayerJumpSpeed;
+	}
+
+	if (RunConfig->PlayerGravity > 0.f && GetWorld())
+	{
+		const float WorldGravity = FMath::Abs(GetWorld()->GetGravityZ());
+		if (WorldGravity > KINDA_SMALL_NUMBER)
+		{
+			GetCharacterMovement()->GravityScale = RunConfig->PlayerGravity / WorldGravity;
+		}
 	}
 
 	if (RunConfig->PlayerTurnRateDegPerSec > 0.f)
@@ -177,19 +210,35 @@ void ASlimeWarCharacter::ApplyRunConfig()
 	{
 		if (RunConfig->CameraBoomLength > 0.f)
 		{
+			CachedNormalBoomLength = RunConfig->CameraBoomLength;
 			CameraBoom->TargetArmLength = RunConfig->CameraBoomLength;
 		}
 
 		if (!RunConfig->CameraSocketOffset.IsNearlyZero())
 		{
-			CameraBoom->SocketOffset = RunConfig->CameraSocketOffset;
+			CachedShoulderOffset = RunConfig->CameraSocketOffset;
+			ApplyShoulderOffset();
 		}
+
+		CachedAimBoomLength = RunConfig->CameraAimBoomLength;
 	}
 
-	if (FollowCamera && RunConfig->CameraFieldOfView > 0.f)
+	if (FollowCamera)
 	{
-		FollowCamera->SetFieldOfView(RunConfig->CameraFieldOfView);
+		if (RunConfig->CameraFieldOfView > 0.f)
+		{
+			CachedNormalFOV = RunConfig->CameraFieldOfView;
+			FollowCamera->SetFieldOfView(RunConfig->CameraFieldOfView);
+		}
+		else
+		{
+			// Keep the engine default so leaving aim can restore it.
+			CachedNormalFOV = FollowCamera->FieldOfView;
+		}
 	}
+	CachedAimFOV = RunConfig->CameraAimFieldOfView;
+
+	UpdateMovementSpeed();
 
 	if (Attributes)
 	{
@@ -197,9 +246,26 @@ void ASlimeWarCharacter::ApplyRunConfig()
 		Attributes->InitHealth(RunConfig->PlayerMaxHealth);
 	}
 
-	FWeaponStatRow WeaponRow;
 	UStatTableProvider* Provider = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStatTableProvider>() : nullptr;
-	if (Provider && Provider->GetWeaponStat(RunConfig->DefaultWeaponId, WeaponRow))
+	FWeaponStatRow WeaponRow;
+	bool bHasWeaponRow = false;
+	if (Provider && Provider->GetWeaponRules())
+	{
+		const USlimeWeaponRules* WeaponRules = Provider->GetWeaponRules();
+		WeaponRow.Damage = WeaponRules->BaseDamage;
+		WeaponRow.FireRate = 1.f / FMath::Max(0.01f, WeaponRules->FireInterval);
+		WeaponRow.MagazineSize = WeaponRules->MagazineSize;
+		WeaponRow.ReloadDuration = WeaponRules->ReloadDuration;
+		WeaponRow.Range = WeaponRules->Range;
+		WeaponRow.AimAssistStrength = 1.f;
+		bHasWeaponRow = true;
+	}
+	else if (Provider)
+	{
+		bHasWeaponRow = Provider->GetWeaponStat(RunConfig->DefaultWeaponId, WeaponRow);
+	}
+
+	if (bHasWeaponRow)
 	{
 		if (Attributes)
 		{
@@ -286,8 +352,17 @@ void ASlimeWarCharacter::ApplyDeathEffects(bool bCancelAbilities)
 		AbilitySystem->AddLooseGameplayTag(TAG_State_Player_Dead);
 	}
 
-	bWantsToFire = false;
+	bCharging = false;
+	PendingChargeAlpha = 0.f;
+	EndReloadVisuals();
+	if (AimAssist)
+	{
+		AimAssist->ReleaseLock();
+	}
 	bIsAiming = false;
+        bIsSprinting = false;
+        UpdateMovementSpeed();
+        ApplyAimCamera(false);
 	bInputBlocked = true;
 
 	// Death locks movement (design 3.1).
@@ -338,8 +413,17 @@ void ASlimeWarCharacter::SetRunInputBlocked(bool bBlocked)
 	{
 		// Drop any input state that is still held down, so the lock cannot leave a latched shot
 		// or a strafe-facing character behind.
-		bWantsToFire = false;
+		bCharging = false;
+		PendingChargeAlpha = 0.f;
+		EndReloadVisuals();
+		if (AimAssist)
+		{
+			AimAssist->ReleaseLock();
+		}
 		bIsAiming = false;
+                bIsSprinting = false;
+                UpdateMovementSpeed();
+                ApplyAimCamera(false);
 		bUseControllerRotationYaw = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
@@ -359,8 +443,17 @@ void ASlimeWarCharacter::SetRunInputBlocked(bool bBlocked)
 void ASlimeWarCharacter::EnterResultState()
 {
 	bInputBlocked = true;
-	bWantsToFire = false;
+	bCharging = false;
+	PendingChargeAlpha = 0.f;
+	EndReloadVisuals();
+	if (AimAssist)
+	{
+		AimAssist->ReleaseLock();
+	}
 	bIsAiming = false;
+        bIsSprinting = false;
+        UpdateMovementSpeed();
+        ApplyAimCamera(false);
 
 	if (AbilitySystem)
 	{
@@ -383,37 +476,76 @@ void ASlimeWarCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	ApplyBodyPushToNearbyEcology();
+	GrenadeCooldownRemaining = FMath::Max(0.f, GrenadeCooldownRemaining - DeltaSeconds);
 
-	// Hold-to-fire: the cooldown GameplayEffect is what actually gates the rate, so simply
-	// asking again every frame is enough (a blocked activation is silently ignored).
-	if (bWantsToFire && !bInputBlocked && AbilitySystem && Health && !Health->IsDead())
+	// Charge is accumulated only while the fire button is held; the ability fires on release.
+	if (bReloadVisualActive && GetWorld()
+		&& GetWorld()->GetTimeSeconds() - ReloadVisualStart >= ReloadVisualDuration)
 	{
-		AbilitySystem->TryActivateAbilityByClass(UGA_Fire::StaticClass());
+		EndReloadVisuals();
+	}
+}
+
+float ASlimeWarCharacter::GetChargeAlpha() const
+{
+	const USlimeWeaponRules* Rules = USlimeWeaponRules::GetFor(this);
+	const UWorld* World = GetWorld();
+	if (!bCharging || !Rules || !World)
+	{
+		return 0.f;
 	}
 
-	// Slime.Debug.DrawAimAssist: show what aim assist is doing. Nothing is drawn when it is off.
-	if (bIsAiming && SlimeCVars::DebugDrawAimAssist != 0 && FollowCamera && Weapon)
+	const float HoldTime = World->GetTimeSeconds() - ChargeStartTime;
+	const float ChargeWindow =
+		FMath::Max(0.01f, Rules->ChargeFullTime - Rules->ChargeStart);
+	return FMath::Clamp((HoldTime - Rules->ChargeStart) / ChargeWindow, 0.f, 1.f);
+}
+
+float ASlimeWarCharacter::ConsumeChargeAlpha()
+{
+	const float Result = PendingChargeAlpha;
+	PendingChargeAlpha = 0.f;
+	return Result;
+}
+
+void ASlimeWarCharacter::BeginReloadVisuals(float Duration)
+{
+	bCharging = false;
+	PendingChargeAlpha = 0.f;
+	bReloadVisualActive = Duration > 0.f;
+	ReloadVisualDuration = FMath::Max(0.f, Duration);
+	ReloadVisualStart = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+}
+
+void ASlimeWarCharacter::EndReloadVisuals()
+{
+	bReloadVisualActive = false;
+	ReloadVisualDuration = 0.f;
+}
+
+float ASlimeWarCharacter::GetReloadProgress() const
+{
+	if (!bReloadVisualActive || !GetWorld() || ReloadVisualDuration <= KINDA_SMALL_NUMBER)
 	{
-		const FVector CameraLocation = FollowCamera->GetComponentLocation();
-		const FVector CameraForward = FollowCamera->GetForwardVector();
-		const float Range = Weapon->GetRange();
-
-		AActor* AssistTarget = nullptr;
-		const FVector AssistedDirection =
-			GetAimDirectionWithAssist(CameraLocation, CameraForward, Range, &AssistTarget);
-
-		// White: where the camera points. Yellow: where the shot will actually go.
-		DrawDebugLine(GetWorld(), CameraLocation, CameraLocation + CameraForward * Range,
-			FColor::White, false, -1.f, 0, 1.f);
-		DrawDebugLine(GetWorld(), CameraLocation, CameraLocation + AssistedDirection * Range,
-			FColor::Yellow, false, -1.f, 0, 2.f);
-
-		if (AssistTarget)
-		{
-			DrawDebugLine(GetWorld(), CameraLocation, AssistTarget->GetActorLocation(),
-				FColor::Green, false, -1.f, 0, 3.f);
-		}
+		return 0.f;
 	}
+	return FMath::Clamp(
+		(GetWorld()->GetTimeSeconds() - ReloadVisualStart) / ReloadVisualDuration,
+		0.f,
+		1.f);
+}
+
+bool ASlimeWarCharacter::CanStartCharge() const
+{
+	const USlimeWeaponComponent* WeaponComponent = Weapon;
+	if (bInputBlocked || !Health || Health->IsDead() || !WeaponComponent
+		|| WeaponComponent->IsMagazineEmpty() || bReloadVisualActive)
+	{
+		return false;
+	}
+
+	return !AbilitySystem
+		|| !AbilitySystem->HasMatchingGameplayTag(TAG_State_Weapon_Reloading);
 }
 
 void ASlimeWarCharacter::ApplyBodyPushToNearbyEcology()
@@ -534,6 +666,13 @@ void ASlimeWarCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 			TEXT("'%s' failed to find an Enhanced Input component. This project is built on the Enhanced Input system."),
 			*GetNameSafe(this));
 	}
+
+	// R1 controls do not need new input assets: bind the three direct keys in C++ so they remain
+	// available even when the Blueprint has not been updated.
+	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Pressed, this, &ASlimeWarCharacter::OnSprintPressed);
+	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Released, this, &ASlimeWarCharacter::OnSprintReleased);
+	PlayerInputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &ASlimeWarCharacter::OnJumpPressed);
+	PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ASlimeWarCharacter::OnSwitchShoulderPressed);
 }
 
 void ASlimeWarCharacter::BindAbilityActions(UInputComponent* PlayerInputComponent)
@@ -567,30 +706,51 @@ void ASlimeWarCharacter::BindAbilityActions(UInputComponent* PlayerInputComponen
 	{
 		EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &ASlimeWarCharacter::OnPausePressed);
 	}
+
+	PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &ASlimeWarCharacter::SelectAssimilationGrenade);
+	PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ASlimeWarCharacter::SelectTornadoGrenade);
+	PlayerInputComponent->BindKey(EKeys::Z, IE_Pressed, this, &ASlimeWarCharacter::SelectFactionA);
+	PlayerInputComponent->BindKey(EKeys::X, IE_Pressed, this, &ASlimeWarCharacter::SelectFactionB);
+	PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &ASlimeWarCharacter::SelectFactionC);
+	PlayerInputComponent->BindKey(EKeys::G, IE_Pressed, this, &ASlimeWarCharacter::ThrowSelectedGrenade);
 }
 
 void ASlimeWarCharacter::OnFirePressed()
 {
-	if (bInputBlocked)
+	if (bInputBlocked || !Health || Health->IsDead())
 	{
 		return;
 	}
 
-	bWantsToFire = true;
-
-	if (AbilitySystem)
+	if (!CanStartCharge())
 	{
-		AbilitySystem->AbilityLocalInputPressed(static_cast<int32>(EAbilityInputID::Fire));
+		if (Weapon && Weapon->IsMagazineEmpty() && AbilitySystem
+			&& !bReloadVisualActive
+			&& !AbilitySystem->HasMatchingGameplayTag(TAG_State_Weapon_Reloading))
+		{
+			AbilitySystem->TryActivateAbilityByClass(UGA_Reload::StaticClass());
+		}
+		return;
 	}
+
+	bCharging = true;
+	ChargeStartTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+	PendingChargeAlpha = 0.f;
 }
 
 void ASlimeWarCharacter::OnFireReleased()
 {
-	bWantsToFire = false;
-
-	if (AbilitySystem)
+	if (!bCharging)
 	{
-		AbilitySystem->AbilityLocalInputReleased(static_cast<int32>(EAbilityInputID::Fire));
+		return;
+	}
+
+	PendingChargeAlpha = GetChargeAlpha();
+	bCharging = false;
+
+	if (AbilitySystem && !bInputBlocked && Health && !Health->IsDead())
+	{
+		AbilitySystem->TryActivateAbilityByClass(UGA_ChargeFire::StaticClass());
 	}
 }
 
@@ -601,6 +761,8 @@ void ASlimeWarCharacter::OnReloadPressed()
 		return;
 	}
 
+	bCharging = false;
+	PendingChargeAlpha = 0.f;
 	if (AbilitySystem)
 	{
 		AbilitySystem->AbilityLocalInputPressed(static_cast<int32>(EAbilityInputID::Reload));
@@ -615,6 +777,8 @@ void ASlimeWarCharacter::OnAimPressed()
 	}
 
 	bIsAiming = true;
+	UpdateMovementSpeed();
+	ApplyAimCamera(true);
 
 	// While aiming the character faces the camera (strafe shooting) instead of its movement.
 	bUseControllerRotationYaw = true;
@@ -629,6 +793,8 @@ void ASlimeWarCharacter::OnAimPressed()
 void ASlimeWarCharacter::OnAimReleased()
 {
 	bIsAiming = false;
+	UpdateMovementSpeed();
+	ApplyAimCamera(false);
 
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
@@ -639,12 +805,264 @@ void ASlimeWarCharacter::OnAimReleased()
 	}
 }
 
+void ASlimeWarCharacter::OnSprintPressed()
+{
+	if (bInputBlocked)
+	{
+		return;
+	}
+
+	bIsSprinting = true;
+	UpdateMovementSpeed();
+}
+
+void ASlimeWarCharacter::OnSprintReleased()
+{
+	bIsSprinting = false;
+	UpdateMovementSpeed();
+}
+
+void ASlimeWarCharacter::OnJumpPressed()
+{
+	if (bInputBlocked || !Health || Health->IsDead())
+	{
+		return;
+	}
+
+	if (GetCharacterMovement() && GetCharacterMovement()->IsMovingOnGround()
+		&& CanJump())
+	{
+		Jump();
+	}
+}
+
+void ASlimeWarCharacter::OnSwitchShoulderPressed()
+{
+	if (bInputBlocked)
+	{
+		return;
+	}
+
+	bIsLeftShoulder = !bIsLeftShoulder;
+	ApplyShoulderOffset();
+}
+
+void ASlimeWarCharacter::DebugSetSprinting(bool bEnabled)
+{
+	if (bEnabled)
+	{
+		OnSprintPressed();
+	}
+	else
+	{
+		OnSprintReleased();
+	}
+}
+
+void ASlimeWarCharacter::DebugSetAiming(bool bEnabled)
+{
+	if (bEnabled)
+	{
+		OnAimPressed();
+	}
+	else
+	{
+		OnAimReleased();
+	}
+}
+
+void ASlimeWarCharacter::DebugJump()
+{
+	OnJumpPressed();
+}
+
+void ASlimeWarCharacter::DebugSwitchShoulder()
+{
+	OnSwitchShoulderPressed();
+}
+
+void ASlimeWarCharacter::UpdateMovementSpeed()
+{
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (!Movement)
+	{
+		return;
+	}
+
+	float Speed = CachedWalkSpeed;
+	if (bIsSprinting && CachedSprintSpeed > 0.f)
+	{
+		Speed = CachedSprintSpeed;
+	}
+	if (bIsAiming && CachedAimSpeed > 0.f)
+	{
+		Speed = CachedAimSpeed;
+	}
+
+	if (Speed > 0.f)
+	{
+		Movement->MaxWalkSpeed = Speed;
+	}
+}
+
+void ASlimeWarCharacter::ApplyAimCamera(bool bAim)
+{
+	if (CameraBoom)
+	{
+		const float TargetBoom =
+			bAim && CachedAimBoomLength > 0.f ? CachedAimBoomLength : CachedNormalBoomLength;
+		if (TargetBoom > 0.f)
+		{
+			CameraBoom->TargetArmLength = TargetBoom;
+		}
+	}
+
+	if (FollowCamera)
+	{
+		const float TargetFOV =
+			bAim && CachedAimFOV > 0.f ? CachedAimFOV : CachedNormalFOV;
+		if (TargetFOV > 0.f)
+		{
+			FollowCamera->SetFieldOfView(TargetFOV);
+		}
+	}
+}
+
+void ASlimeWarCharacter::ApplyShoulderOffset()
+{
+	if (!CameraBoom)
+	{
+		return;
+	}
+
+	FVector Offset = CachedShoulderOffset;
+	const float SideOffset = FMath::Abs(Offset.Y);
+	Offset.Y = bIsLeftShoulder ? -SideOffset : SideOffset;
+	CameraBoom->SocketOffset = Offset;
+}
+
 void ASlimeWarCharacter::OnPausePressed()
 {
 	// Phase D: the UI layer owns pausing (it has to show a menu and set the input mode, and an
 	// engine pause without that leaves the buttons unclickable). The character only reports the
 	// key, so the Player module never has to know a UI exists.
 	OnPauseRequested.Broadcast();
+}
+
+void ASlimeWarCharacter::SelectAssimilationGrenade()
+{
+	SelectedGrenadeType = ESlimeGrenadeType::Assimilation;
+	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
+}
+
+void ASlimeWarCharacter::SelectTornadoGrenade()
+{
+	SelectedGrenadeType = ESlimeGrenadeType::Tornado;
+	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
+}
+
+void ASlimeWarCharacter::SelectFactionA()
+{
+	if (!CanSelectFaction(ESlimeFaction::A))
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SelectFactionA: this level has no A faction site."));
+		return;
+	}
+
+	SelectedGrenadeFaction = ESlimeFaction::A;
+	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
+}
+
+void ASlimeWarCharacter::SelectFactionB()
+{
+	if (!CanSelectFaction(ESlimeFaction::B))
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SelectFactionB: this level has no B faction site."));
+		return;
+	}
+
+	SelectedGrenadeFaction = ESlimeFaction::B;
+	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
+}
+
+void ASlimeWarCharacter::SelectFactionC()
+{
+	if (!CanSelectFaction(ESlimeFaction::C))
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SelectFactionC: this level has no C faction site."));
+		return;
+	}
+
+	SelectedGrenadeFaction = ESlimeFaction::C;
+	OnGrenadeSelectionChanged.Broadcast(SelectedGrenadeType, SelectedGrenadeFaction);
+}
+
+bool ASlimeWarCharacter::CanSelectFaction(ESlimeFaction Faction) const
+{
+	const UWorld* World = GetWorld();
+	const USlimeEcologySubsystem* Ecology = World
+		? World->GetSubsystem<USlimeEcologySubsystem>()
+		: nullptr;
+	return Ecology && Ecology->HasFactionSite(Faction);
+}
+
+void ASlimeWarCharacter::RecordDamageTaken(float Amount)
+{
+	TotalDamageTaken += FMath::Max(0.f, Amount);
+}
+
+void ASlimeWarCharacter::ThrowSelectedGrenade()
+{
+	if (bInputBlocked || GrenadeCooldownRemaining > 0.f
+		|| !Health || Health->IsDead())
+	{
+		return;
+	}
+
+	int32& Stock = SelectedGrenadeType == ESlimeGrenadeType::Assimilation
+		? AssimilationGrenades
+		: TornadoGrenades;
+	if (Stock <= 0 || !FollowCamera)
+	{
+		return;
+	}
+
+	const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+	UWorld* World = GetWorld();
+	if (!Rules || !World)
+	{
+		return;
+	}
+
+	const FVector SpawnLocation =
+		FollowCamera->GetComponentLocation()
+		+ FollowCamera->GetForwardVector() * 80.f;
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ASlimeEcologyGrenade* Grenade = World->SpawnActor<ASlimeEcologyGrenade>(
+		ASlimeEcologyGrenade::StaticClass(),
+		SpawnLocation,
+		FollowCamera->GetComponentRotation(),
+		Params);
+	if (!Grenade)
+	{
+		return;
+	}
+
+	Grenade->Launch(
+		SelectedGrenadeType,
+		SelectedGrenadeFaction,
+		FollowCamera->GetForwardVector());
+	--Stock;
+	GrenadeCooldownRemaining = Rules->GrenadeThrowInterval;
+	OnGrenadeInventoryChanged.Broadcast(AssimilationGrenades, TornadoGrenades);
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("GrenadeThrow: %s faction %d (A=%d T=%d)."),
+		ASlimeEcologyGrenade::TypeName(SelectedGrenadeType),
+		static_cast<int32>(SelectedGrenadeFaction),
+		AssimilationGrenades,
+		TornadoGrenades);
 }
 
 void ASlimeWarCharacter::Move(const FInputActionValue& Value)
@@ -826,73 +1244,161 @@ FVector ASlimeWarCharacter::GetAimDirectionWithAssist(const FVector& CameraLocat
 
 bool ASlimeWarCharacter::PerformShot(FVector& OutImpactPoint, AActor*& OutHitActor)
 {
+	bool bWeakpoint = false;
+	return PerformChargedShot(0.f, OutImpactPoint, OutHitActor, bWeakpoint);
+}
+
+bool ASlimeWarCharacter::PerformChargedShot(
+	float ChargeAlpha,
+	FVector& OutImpactPoint,
+	AActor*& OutHitActor,
+	bool& bOutWeakpoint)
+{
 	OutImpactPoint = FVector::ZeroVector;
 	OutHitActor = nullptr;
+	bOutWeakpoint = false;
 
 	USlimeWeaponComponent* WeaponComponent = Weapon;
-	if (!WeaponComponent || !FollowCamera)
+	const USlimeWeaponRules* Rules = USlimeWeaponRules::GetFor(this);
+	if (!WeaponComponent || !AimAssist || !Rules)
 	{
 		return false;
 	}
 
-	const float Range = WeaponComponent->GetRange();
-	if (Range <= 0.f)
-	{
-		UE_LOG(LogSlimeWar, Error, TEXT("ASlimeWarCharacter::PerformShot: weapon range is not configured."));
-		return false;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
+	FSlimeShotSolution Shot;
+	if (!AimAssist->SolveShot(Shot))
 	{
 		return false;
 	}
 
-	const FVector CameraLocation = FollowCamera->GetComponentLocation();
-	const FVector CameraForward = FollowCamera->GetForwardVector();
-	const FVector ShotDirection = GetAimDirectionWithAssist(CameraLocation, CameraForward, Range);
+	const float Alpha = FMath::Clamp(ChargeAlpha, 0.f, 1.f);
+	const float Damage = Rules->BaseDamage * (1.f - Alpha);
+        const USlimeEcologyRules* EcologyRules = USlimeEcologyRules::GetFor(this);
+        ASlimeEcologyEnemy* DirectTarget = Cast<ASlimeEcologyEnemy>(Shot.TargetActor);
+        USlimeEcologyFusionComponent* DirectFusion =
+                DirectTarget ? DirectTarget->GetEcologyFusionComponent() : nullptr;
+        if (DirectFusion)
+        {
+                DirectFusion->ApplyShotFusionInterference(
+                        EcologyRules ? EcologyRules->ShotFusionCooldown : -1.f);
+        }
 
-	FCollisionQueryParams Params(FName(TEXT("SlimeShot")), false, this);
-	Params.AddIgnoredActor(this);
-
-	// 1) Camera trace: where is the player actually aiming?
-	FHitResult CameraHit;
-	const FVector CameraEnd = CameraLocation + ShotDirection * Range;
-	const bool bCameraHit = World->LineTraceSingleByChannel(
-		CameraHit, CameraLocation, CameraEnd, ECC_Visibility, Params);
-
-	const FVector AimPoint = bCameraHit ? CameraHit.ImpactPoint : CameraEnd;
-	AActor* AimActor = bCameraHit ? CameraHit.GetActor() : nullptr;
-
-	// 2) Muzzle trace: the barrel may be inside geometry even when the camera is not.
-	const USlimeRunConfig* RunConfig = GetRunConfig();
-	const FVector MuzzleOffset = RunConfig ? RunConfig->MuzzleOffsetLocal : FVector::ZeroVector;
-	const FVector MuzzleLocation = CameraLocation + FollowCamera->GetComponentRotation().RotateVector(MuzzleOffset);
-
-	FHitResult MuzzleHit;
-	const bool bMuzzleBlocked = World->LineTraceSingleByChannel(
-		MuzzleHit, MuzzleLocation, AimPoint, ECC_Visibility, Params);
-
-	if (bMuzzleBlocked && MuzzleHit.GetActor() != AimActor)
+	if (Shot.TargetActor && Damage > 0.f)
 	{
-		// Muzzle is buried in geometry: the shot hits the wall instead (design 3.3).
-		OutImpactPoint = MuzzleHit.ImpactPoint;
-		WeaponComponent->BroadcastShotResult(nullptr, OutImpactPoint, false);
-		return true;
-	}
-
-	OutImpactPoint = AimPoint;
-	OutHitActor = AimActor;
-
-	if (AimActor)
-	{
-		// Single damage entry point: ASC targets get GE_Damage, enemies get their HealthComponent.
 		if (USlimeCombatSubsystem* Combat = USlimeCombatSubsystem::Get(this))
 		{
-			Combat->ApplyDamageTo(AimActor, WeaponComponent->GetDamage(), this);
+			Combat->ApplyDamageToComponent(
+				Shot.TargetActor,
+				Shot.HitComponent,
+				Damage,
+				this);
 		}
 	}
 
-	WeaponComponent->BroadcastShotResult(AimActor, AimPoint, AimActor != nullptr);
+        if (DirectTarget)
+	{
+		if (USlimeBodyInteractionComponent* Body = DirectTarget->GetBodyInteraction())
+		{
+			FVector Push = DirectTarget->GetActorLocation() - GetActorLocation();
+			Push.Z = 0.f;
+			Push = Push.GetSafeNormal2D();
+			const float MassScale = FMath::Pow(
+				static_cast<float>(FMath::Max(1, DirectTarget->GetMass())),
+				Rules->DirectPushMassExponent);
+			Body->ApplyExternalVelocity(Push * Rules->DirectPushSpeed / MassScale, this);
+			if (EcologyRules)
+			{
+				Body->ReceiveStun(EcologyRules->HitStunDuration);
+				if (Alpha > 0.f
+					&& Rules->ChargePushSpeed * Alpha >= EcologyRules->ImpactSplitSpeed
+					&& DirectTarget->GetMass() >= 2)
+				{
+					Body->OpenImpactSplitWindow(EcologyRules->ImpactSplitWindow);
+				}
+                                if (DirectFusion)
+				{
+                                        DirectFusion->InterruptFusion(EcologyRules->FusionInterruptedBlock);
+				}
+			}
+		}
+	}
+
+	if (Alpha > 0.f && EcologyRules)
+	{
+		const float Radius = Rules->ChargePushRadius * Alpha;
+		const UWorld* World = GetWorld();
+		const USlimeEcologySubsystem* Ecology =
+			World ? World->GetSubsystem<USlimeEcologySubsystem>() : nullptr;
+		if (Ecology && Radius > 0.f)
+		{
+			TArray<ASlimeEcologyEnemy*> Neighbours;
+			Ecology->QueryAgentsAroundLocation(Shot.AimPoint, Radius, Neighbours);
+			for (ASlimeEcologyEnemy* Other : Neighbours)
+			{
+				if (!Other || Other->IsActorBeingDestroyed())
+				{
+					continue;
+				}
+
+				FCollisionQueryParams Params(SCENE_QUERY_STAT(SlimeChargePushLOS), false, Other);
+				FHitResult Hit;
+				if (World->LineTraceSingleByChannel(
+					Hit,
+					Shot.AimPoint,
+					Other->GetActorLocation(),
+					ECC_WorldStatic,
+					Params))
+				{
+					continue;
+				}
+
+				const float Distance =
+					FVector::Dist2D(Shot.AimPoint, Other->GetActorLocation());
+				const float Falloff =
+					1.f - Rules->RadialPushEdgeScale * FMath::Clamp(Distance / Radius, 0.f, 1.f);
+				const float PushSpeed = Rules->ChargePushSpeed * Alpha * Falloff;
+				if (PushSpeed <= 0.f)
+				{
+					continue;
+				}
+
+				FVector Push = Other->GetActorLocation() - Shot.AimPoint;
+				Push.Z = 0.f;
+				Push = Push.GetSafeNormal2D();
+				if (Push.IsNearlyZero())
+				{
+					Push = (Other->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+				}
+				if (Push.IsNearlyZero())
+				{
+					Push = GetActorForwardVector().GetSafeNormal2D();
+				}
+				if (USlimeBodyInteractionComponent* Body = Other->GetBodyInteraction())
+				{
+					Body->ApplyExternalVelocity(Push * PushSpeed, this);
+					Body->ReceiveStun(EcologyRules->HitStunDuration);
+					if (PushSpeed >= EcologyRules->ImpactSplitSpeed
+						&& Other->GetMass() >= 2)
+					{
+						Body->OpenImpactSplitWindow(EcologyRules->ImpactSplitWindow);
+					}
+				}
+                                if (USlimeEcologyFusionComponent* Fusion = Other->GetEcologyFusionComponent())
+				{
+                                        Fusion->ApplyShotFusionInterference(
+                                                EcologyRules ? EcologyRules->ShotFusionCooldown : -1.f);
+					Fusion->InterruptFusion(EcologyRules->FusionInterruptedBlock);
+				}
+			}
+		}
+	}
+
+	OutImpactPoint = Shot.AimPoint;
+	OutHitActor = Shot.TargetActor;
+	bOutWeakpoint = Shot.bWeakpoint;
+	WeaponComponent->BroadcastShotResult(
+		Shot.TargetActor,
+		Shot.AimPoint,
+		Shot.TargetActor != nullptr);
 	return true;
 }

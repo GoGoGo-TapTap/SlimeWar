@@ -25,6 +25,12 @@ void UScoreSubsystem::BeginRun(int32 InTargetScore)
 {
 	CurrentScore = 0;
 	NormalKillCount = 0;
+	PlayerKillCount = 0;
+	NpcKillCount = 0;
+	PlayerCargoScored = 0;
+	HostileKillCount = 0;
+	DetonationKillCount = 0;
+	ChainKillCount = 0;
 	ClearedPointCount = 0;
 	TargetScore = InTargetScore;
 	bScoreLocked = false;
@@ -37,29 +43,29 @@ void UScoreSubsystem::BeginRun(int32 InTargetScore)
 	OnClearedPointCountChanged.Broadcast(ClearedPointCount);
 }
 
-void UScoreSubsystem::AddKill(ETargetKind Kind, int32 Mass)
+void UScoreSubsystem::AddKill(const FSlimeKillContext& Context)
 {
-	if (bScoreLocked || Kind != ETargetKind::Normal)
+	if (bScoreLocked)
 	{
 		return;
 	}
 
-	// The enemy only reports "a normal target of this mass died"; the worth of that kill is a
-	// table value, exactly like every other number in this project.
-	const UStatTableProvider* Provider =
-		GetGameInstance() ? GetGameInstance()->GetSubsystem<UStatTableProvider>() : nullptr;
-
-	FSlimeStatRow Row;
-	if (!Provider || !Provider->GetSlimeStat(Mass, Row))
+	if (!Context.bKilledByPlayer)
 	{
-		UE_LOG(LogSlimeWar, Warning,
-			TEXT("UScoreSubsystem::AddKill: no stat row for mass %d, the kill is ignored."), Mass);
+		++NpcKillCount;
 		return;
 	}
 
-	const int32 Awarded = SlimeFlowMath::ScoreForKill(Kind, Row.KillScore);
+	const int32 Mass = FMath::Max(1, Context.Mass);
+	const int32 Awarded = SlimeFlowMath::EcologyKillScore(Context);
+
 	CurrentScore += Awarded;
 	++NormalKillCount;
+	++PlayerKillCount;
+	PlayerCargoScored += FMath::Max(0, Context.Cargo);
+	HostileKillCount += Context.bHostileCore ? 1 : 0;
+	DetonationKillCount += Context.bDetonated ? 1 : 0;
+	ChainKillCount += Context.bChainKill ? 1 : 0;
 
 	if (KillsByMass.IsValidIndex(Mass))
 	{

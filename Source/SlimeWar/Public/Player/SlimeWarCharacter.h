@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
+#include "Core/SlimeWarCoreTypes.h"
+#include "Ecology/SlimeEcologyGrenade.h"
 #include "GameFramework/Character.h"
 #include "SlimeWarCharacter.generated.h"
 
@@ -15,11 +17,16 @@ class USlimeHealthComponent;
 class USlimePlayerAttributeSet;
 class USlimeRunConfig;
 class USlimeWeaponComponent;
+class USlimeAimAssistComponent;
 class USpringArmComponent;
 struct FInputActionValue;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimePlayerDamagedSignature, FVector, DamageDirection);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSlimePauseRequestedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FSlimeGrenadeInventoryChangedSignature, int32, Assimilation, int32, Tornado);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FSlimeGrenadeSelectionChangedSignature, ESlimeGrenadeType, Type, ESlimeFaction, Faction);
 
 /**
  * Player character. GAS is fully enabled on this actor only (plan decision: layered GAS).
@@ -52,8 +59,40 @@ public:
 
 	FORCEINLINE USlimeWeaponComponent* GetWeaponComponent() const { return Weapon; }
 
+	FORCEINLINE USlimeAimAssistComponent* GetAimAssistComponent() const { return AimAssist; }
+
 	UFUNCTION(BlueprintPure, Category = "Slime|Player")
 	bool IsAiming() const { return bIsAiming; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	bool IsSprinting() const { return bIsSprinting && !bIsAiming; }
+
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	bool IsUsingLeftShoulder() const { return bIsLeftShoulder; }
+
+	void DebugSetSprinting(bool bEnabled);
+	void DebugSetAiming(bool bEnabled);
+	void DebugJump();
+	void DebugSwitchShoulder();
+
+        UFUNCTION(BlueprintPure, Category = "Slime|Player")
+        ESlimeGrenadeType GetSelectedGrenadeType() const { return SelectedGrenadeType; }
+
+        UFUNCTION(BlueprintPure, Category = "Slime|Player")
+        ESlimeFaction GetSelectedGrenadeFaction() const { return SelectedGrenadeFaction; }
+
+        UFUNCTION(BlueprintPure, Category = "Slime|Player")
+        int32 GetAssimilationGrenadeCount() const { return AssimilationGrenades; }
+
+        UFUNCTION(BlueprintPure, Category = "Slime|Player")
+        int32 GetTornadoGrenadeCount() const { return TornadoGrenades; }
+
+	/** Total damage taken this run, after hit protection. */
+	UFUNCTION(BlueprintPure, Category = "Slime|Player")
+	float GetTotalDamageTaken() const { return TotalDamageTaken; }
+
+	/** Called by the player AttributeSet with the actual negative health delta. */
+	void RecordDamageTaken(float Amount);
 
 	/**
 	 * Camera-space fire direction after aim assist. OutAssistTarget is set to the actor
@@ -67,6 +106,22 @@ public:
 	 * USlimeCombatSubsystem. Always consumes the round; reports miss through OutHitActor == null.
 	 */
 	bool PerformShot(FVector& OutImpactPoint, AActor*& OutHitActor);
+
+	/** M6 release-triggered charged shot. */
+	bool PerformChargedShot(
+		float ChargeAlpha,
+		FVector& OutImpactPoint,
+		AActor*& OutHitActor,
+		bool& bOutWeakpoint);
+
+	float GetChargeAlpha() const;
+	bool IsCharging() const { return bCharging; }
+	float ConsumeChargeAlpha();
+
+	void BeginReloadVisuals(float Duration);
+	void EndReloadVisuals();
+	bool IsReloading() const { return bReloadVisualActive; }
+	float GetReloadProgress() const;
 
 	/** Called by USlimePlayerAttributeSet when a damage effect lands. Sets the direction hook. */
 	void NotifyDamagedFrom(AActor* Causer);
@@ -108,6 +163,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
 	FSlimePauseRequestedSignature OnPauseRequested;
 
+        UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
+        FSlimeGrenadeInventoryChangedSignature OnGrenadeInventoryChanged;
+
+        UPROPERTY(BlueprintAssignable, Category = "Slime|Player")
+        FSlimeGrenadeSelectionChangedSignature OnGrenadeSelectionChanged;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void NotifyControllerChanged() override;
@@ -125,7 +186,19 @@ protected:
 	UFUNCTION() void OnReloadPressed();
 	UFUNCTION() void OnAimPressed();
 	UFUNCTION() void OnAimReleased();
+	UFUNCTION() void OnSprintPressed();
+	UFUNCTION() void OnSprintReleased();
+	UFUNCTION() void OnJumpPressed();
+	UFUNCTION() void OnSwitchShoulderPressed();
 	UFUNCTION() void OnPausePressed();
+        UFUNCTION() void SelectAssimilationGrenade();
+        UFUNCTION() void SelectTornadoGrenade();
+        UFUNCTION() void SelectFactionA();
+        UFUNCTION() void SelectFactionB();
+        UFUNCTION() void SelectFactionC();
+        UFUNCTION() void ThrowSelectedGrenade();
+
+	bool CanSelectFaction(ESlimeFaction Faction) const;
 
 	// -- GAS --
 	void InitAbilitySystem();
@@ -139,10 +212,14 @@ protected:
 
 	/** M3: push nearby mass 1-3 ecology bodies without damage or ammo. */
 	void ApplyBodyPushToNearbyEcology();
+	bool CanStartCharge() const;
 
 	bool HasClearShot(const FVector& From, const AActor* Target) const;
 
 	const USlimeRunConfig* GetRunConfig() const;
+	void UpdateMovementSpeed();
+	void ApplyAimCamera(bool bAim);
+	void ApplyShoulderOffset();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystem;
@@ -155,6 +232,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Weapon")
 	TObjectPtr<USlimeWeaponComponent> Weapon;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Weapon")
+	TObjectPtr<USlimeAimAssistComponent> AimAssist;
 
 	// -- Camera --
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -187,11 +267,26 @@ protected:
 
 	// -- Phase A runtime state --
 
-	/** True between Fire pressed and released; re-triggers the ability while the cooldown allows. */
-	bool bWantsToFire = false;
+	bool bCharging = false;
+	float ChargeStartTime = 0.f;
+	float PendingChargeAlpha = 0.f;
+	bool bReloadVisualActive = false;
+	float ReloadVisualStart = 0.f;
+	float ReloadVisualDuration = 0.f;
 
 	/** Right mouse held: enables aim assist and strafe facing. */
 	bool bIsAiming = false;
+
+	bool bIsSprinting = false;
+	bool bIsLeftShoulder = false;
+	float CachedWalkSpeed = 0.f;
+	float CachedSprintSpeed = 0.f;
+	float CachedAimSpeed = 0.f;
+	float CachedNormalBoomLength = 0.f;
+	float CachedAimBoomLength = 0.f;
+	float CachedNormalFOV = 0.f;
+	float CachedAimFOV = 0.f;
+	FVector CachedShoulderOffset = FVector::ZeroVector;
 
 	/** Previous mirrored health, used to detect "just took damage" for hit protection. */
 	float LastMirroredHealth = 0.f;
@@ -206,4 +301,11 @@ protected:
 	/** M3: last world-space movement intent, used when collision has already zeroed velocity. */
 	FVector LastMoveDirection = FVector::ZeroVector;
 	float LastMoveInputTime = -100.f;
+
+        ESlimeGrenadeType SelectedGrenadeType = ESlimeGrenadeType::Assimilation;
+        ESlimeFaction SelectedGrenadeFaction = ESlimeFaction::A;
+        int32 AssimilationGrenades = 3;
+        int32 TornadoGrenades = 3;
+        float GrenadeCooldownRemaining = 0.f;
+	float TotalDamageTaken = 0.f;
 };

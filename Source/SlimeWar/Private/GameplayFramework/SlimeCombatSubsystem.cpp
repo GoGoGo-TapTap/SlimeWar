@@ -7,6 +7,8 @@
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarCVars.h"
 #include "Core/SlimeWarLog.h"
+#include "Ecology/SlimeWeakpointComponent.h"
+#include "Ecology/SlimeEcologyEnemy.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameplayEffect.h"
@@ -83,6 +85,10 @@ void USlimeCombatSubsystem::ApplyDamageTo(AActor* Target, float Amount, AActor* 
 	if (USlimeHealthComponent* Health = Target->FindComponentByClass<USlimeHealthComponent>())
 	{
 		Health->ApplyDamage(Amount, Causer);
+		if (ASlimeEcologyEnemy* Enemy = Cast<ASlimeEcologyEnemy>(Target))
+		{
+			Enemy->NotifyCombatDamage(Causer);
+		}
 		return;
 	}
 
@@ -94,4 +100,24 @@ void USlimeCombatSubsystem::ApplyDamageTo(AActor* Target, float Amount, AActor* 
 			TEXT("ApplyDamageTo: %s has no damage path (no ASC, no USlimeHealthComponent), %.2f damage dropped."),
 			*GetNameSafe(Target), Amount);
 	}
+}
+
+void USlimeCombatSubsystem::ApplyDamageToComponent(
+	AActor* Target,
+	UPrimitiveComponent* HitComponent,
+	float Amount,
+	AActor* Causer)
+{
+	if (Target && HitComponent && Amount > 0.f)
+	{
+		if (USlimeWeakpointComponent* Weakpoint = Cast<USlimeWeakpointComponent>(HitComponent))
+		{
+			if (Weakpoint->TryExecute(Target, Causer))
+			{
+				return;
+			}
+		}
+	}
+
+	ApplyDamageTo(Target, Amount, Causer);
 }

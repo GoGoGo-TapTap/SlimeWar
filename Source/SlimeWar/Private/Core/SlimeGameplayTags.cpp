@@ -12,14 +12,6 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_State_Weapon_Reloading, "State.Weapon.Reloading");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Weapon_Cooldown, "State.Weapon.Cooldown");
 
 // Enemy AI state
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Normal_Idle, "State.Enemy.Normal.Idle");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Normal_Fusing, "State.Enemy.Normal.Fusing");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Normal_MassLocked, "State.Enemy.Normal.MassLocked");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Aggro_Chasing, "State.Enemy.Aggro.Chasing");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Aggro_WindingUp, "State.Enemy.Aggro.WindingUp");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Aggro_Recovering, "State.Enemy.Aggro.Recovering");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Enemy_Aggro_Cooling, "State.Enemy.Aggro.Cooling");
-
 // Reserved
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Player_Stunned, "State.Player.Stunned");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Player_Shielded, "State.Player.Shielded");

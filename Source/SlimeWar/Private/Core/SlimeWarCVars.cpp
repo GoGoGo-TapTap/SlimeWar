@@ -19,11 +19,11 @@ namespace SlimeCVars
 		TEXT("Draw enemy state tags, activity radius and fusion target links above each enemy."),
 		ECVF_Cheat);
 
-	int32 DebugCrosshair = 1;
+	int32 DebugCrosshair = 0;
 	static FAutoConsoleVariableRef CVarDebugCrosshair(
 		TEXT("Slime.Debug.Crosshair"),
 		DebugCrosshair,
-		TEXT("Draw the placeholder crosshair until the Phase D HUD replaces it. 0 = off."),
+		TEXT("Draw the C++ placeholder crosshair. Default off; the UI blueprint owns the crosshair."),
 		ECVF_Cheat);
 
 	int32 DebugDrawAimAssist = 0;
@@ -40,19 +40,34 @@ namespace SlimeCVars
 		TEXT("Draw fusion pairs (colour = state), contact progress, meeting points and cooldowns."),
 		ECVF_Cheat);
 
-	int32 DebugDrawAggroPath = 1;
+	int32 DebugDrawEcologyState = 0;
+	static FAutoConsoleVariableRef CVarDebugDrawEcologyState(
+		TEXT("Slime.Debug.DrawEcologyState"),
+		DebugDrawEcologyState,
+		TEXT("Draw mass, health, fusion, brain, body, stun, cargo and credit state above ecology slimes. ")
+		TEXT("Default off; 1 = on."),
+		ECVF_Cheat);
+
+	int32 DebugDrawAggroPath = 0;
 	static FAutoConsoleVariableRef CVarDebugDrawAggroPath(
 		TEXT("Slime.Debug.DrawAggroPath"),
 		DebugDrawAggroPath,
 		TEXT("Draw aggro slimes: cyan = planned nav path, orange trail = where it actually went, ")
-		TEXT("plus a label with move status and speed."),
+		TEXT("plus a label with move status and speed. Default off."),
 		ECVF_Cheat);
 
-	int32 DebugDrawRun = 1;
+	int32 DebugDrawRun = 0;
 	static FAutoConsoleVariableRef CVarDebugDrawRun(
 		TEXT("Slime.Debug.DrawRun"),
 		DebugDrawRun,
-		TEXT("Draw the Phase C run HUD: score, countdown, point states and live enemy counts. 0 = off."),
+		TEXT("Draw the C++ run HUD: score, countdown, faction sites, minerals and ledger. Default off."),
+		ECVF_Cheat);
+
+	int32 DebugPaint = 1;
+	static FAutoConsoleVariableRef CVarDebugPaint(
+		TEXT("Slime.Debug.Paint"),
+		DebugPaint,
+		TEXT("Draw accumulated paint splats while the art-owned paint material is not assigned."),
 		ECVF_Cheat);
 
 	float RunTimeScale = 1.f;
