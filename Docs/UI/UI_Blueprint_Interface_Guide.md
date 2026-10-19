@@ -99,10 +99,31 @@
 
 ### `SlimePauseWidget.h` / `SlimeResultWidget` / `SlimeSettingsWidget`
 
+**Pause / Result**
+
 | 项               | 类型   | 内容         | 蓝图   |
 | --------------- | ---- | ---------- | ---- |
 | `RequestQuit()` | 语义变更 | 转发到"回主菜单"  | 见 §5 |
 | 其他函数与事件         | 不变   | 签名与触发时机都没动 | 不变   |
+
+**Settings（本次）**
+
+| 项                                            | 类型     | 内容                                              | 蓝图        |
+| -------------------------------------------- | ------ | ----------------------------------------------- | --------- |
+| `SetResolution(int32 Width, int32 Height)`   | 不变     | 只暂存；非正值忽略；触发 `OnSettingsValuesChanged`            | 用：分辨率下拉   |
+| `SetFullscreenMode(int32 Mode)`              | 不变     | 0 窗口化 / 1 全屏 / 2 无边框；越界按 2                     | 用：窗口模式下拉  |
+| `GetResolution()` / `GetFullscreenMode()`     | 不变     | 回读待应用值                                          | 用：回填      |
+| `GetSupportedResolutions(TArray<FIntPoint>&)` | 行为变更   | 追加当前 / 桌面、过滤非正值、按面积稳定排序                         | 用：填下拉     |
+| `ApplySettings()`                            | 行为变更   | 下发前校验分辨率，绝不写 0×0；应用并保存                           | 用：应用      |
+| `ResetSettings()`                            | 行为变更   | `SetToDefaults` 后桌面兜底；只暂存不应用                     | 用：重置      |
+| `ReturnToPreviousMenu()`                     | 行为变更   | `ReturnWidget` 失效时回退 `USlimeUISubsystem::ShowMainMenu()` | 用：返回      |
+| `SetReturnWidget(UUserWidget*)`               | 不变     | 由 `OpenSettings()` 调用                            | 不要接       |
+| `OnSettingsValuesChanged()`                   | 不变     | 暂存 / 应用 / 重置后触发                                  | **必须实现**  |
+| `GetMasterVolume()` / `SetMasterVolume(float)` | 本期不用   | 签名保留，等音量方案                                      | 不要接       |
+
+> `ApplyMasterVolumeToAudio()`（`SlimeSettingsWidget.h:67-68`、`.cpp:165-170`）仍是刻意空实现，本期不动。
+> 本次没有新增或删除公开函数，只有 `GetSupportedResolutions`、`ApplySettings`、`ResetSettings`、`ReturnToPreviousMenu` 四个行为变更。
+> WBP 侧步骤见 `Docs/UI/UI_Settings_Implementation.md`。
 
 ### `SlimeGameSettings.h` / `SlimeLevelDefinition.h`（配置类）
 

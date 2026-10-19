@@ -3,21 +3,9 @@
 	<GameParameters>
 		<WorkUnit Name="Default Work Unit" ID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}" PersistMode="Standalone">
 			<ChildrenList>
-				<GameParameter Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}">
-					<PropertyList>
-						<Property Name="InitialValue" Type="Real64" Value="0"/>
-					</PropertyList>
-				</GameParameter>
-				<GameParameter Name="bgm" ID="{2C5223D6-CBDE-4762-8057-32F31A76C5EB}">
-					<PropertyList>
-						<Property Name="InitialValue" Type="Real64" Value="0"/>
-					</PropertyList>
-				</GameParameter>
-				<GameParameter Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}">
-					<PropertyList>
-						<Property Name="InitialValue" Type="Real64" Value="0"/>
-					</PropertyList>
-				</GameParameter>
+				<GameParameter Name="sfx" ID="{23A23A39-28CD-43E5-937F-6BE65E176D5C}"/>
+				<GameParameter Name="bgm" ID="{2C5223D6-CBDE-4762-8057-32F31A76C5EB}"/>
+				<GameParameter Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}"/>
 			</ChildrenList>
 		</WorkUnit>
 	</GameParameters>

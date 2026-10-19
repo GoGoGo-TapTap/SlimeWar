@@ -523,7 +523,13 @@
 									</ActiveSourceList>
 								</Sound>
 								<RandomSequenceContainer Name="move" ID="{9B103A57-9B94-43CC-9FA3-6CD0DC2D9B69}" ShortID="16599822">
+									<PropertyList>
+										<Property Name="3DSpatialization" Type="int16" Value="2"/>
+									</PropertyList>
 									<ReferenceList>
+										<Reference Name="Attenuation">
+											<ObjectRef Name="move" ID="{23762F1F-A55E-4981-A5D9-43073F076023}" WorkUnitID="{F10ED929-D4A6-4E9C-8920-C90BBFED32F1}"/>
+										</Reference>
 										<Reference Name="Conversion">
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
 										</Reference>
