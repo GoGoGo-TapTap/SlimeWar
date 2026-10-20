@@ -7,6 +7,7 @@
 #include "SlimeGameSettings.generated.h"
 
 class UGameplayEffect;
+class USlimeAudioConfig;
 class USlimeLevelDefinition;
 class USlimeRunConfig;
 class UUserWidget;
@@ -119,6 +120,18 @@ public:
 	/** Fallback settlement orbit camera, used when the level does not configure one. */
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	FSoftObjectPath ResultSequence;
+
+	// -- Audio --
+
+	/**
+	 * Event table for the C++ side (USlimeAudioConfig).
+	 *
+	 * Leaving it empty is supported: the subsystem falls back to the class defaults, which already
+	 * point at the real Wwise events. Create the asset only when sound design needs to repoint an
+	 * event without a recompile.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<USlimeAudioConfig> AudioConfig;
 
 	/**
 	 * Editor convenience: start PIE directly on the preparation screen of the current map instead of

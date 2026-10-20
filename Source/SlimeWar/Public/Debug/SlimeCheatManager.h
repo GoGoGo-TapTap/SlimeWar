@@ -435,4 +435,21 @@ private:
 	bool bEcologyFusionAutoTest = false;
 	bool bEcologyFusionInterruptTest = false;
 	int32 GroundingTestStage = 0;
+
+public:
+	// -- Audio --
+
+	/** Print the resolved audio events and which config object is in use. */
+	UFUNCTION(Exec)
+	void SlimeAudioDump();
+
+	/**
+	 * Play one audio event on the player pawn.
+	 * Index as printed by SlimeAudioDump; Loop=1 toggles a looping event on and off.
+	 */
+	UFUNCTION(Exec)
+	void SlimeAudioTest(int32 Index = 0, int32 Loop = 0);
+
+private:
+	uint32 AudioTestLoopID = 0;
 };

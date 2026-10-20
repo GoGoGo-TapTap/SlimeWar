@@ -2,6 +2,8 @@
 
 #include "Debug/SlimeCheatManager.h"
 
+#include "AkAudioEvent.h"
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -4336,4 +4338,64 @@ void USlimeCheatManager::SlimePause()
 	}
 
 	UE_LOG(LogSlimeWar, Error, TEXT("SlimePause: the UI subsystem is unavailable."));
+}
+
+void USlimeCheatManager::SlimeAudioDump()
+{
+	USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this);
+	if (!Audio)
+	{
+		UE_LOG(LogSlimeWar, Log, TEXT("SlimeAudioDump: no USlimeAudioSubsystem (not a game world?)."));
+		return;
+	}
+
+	const USlimeAudioConfig* Config = Audio->GetConfig();
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeAudioDump: config=%s"), *GetNameSafe(Config));
+
+	const int32 Total = static_cast<int32>(ESlimeAudioEvent::Count);
+	for (int32 Index = 0; Index < Total; ++Index)
+	{
+		const ESlimeAudioEvent Event = static_cast<ESlimeAudioEvent>(Index);
+		UAkAudioEvent* Asset = Config ? Config->GetEvent(Event) : nullptr;
+		UE_LOG(LogSlimeWar, Log, TEXT("  [%d] %s"), Index,
+			Asset ? *Asset->GetName() : TEXT("<missing>"));
+	}
+}
+
+void USlimeCheatManager::SlimeAudioTest(int32 Index, int32 Loop)
+{
+	USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this);
+	APlayerController* PlayerController = GetOuterAPlayerController();
+	AActor* Emitter = PlayerController ? PlayerController->GetPawn() : nullptr;
+	if (!Audio || !Emitter)
+	{
+		UE_LOG(LogSlimeWar, Log, TEXT("SlimeAudioTest: no audio subsystem or no player pawn."));
+		return;
+	}
+
+	if (Index < 0 || Index >= static_cast<int32>(ESlimeAudioEvent::Count))
+	{
+		UE_LOG(LogSlimeWar, Warning, TEXT("SlimeAudioTest: index %d is out of range."), Index);
+		return;
+	}
+
+	const ESlimeAudioEvent Event = static_cast<ESlimeAudioEvent>(Index);
+
+	if (Loop != 0)
+	{
+		// Toggle, so the same command is also how you stop the loop again.
+		if (AudioTestLoopID != USlimeAudioSubsystem::InvalidPlayingID)
+		{
+			Audio->StopLoop(AudioTestLoopID);
+			UE_LOG(LogSlimeWar, Log, TEXT("SlimeAudioTest: loop stopped."));
+			return;
+		}
+
+		AudioTestLoopID = Audio->PlayLoop(Event, Emitter);
+		UE_LOG(LogSlimeWar, Log, TEXT("SlimeAudioTest: loop [%d] -> id %u"), Index, AudioTestLoopID);
+		return;
+	}
+
+	const uint32 PlayingID = Audio->PlayEvent(Event, Emitter);
+	UE_LOG(LogSlimeWar, Log, TEXT("SlimeAudioTest: [%d] -> id %u"), Index, PlayingID);
 }

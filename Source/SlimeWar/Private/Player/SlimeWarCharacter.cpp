@@ -3,6 +3,7 @@
 #include "Player/SlimeWarCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "CollisionQueryParams.h"
 #include "Components/CapsuleComponent.h"
@@ -593,6 +594,13 @@ void ASlimeWarCharacter::BeginReloadVisuals(float Duration)
 	bReloadVisualActive = Duration > 0.f;
 	ReloadVisualDuration = FMath::Max(0.f, Duration);
 	ReloadVisualStart = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+
+	// Start of the reload only. EndReloadVisuals() is shared by "finished" and "interrupted", so a
+	// sound there would also fire every time an ability cancel cuts the reload short.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayEvent(ESlimeAudioEvent::WeaponReload, this);
+	}
 }
 
 void ASlimeWarCharacter::EndReloadVisuals()
@@ -802,6 +810,16 @@ void ASlimeWarCharacter::OnFirePressed()
 
 	if (!CanStartCharge())
 	{
+		// Dry fire: an empty magazine cannot start a charge, so this press only clicks. Gated on
+		// "not reloading" because during a reload the reload itself is the feedback.
+		if (Weapon && Weapon->IsMagazineEmpty() && !bReloadVisualActive)
+		{
+			if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+			{
+				Audio->PlayThrottledEvent(ESlimeAudioEvent::WeaponEmpty, this);
+			}
+		}
+
 		if (Weapon && Weapon->IsMagazineEmpty() && AbilitySystem
 			&& !bReloadVisualActive
 			&& !AbilitySystem->HasMatchingGameplayTag(TAG_State_Weapon_Reloading))
@@ -1478,5 +1496,14 @@ bool ASlimeWarCharacter::PerformChargedShot(
 		Shot.TargetActor,
 		Shot.AimPoint,
 		Shot.TargetActor != nullptr);
+
+	// The shot sound belongs here rather than in ConsumeShot(): that one also fires for a shot whose
+	// trajectory never solved (the early returns above still leave the round consumed), so this line
+	// is the only point that means "a shot actually happened".
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayEvent(ESlimeAudioEvent::WeaponFire, this);
+	}
+
 	return true;
 }

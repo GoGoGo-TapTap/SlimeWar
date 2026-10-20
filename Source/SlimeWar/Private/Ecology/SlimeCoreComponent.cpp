@@ -2,6 +2,7 @@
 
 #include "Ecology/SlimeCoreComponent.h"
 
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Components/CapsuleComponent.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarLog.h"
@@ -469,6 +470,14 @@ void USlimeCoreComponent::StartPounce()
 	PreviousPounceLocation = Character->GetActorLocation();
 	PounceRemaining = Rules->PounceDuration;
 	Phase = ESlimeCoreCombatPhase::Pouncing;
+
+	// The leap itself, not the wind-up: Windup can be cancelled by a stun and then never reaches
+	// here, so this is the only point that always matches a real attack.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayGatedEvent(ESlimeAudioEvent::MonsterAttack, GetOwner());
+	}
+
 	Character->LaunchCharacter(
 		FVector(PounceDirection.X * Rules->PounceSpeed,
 			PounceDirection.Y * Rules->PounceSpeed,

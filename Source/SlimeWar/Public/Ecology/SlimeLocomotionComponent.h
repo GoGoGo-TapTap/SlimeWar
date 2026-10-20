@@ -25,6 +25,7 @@ public:
 		float DeltaTime,
 		ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void EndPlay(EEndPlayReason::Type Reason) override;
 
 	void SetMoveGoal(const FVector& InGoal, float InSpeed, float InArrivalRadius = -1.f);
 	void ClearMoveGoal();
@@ -57,6 +58,9 @@ private:
 	bool BuildNavPath(const FVector& From, const FVector& To, TArray<FVector>& OutPoints) const;
 	void StopAtGoal();
 
+	/** Start or stop the looping movement bed from the measured speed. */
+	void UpdateMoveAudio(float DeltaTime);
+
 	bool bHasGoal = false;
 	bool bAtGoal = false;
 	bool bStuckExhausted = false;
@@ -75,4 +79,9 @@ private:
 	FVector ProgressAnchor = FVector::ZeroVector;
 	float TimeWithoutProgress = 0.f;
 	float MaxStuckTime = 0.f;
+
+	/** Playing id of the movement loop, 0 when silent. Owned here because it is per slime. */
+	uint32 MoveLoopPlayingID = 0;
+	float MoveLoopOnSeconds = 0.f;
+	float MoveLoopOffSeconds = 0.f;
 };

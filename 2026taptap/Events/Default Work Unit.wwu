@@ -278,16 +278,6 @@
 												</Reference>
 											</ReferenceList>
 										</Action>
-										<Action Name="" ID="{55C4DFD8-D2C8-47D7-AC17-70FAF3BAB85A}" ShortID="1028011853">
-											<PropertyList>
-												<Property Name="ActionType" Type="int16" Value="2"/>
-											</PropertyList>
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="ui_alert02" ID="{C7B39CDF-0E98-4DC4-B08E-1AF23C399811}" WorkUnitID="{371F7943-F828-4A33-9BC2-C997FBEF016E}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
 									</ChildrenList>
 								</Event>
 							</ChildrenList>
