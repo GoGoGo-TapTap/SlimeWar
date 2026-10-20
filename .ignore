@@ -1,3 +1,4 @@
+/.codex
 /.git
 /.github
 /.vs
@@ -6,8 +7,11 @@
 /Content
 /DerivedDataCache
 /Docs
+/Icon
 /Intermediate
 /Saved
+/Scripts
+/Tools
 /Plugins/Blockouta97b42e05863V12/Content
 /Plugins/Blockouta97b42e05863V12/Intermediate
 /Plugins/Wwise/Content

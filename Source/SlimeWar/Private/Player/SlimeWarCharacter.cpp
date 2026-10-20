@@ -522,6 +522,17 @@ void ASlimeWarCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// Keep the body aimed at the camera when standing still. Movement still uses the character
+	// movement component's orient-to-movement behavior, while aiming already uses controller yaw.
+	if (!bInputBlocked && Controller
+		&& GetVelocity().SizeSquared2D() < FMath::Square(10.f))
+	{
+		const FRotator CurrentRotation = GetActorRotation();
+		const FRotator DesiredRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
+		SetActorRotation(
+			FMath::RInterpTo(CurrentRotation, DesiredRotation, DeltaSeconds, 12.f));
+	}
+
 	ApplyBodyPushToNearbyEcology();
 	GrenadeCooldownRemaining = FMath::Max(0.f, GrenadeCooldownRemaining - DeltaSeconds);
 
