@@ -267,7 +267,8 @@ void ASlimeEcologyEnemy::ApplyFactionVisuals()
 	{
 		WeakpointMesh->SetRelativeLocation(FVector::ZeroVector);
 		WeakpointMesh->SetRelativeScale3D(FVector::OneVector);
-		WeakpointMesh->SetVisibility(Weakpoint && Weakpoint->IsVisible(), true);
+		WeakpointMesh->SetVisibility(
+			Weakpoint && Weakpoint->IsWeakpointActive(), true);
 	}
 
 	if (bBodyMeshChanged && Radius > 0.f)
@@ -294,7 +295,8 @@ void ASlimeEcologyEnemy::RefreshCoreVisuals()
 	}
 	if (WeakpointMesh)
 	{
-		WeakpointMesh->SetVisibility(Weakpoint && Weakpoint->IsVisible(), true);
+		WeakpointMesh->SetVisibility(
+			Weakpoint && Weakpoint->IsWeakpointActive(), true);
 	}
 }
 
