@@ -118,7 +118,8 @@ void USlimePaintSubsystem::RegisterSplat(
 	const FVector& Location,
 	const FLinearColor& Color,
 	float Radius,
-	float Rotation)
+	float Rotation,
+	ESlimeFaction Faction)
 {
 	EnsureRenderTarget();
 	FSlimePaintSplat Splat;
@@ -135,10 +136,25 @@ void USlimePaintSubsystem::RegisterSplat(
 	++SplatCount;
 
 	const USlimeEcologyRules* DefaultRules = GetDefault<USlimeEcologyRules>();
-	const TSoftObjectPtr<UMaterialInterface>& DecalAsset =
-		(Rules && !Rules->PaintDecalMaterial.IsNull())
+	const FSlimeFactionVisual* Visual = Rules
+		? Rules->FindFactionVisual(Faction)
+		: nullptr;
+	if (!Visual || Visual->DecalMaterial.IsNull())
+	{
+		Visual = DefaultRules->FindFactionVisual(Faction);
+	}
+
+	TSoftObjectPtr<UMaterialInterface> DecalAsset;
+	if (Visual && !Visual->DecalMaterial.IsNull())
+	{
+		DecalAsset = Visual->DecalMaterial;
+	}
+	else
+	{
+		DecalAsset = (Rules && !Rules->PaintDecalMaterial.IsNull())
 			? Rules->PaintDecalMaterial
 			: DefaultRules->PaintDecalMaterial;
+	}
 	if (UMaterialInterface* DecalMaterial = DecalAsset.LoadSynchronous())
 	{
 		SpawnPaintDecal(Splat, DecalMaterial);

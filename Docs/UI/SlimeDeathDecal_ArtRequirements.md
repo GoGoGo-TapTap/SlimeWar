@@ -13,39 +13,28 @@
 
 ## 2. 当前资产
 
-- 材质：`/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal`
-- 纹理：`/Game/_SlimeWar/Enemy/Art/T_Slime_Splatter_01`
+- A 材质：`/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal_A`
+- B 材质：`/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal_B`
+- C 材质：`/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal_C`
+- A 纹理：`/Game/_SlimeWar/Enemy/Art/T_Slime_Splatter_01`
+- B 纹理：`/Game/_SlimeWar/Enemy/Art/T_Slime_Splatter_02`
+- C 纹理：`/Game/_SlimeWar/Enemy/Art/T_Slime_Splatter_03`
 
-当前材质是 `Deferred Decal`，可以作为地面投影使用，但目前没有可编辑的阵营颜色参数，所以所有印迹只能是固定颜色。
+三个材质都是 `Deferred Decal`，已经分别引用对应颜色的纹理。程序现在按史莱姆阵营直接选择 A/B/C 材质，不需要额外做颜色参数。
 
 ## 3. 需要美术修改的材质要求
 
-推荐保留一个材质，新增可编辑参数：
+推荐直接使用三套材质：
 
-- 材质域：`Deferred Decal`
-- 混合模式：保持当前可用的 Decal 透明混合
-- `SplatterTexture`：采样 `T_Slime_Splatter_01`
-- `TintColor`：Vector Parameter，默认白色，用于阵营染色
-- `Opacity`：Scalar Parameter，默认约 0.8
+- `M_Slime_Splatter_Decal_A`：采样 `T_Slime_Splatter_01`
+- `M_Slime_Splatter_Decal_B`：采样 `T_Slime_Splatter_02`
+- `M_Slime_Splatter_Decal_C`：采样 `T_Slime_Splatter_03`
+- 材质域统一为 `Deferred Decal`
+- 混合模式和 `Opacity` 保持当前表现
 
-颜色合成建议：
+三个材质应保持相同的形状、尺寸、透明度和投影方式，只改变纹理颜色。
 
-```text
-BaseColor = SplatterTexture.RGB × TintColor
-Opacity   = SplatterTexture.Alpha × Opacity
-```
-
-不要将阵营颜色直接烘死到纹理里，否则后续无法统一调整三个阵营。
-
-如果美术更习惯材质实例，也可以提供：
-
-```text
-MI_Slime_Splatter_A
-MI_Slime_Splatter_B
-MI_Slime_Splatter_C
-```
-
-三个实例都基于同一个材质，只改 `TintColor`。
+如果以后想统一成一个材质，可以给材质增加 `TintColor` Vector Parameter，再把三张纹理改为参数纹理；本期直接使用三套材质即可。
 
 ## 4. 阵营颜色
 
@@ -88,12 +77,14 @@ MI_Slime_Splatter_C
 - 场地边缘和有高差的台阶上不会出现严重拉伸
 - 材质中没有硬编码颜色；颜色来自 `TintColor` 或对应材质实例
 
-## 8. 交付后程序侧对接
+## 8. UE 配置位置
 
-美术完成材质后，程序需要把 Decal 材质按 A/B/C 阵营选择：
+打开 `DA_EcologyRules`，在 `FactionVisuals` 中填写：
 
-- A 使用 A 颜色/material instance
-- B 使用 B 颜色/material instance
-- C 使用 C 颜色/material instance
+- A：`DecalMaterial = M_Slime_Splatter_Decal_A`
+- B：`DecalMaterial = M_Slime_Splatter_Decal_B`
+- C：`DecalMaterial = M_Slime_Splatter_Decal_C`
 
-如果只提供一个带 `TintColor` 参数的材质，程序在创建 Decal 动态材质实例时设置对应阵营颜色。
+`PaintSplatMaterial` 和 `PaintSurfaceMaterial` 可以保持为空；`PaintDecalMaterial` 作为旧回退项可设为 A 材质。
+
+程序已经会按死亡史莱姆的阵营选择 `DecalMaterial`，并给 Decal 生成独立的动态位置、大小和旋转。

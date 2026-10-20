@@ -22,6 +22,10 @@ struct FSlimeFactionVisual
 	/** Material applied to the body and faction-colored attachments. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
 	TSoftObjectPtr<UMaterialInterface> BodyMaterial;
+
+	/** Deferred-decal material for death splats, one per faction. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UMaterialInterface> DecalMaterial;
 };
 
 /**

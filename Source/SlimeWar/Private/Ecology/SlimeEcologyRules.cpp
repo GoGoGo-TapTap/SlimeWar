@@ -36,18 +36,24 @@ USlimeEcologyRules::USlimeEcologyRules()
 	FactionA.BodyMesh = DefaultBody;
 	FactionA.BodyMaterial = TSoftObjectPtr<UMaterialInterface>(
 		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/MI_Slime_FactionA.MI_Slime_FactionA")));
+	FactionA.DecalMaterial = TSoftObjectPtr<UMaterialInterface>(
+		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal_A.M_Slime_Splatter_Decal_A")));
 	FactionVisuals.Add(ESlimeFaction::A, FactionA);
 
 	FSlimeFactionVisual FactionB;
 	FactionB.BodyMesh = DefaultBody;
 	FactionB.BodyMaterial = TSoftObjectPtr<UMaterialInterface>(
 		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/MI_Slime_FactionB.MI_Slime_FactionB")));
+	FactionB.DecalMaterial = TSoftObjectPtr<UMaterialInterface>(
+		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal_B.M_Slime_Splatter_Decal_B")));
 	FactionVisuals.Add(ESlimeFaction::B, FactionB);
 
 	FSlimeFactionVisual FactionC;
 	FactionC.BodyMesh = DefaultBody;
 	FactionC.BodyMaterial = TSoftObjectPtr<UMaterialInterface>(
 		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/MI_Slime_FactionC.MI_Slime_FactionC")));
+	FactionC.DecalMaterial = TSoftObjectPtr<UMaterialInterface>(
+		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal_C.M_Slime_Splatter_Decal_C")));
 	FactionVisuals.Add(ESlimeFaction::C, FactionC);
 
 	FactionColors.Add(ESlimeFaction::A, FactionColorFallback(ESlimeFaction::A));
@@ -65,7 +71,7 @@ USlimeEcologyRules::USlimeEcologyRules()
 	WeakpointMaterial = TSoftObjectPtr<UMaterialInterface>(
 		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/MI_Slime_Weakpoint.MI_Slime_Weakpoint")));
 	PaintDecalMaterial = TSoftObjectPtr<UMaterialInterface>(
-		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal.M_Slime_Splatter_Decal")));
+		FSoftObjectPath(TEXT("/Game/_SlimeWar/Enemy/Art/M_Slime_Splatter_Decal_A.M_Slime_Splatter_Decal_A")));
 }
 
 const USlimeEcologyRules* USlimeEcologyRules::GetFor(const UObject* WorldContextObject)

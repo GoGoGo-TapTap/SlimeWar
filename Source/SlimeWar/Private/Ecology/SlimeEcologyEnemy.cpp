@@ -411,7 +411,8 @@ void ASlimeEcologyEnemy::HandleDeath()
 				GetActorLocation(),
 				Paint->GetFactionColor(Faction),
 				SplatRadius,
-				FMath::FRandRange(0.f, 2.f * PI));
+				FMath::FRandRange(0.f, 2.f * PI),
+				Faction);
 		}
 	}
 

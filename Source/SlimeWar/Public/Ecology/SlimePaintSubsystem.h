@@ -37,7 +37,8 @@ public:
 		const FVector& Location,
 		const FLinearColor& Color,
 		float Radius,
-		float Rotation = 0.f);
+		float Rotation = 0.f,
+		ESlimeFaction Faction = ESlimeFaction::A);
 
 	UTextureRenderTarget2D* GetPaintRenderTarget() const { return PaintRenderTarget; }
 	int32 GetSplatCount() const { return SplatCount; }
