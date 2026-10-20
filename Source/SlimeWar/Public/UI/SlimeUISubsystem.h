@@ -65,6 +65,35 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
 	void RequestQuit();
 
+	/**
+	 * Settlement screen: open the level select page.
+	 *
+	 * Screen switch only - reloading the world here would turn one click into a multi-second black
+	 * screen. The world is reloaded later, when the player actually picks a level.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
+	void RequestLevelSelect();
+
+	/**
+	 * Settlement screen: enter the next level in USlimeGameSettings::Levels.
+	 *
+	 * Lands on that level's preparation screen, never straight into a run: drop point counts differ
+	 * per level, so an index from this run cannot be reused.
+	 *
+	 * @return false when there is no next level, it has no map, or the current level is unknown
+	 *         (PIE on a bare map).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
+	bool RequestNextLevel();
+
+	/** Whether a next level exists, has a map, and is therefore enterable. */
+	UFUNCTION(BlueprintPure, Category = "Slime|UI")
+	bool HasNextLevel() const;
+
+	/** Current level's index in USlimeGameSettings::Levels; INDEX_NONE when unknown. */
+	UFUNCTION(BlueprintPure, Category = "Slime|UI")
+	int32 GetCurrentLevelIndex() const;
+
 	/** Show the level selection screen from the main menu. */
 	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
 	void OpenLevelSelect();
@@ -125,6 +154,9 @@ protected:
 	 */
 	void EnsurePreparationWidget();
 
+	/** Create the aim overlay on demand (Running only). */
+	void EnsureAimPreviewWidget();
+
 	/** Shared loader: soft class -> widget at viewport Z 0, hidden. Null when the class is missing. */
 	UUserWidget* CreateScreenWidget(const TSoftClassPtr<UUserWidget>& WidgetClass, const FString& Label);
 
@@ -148,6 +180,9 @@ protected:
 	TObjectPtr<UUserWidget> PreparationWidget;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> AimPreviewWidget;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UUserWidget> ResultWidget;
 
 	UPROPERTY(Transient)
@@ -158,5 +193,6 @@ protected:
 
 	bool bWidgetsCreated = false;
 	bool bPaused = false;
+
 	ESlimeUIFlowState UIFlowState = ESlimeUIFlowState::MainMenu;
 };

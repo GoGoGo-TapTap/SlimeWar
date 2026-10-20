@@ -36,6 +36,25 @@ const USlimeLevelDefinition* USlimeGameSettings::FindLevelById(FName LevelId) co
 	return nullptr;
 }
 
+int32 USlimeGameSettings::IndexOfLevel(FName LevelId) const
+{
+	if (LevelId.IsNone())
+	{
+		return INDEX_NONE;
+	}
+
+	for (int32 Index = 0; Index < Levels.Num(); ++Index)
+	{
+		const USlimeLevelDefinition* Definition = Levels[Index].LoadSynchronous();
+		if (Definition && Definition->LevelId == LevelId)
+		{
+			return Index;
+		}
+	}
+
+	return INDEX_NONE;
+}
+
 const USlimeLevelDefinition* USlimeGameSettings::FindLevelByMapName(const FString& MapName) const
 {
 	if (MapName.IsEmpty())

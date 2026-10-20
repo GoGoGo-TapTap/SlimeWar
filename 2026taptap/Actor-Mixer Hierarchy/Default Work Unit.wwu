@@ -1536,6 +1536,11 @@
 												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
 												<Property Name="TrimBegin" Type="Real64" Value="0.153382412549957"/>
 												<Property Name="TrimEnd" Type="Real64" Value="1.11750044137482"/>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>-8</Value>
+													</ValueList>
+												</Property>
 											</PropertyList>
 											<Language>SFX</Language>
 											<AudioFile>ui_alert01.wav</AudioFile>
@@ -1636,6 +1641,13 @@
 									</ReferenceList>
 									<ChildrenList>
 										<AudioFileSource Name="ui_alert02" ID="{3AF8F821-D7CC-4A2F-ABBD-79194B0ECD8F}">
+											<PropertyList>
+												<Property Name="VolumeOffset" Type="Real64">
+													<ValueList>
+														<Value>-3</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
 											<Language>SFX</Language>
 											<AudioFile>ui_alert02.wav</AudioFile>
 											<MediaIDList>

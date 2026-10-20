@@ -52,6 +52,14 @@ public:
 	/** Level definition by stable id; null when nothing matches (including an empty id). */
 	const USlimeLevelDefinition* FindLevelById(FName LevelId) const;
 
+	/**
+	 * Position of a level in Levels, or INDEX_NONE when the id is empty or unknown.
+	 *
+	 * This is what "next level" is built on: index + 1 in the configured order. Deliberately not a
+	 * name comparison, so reordering the list moves the progression with it.
+	 */
+	int32 IndexOfLevel(FName LevelId) const;
+
 	/** Resolve a level when a map is opened directly in PIE or by a console Open command. */
 	const USlimeLevelDefinition* FindLevelByMapName(const FString& MapName) const;
 
@@ -66,6 +74,13 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> HUDWidgetClass;
+
+	/**
+	 * Aim overlay (charge ring + crosshairs). Created and shown only while the run is Running.
+	 * Leaving it empty keeps the game playable without a crosshair, so it degrades like the others.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UUserWidget> AimPreviewWidgetClass;
 
 	/**
 	 * Fallback drop point screen, used when the current level does not configure its own

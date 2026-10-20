@@ -64,8 +64,14 @@ public:
 	void OnSettingsValuesChanged();
 
 protected:
-	/** Reserved for Wwise 2024.1.8.8898 RTPC integration. Currently a deliberate no-op. */
-	void ApplyMasterVolumeToAudio();
+	/**
+	 * A resolution that is safe to display and to apply, resolved in this order:
+	 * current screen -> desktop -> largest supported -> 1280x720.
+	 *
+	 * Shared by construct, reset and apply on purpose: writing that chain three times is how one of
+	 * them ends up writing 0x0 (which then persists into GameUserSettings.ini).
+	 */
+	FIntPoint ResolveValidResolution(const class UGameUserSettings* UserSettings) const;
 
 	TWeakObjectPtr<UUserWidget> ReturnWidget;
 	float PendingMasterVolume = 1.0f;

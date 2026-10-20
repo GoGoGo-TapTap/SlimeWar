@@ -18,6 +18,9 @@ class USlimePlayerAttributeSet;
 class USlimeRunConfig;
 class USlimeWeaponComponent;
 class USlimeAimAssistComponent;
+class UMaterialInstanceDynamic;
+class UMaterialInterface;
+class UPostProcessComponent;
 class USpringArmComponent;
 struct FInputActionValue;
 
@@ -308,4 +311,33 @@ protected:
         int32 TornadoGrenades = 3;
         float GrenadeCooldownRemaining = 0.f;
 	float TotalDamageTaken = 0.f;
+
+	// -- Presentation: hurt indicator (U-C7) --
+
+	/**
+	 * Screen-edge red flash, driven through a post process component attached to this character.
+	 *
+	 * A component (rather than a PostProcessVolume per level) means every map gets the effect
+	 * without anyone remembering to place an actor; the blendable material is assigned on the BP.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Presentation")
+	TObjectPtr<UPostProcessComponent> HurtPostProcess;
+
+	/** Overwrites the material used for the flash; empty keeps the fallback path hard-coded below. */
+	UPROPERTY(EditDefaultsOnly, Category = "Slime|Presentation")
+	TObjectPtr<UMaterialInterface> HurtIndicatorMaterial;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> HurtIndicatorMID;
+
+	/** Current red-screen intensity, 0..1. */
+	float HurtIndicatorAlpha = 0.f;
+
+	/** 0..1/seconds decay applied after a hit; the low-health floor is separate. */
+	float HurtIndicatorDecay = 0.f;
+
+	UFUNCTION()
+	void HandlePlayerDamagedForIndicator(FVector DamageDirection);
+
+	void UpdateHurtIndicator(float DeltaSeconds);
 };

@@ -34,7 +34,7 @@
 | `MainMenuWidgetClass` | `/Game/_SlimeWar/UI/WBP_SlimeMainMenu.WBP_SlimeMainMenu_C` | 主菜单 |
 | `SettingsWidgetClass` | `/Game/_SlimeWar/UI/WBP_SlimeSettings.WBP_SlimeSettings_C` | 设置页 |
 | `LevelSelectWidgetClass` | `/Game/_SlimeWar/UI/WBP_SlimeLevelSelect.WBP_SlimeLevelSelect_C` | 选关页 |
-| `Levels` | `DA_Level_DoublePoint`、`DA_Level_ThreePoint` | 选关槽位，顺序即槽位顺序 |
+| `Levels` | `DA_Level_DoublePoint`、`DA_Level_ThreePoint`、`DA_Level_CityPlaza` | 选关槽位，顺序即槽位顺序；第 3 项是旧白盒，非正式关 |
 | `bSkipMainMenuInPIE` | `false` | 仅编辑器调试用；正式流程从主菜单开始 |
 
 全局文件：`Config/DefaultGame.ini`。
@@ -362,12 +362,17 @@ C = (0.71, 0.61, 1.00) 紫色
 +Levels=/Game/_SlimeWar/Core/Data/Levels/DA_Level_<LevelName>.DA_Level_<LevelName>
 ```
 
-当前已有两行：
+当前已有三行（顺序 = 槽位；第 3 项为旧白盒，只用于回归/调试）：
 
 ```ini
 +Levels=/Game/_SlimeWar/Core/Data/Levels/DA_Level_DoublePoint.DA_Level_DoublePoint
 +Levels=/Game/_SlimeWar/Core/Data/Levels/DA_Level_ThreePoint.DA_Level_ThreePoint
++Levels=/Game/_SlimeWar/Core/Data/Levels/DA_Level_CityPlaza.DA_Level_CityPlaza
 ```
+
+> 注意：`DA_Level_CityPlaza` 有 `MapAsset`，所以 `IsLevelAvailable` 为真、`HasNextLevel` 也会成立。
+> 从三点关结算点"下一关"会进白盒图。要么删掉第三行，要么给 `USlimeLevelDefinition` 加 `bPlayable`
+> 让"下一关"与选关页跳过它（详见 `Docs/UI/UI_改动补丁_框架对齐.md` §A.6）。
 
 也可以在 **Project Settings → Game → Slime War → Levels** 里加数组项。
 当前选关 UI 预留 4 个槽位，但 `GetConfiguredLevelCount()` 只返回真实配置数；
