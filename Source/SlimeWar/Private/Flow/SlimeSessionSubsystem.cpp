@@ -61,6 +61,13 @@ bool USlimeSessionSubsystem::ConsumeMainMenuRequest()
 	return bPending;
 }
 
+bool USlimeSessionSubsystem::ConsumeLevelSelectRequest()
+{
+	const bool bPending = bLevelSelectPending;
+	bLevelSelectPending = false;
+	return bPending;
+}
+
 const USlimeLevelDefinition* USlimeSessionSubsystem::GetSelectedLevelDefinition() const
 {
 	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();

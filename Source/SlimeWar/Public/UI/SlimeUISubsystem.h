@@ -163,6 +163,15 @@ protected:
 	void ApplyMenuState(ESlimeUIFlowState NewState);
 	bool ShouldEnterGameplay() const;
 
+	/**
+	 * Blend the player controller's view target to the CameraActor whose Outliner label matches the
+	 * state's camera (Camera_MainMenu / Camera_LevelSelect / Camera_Prepare). Called from
+	 * ApplyMenuState and ApplyPhaseToScreens so the camera follows the UI flow without any WBP
+	 * needing to drive it. A world that does not place the matching camera just keeps the current
+	 * view target, so missing cameras degrade silently.
+	 */
+	void FocusMenuCamera(ESlimeUIFlowState State);
+
 	void SetUIOnlyInput();
 	void SetGameInput();
 	void SetPauseState(bool bNewPaused);

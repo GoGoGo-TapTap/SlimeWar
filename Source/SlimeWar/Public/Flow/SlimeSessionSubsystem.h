@@ -64,6 +64,21 @@ public:
 	/** Read-and-clear, consumed exactly once by the UI subsystem that comes up after the reload. */
 	bool ConsumeMainMenuRequest();
 
+	/**
+	 * The next world must show the level select page directly, skipping the main menu.
+	 *
+	 * Used by "return to level select" buttons reached from a gameplay world (pause/result). The
+	 * gameplay world never creates a LevelSelectWidget, so the only way back to the picker is to
+	 * travel to L_MainMenu and have its SetupUI see this intent and apply LevelSelect instead of
+	 * MainMenu. Mirrors RequestMainMenu exactly on purpose.
+	 */
+	void RequestLevelSelect() { bLevelSelectPending = true; }
+
+	bool HasLevelSelectRequest() const { return bLevelSelectPending; }
+
+	/** Read-and-clear, consumed exactly once by the UI subsystem that comes up after the reload. */
+	bool ConsumeLevelSelectRequest();
+
 	/** Retry path: the next world should skip the preparation screen and deploy immediately. */
 	void RequestAutoDeploy() { bAutoDeployPending = true; }
 
@@ -96,4 +111,5 @@ private:
 	bool bAutoDeployPending = false;
 	bool bEnterGameplayPending = false;
 	bool bMainMenuPending = false;
+	bool bLevelSelectPending = false;
 };

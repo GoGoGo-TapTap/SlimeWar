@@ -3,9 +3,11 @@
 #include "UI/SlimeUISubsystem.h"
 
 #include "Blueprint/UserWidget.h"
+#include "Camera/CameraActor.h"
 #include "Core/SlimeWarLog.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Flow/RunSubsystem.h"
 #include "Flow/SlimeSessionSubsystem.h"
 #include "Flow/SlimeRunGameState.h"
@@ -124,6 +126,16 @@ void USlimeUISubsystem::SetupUI()
 
 	USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
 
+	// "Go straight to the level select page" is the most specific intent here, so it is consumed
+	// first - a RequestLevelSelect issued by RequestLevelSelect() (reached from a gameplay world)
+	// would otherwise be silently dropped by the MainMenu path below.
+	const bool bLevelSelectRequested = Session && Session->ConsumeLevelSelectRequest();
+	if (bLevelSelectRequested)
+	{
+		ApplyMenuState(ESlimeUIFlowState::LevelSelect);
+		return;
+	}
+
 	// "Leave the run" is the only request that may override the editor's PIE shortcut, so it is
 	// consumed before ShouldEnterGameplay() is asked anything.
 	const bool bMainMenuRequested = Session && Session->ConsumeMainMenuRequest();
@@ -197,6 +209,42 @@ void USlimeUISubsystem::SetupUI()
 void USlimeUISubsystem::ApplyBoundPhaseToScreens()
 {
 	ApplyPhaseToScreens(BoundGameState.IsValid() ? BoundGameState->GetRunState() : ESlimeRunState::Idle);
+}
+
+void USlimeUISubsystem::FocusMenuCamera(ESlimeUIFlowState State)
+{
+	// The camera follows the UI flow rather than the other way around. Each WBP just calls into the
+	// UI subsystem to switch pages; the same call site now also re-aims the view target, so no WBP
+	// has to know which CameraActor belongs to which screen.
+	APlayerController* PC = GetPlayerController();
+	UWorld* World = GetWorld();
+	if (!PC || !World)
+	{
+		return;
+	}
+
+	FName CameraLabel;
+	switch (State)
+	{
+	case ESlimeUIFlowState::MainMenu:    CameraLabel = TEXT("Camera_MainMenu");    break;
+	case ESlimeUIFlowState::LevelSelect: CameraLabel = TEXT("Camera_LevelSelect"); break;
+	case ESlimeUIFlowState::Preparation:  CameraLabel = TEXT("Camera_Prepare");     break;
+	default:
+		return;
+	}
+
+	// Match by the Outliner label rather than the UObject name: the level author names the actor in
+	// the editor ("Camera_MainMenu"), and GetActorLabel returns exactly that string in PIE and in
+	// packaged builds. A world that does not place the matching camera just keeps the view target,
+	// so missing cameras degrade silently.
+	for (TActorIterator<ACameraActor> It(World); It; ++It)
+	{
+		if (It->GetActorLabel() == CameraLabel.ToString())
+		{
+			PC->SetViewTargetWithBlend(*It, 0.5f, EViewTargetBlendFunction::VTBlend_Cubic);
+			return;
+		}
+	}
 }
 
 void USlimeUISubsystem::EnsureWidgets()
@@ -444,6 +492,7 @@ void USlimeUISubsystem::ApplyMenuState(ESlimeUIFlowState NewState)
 			UE_LOG(LogSlimeWar, Error,
 				TEXT("USlimeUISubsystem: MainMenuWidget is unavailable; the game cannot present its entry screen."));
 		}
+		FocusMenuCamera(NewState);
 		SetUIOnlyInput();
 		break;
 
@@ -459,6 +508,7 @@ void USlimeUISubsystem::ApplyMenuState(ESlimeUIFlowState NewState)
 			ApplyMenuState(ESlimeUIFlowState::MainMenu);
 			return;
 		}
+		FocusMenuCamera(NewState);
 		SetUIOnlyInput();
 		break;
 
@@ -537,6 +587,9 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		ShowHud(HUDWidget, false);
 		ShowAim(AimPreviewWidget, false);
 		Show(ResultWidget, false);
+		// Camera_Prepare only exists in gameplay worlds (the menu world never reaches Idle), so
+		// this is a no-op there and the view target stays on whichever menu camera was last set.
+		FocusMenuCamera(UIFlowState);
 		SetUIOnlyInput();
 		break;
 
@@ -666,13 +719,12 @@ void USlimeUISubsystem::ReturnToMainMenu()
 		SetPauseState(false);
 	}
 
-	const FString LevelName = UGameplayStatics::GetCurrentLevelName(this, /*bRemovePrefixString=*/true);
-	if (LevelName.IsEmpty())
-	{
-		UE_LOG(LogSlimeWar, Error,
-			TEXT("USlimeUISubsystem::ReturnToMainMenu: could not resolve the current level name."));
-		return;
-	}
+	// The project now ships a dedicated L_MainMenu world (with the three menu cameras), so "return
+	// to the main menu" leaves the gameplay world entirely rather than reloading the current level
+	// and overlaying the main menu UI on top of it. The old reload-current-level path only existed
+	// because there was no separate menu world; the camera follow (FocusMenuCamera) only works when
+	// the menu cameras actually live in the loaded world.
+	static const FName MainMenuLevelName = TEXT("L_MainMenu");
 
 	if (USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this))
 	{
@@ -685,8 +737,8 @@ void USlimeUISubsystem::ReturnToMainMenu()
 		Session->RequestMainMenu();
 	}
 
-	UE_LOG(LogSlimeWar, Log, TEXT("USlimeUISubsystem: returning to the main menu by reloading '%s'."), *LevelName);
-	UGameplayStatics::OpenLevel(this, FName(*LevelName));
+	UE_LOG(LogSlimeWar, Log, TEXT("USlimeUISubsystem: returning to the main menu by loading '%s'."), *MainMenuLevelName.ToString());
+	UGameplayStatics::OpenLevel(this, MainMenuLevelName);
 }
 
 void USlimeUISubsystem::RequestRetry()
@@ -806,19 +858,29 @@ void USlimeUISubsystem::RequestLevelSelect()
 		SetPauseState(false);
 	}
 
-	if (!LevelSelectWidget)
+	// The menu world always has the level select widget (EnsureWidgets creates it unconditionally),
+	// so "back to level select" from there is a pure screen switch. The gameplay world never
+	// creates one (EnsureWidgets only builds menu widgets when ShouldEnterGameplay is false), so
+	// reaching the picker from a run means travelling to L_MainMenu and letting its SetupUI see the
+	// level-select intent via USlimeSessionSubsystem::RequestLevelSelect.
+	if (LevelSelectWidget)
 	{
-		// Without a picker the player would be stuck on the settlement screen: fall back to the one
-		// screen that always exists.
-		UE_LOG(LogSlimeWar, Warning,
-			TEXT("USlimeUISubsystem::RequestLevelSelect: no level select widget, falling back to the main menu."));
-		ReturnToMainMenu();
+		ApplyMenuState(ESlimeUIFlowState::LevelSelect);
 		return;
 	}
 
-	// Screen switch only. Reloading the world here would make "select level" a several-second
-	// black screen; the reload happens when a level is actually picked.
-	ApplyMenuState(ESlimeUIFlowState::LevelSelect);
+	if (USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this))
+	{
+		Session->ClearSelectedDropPoint();
+		Session->ClearSelectedLevelId();
+		Session->RequestLevelSelect();
+	}
+
+	static const FName MainMenuLevelName = TEXT("L_MainMenu");
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("USlimeUISubsystem: leaving the run for the level select page in '%s'."),
+		*MainMenuLevelName.ToString());
+	UGameplayStatics::OpenLevel(this, MainMenuLevelName);
 }
 
 void USlimeUISubsystem::HandlePauseRequested()
