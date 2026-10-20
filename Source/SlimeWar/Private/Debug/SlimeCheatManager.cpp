@@ -2077,7 +2077,8 @@ void USlimeCheatManager::SlimePaintTest()
                                 ? Paint->GetFactionColor(ESlimeFaction::A)
                                 : Paint->GetFactionColor(ESlimeFaction::B),
                         55.f + Index * 6.f,
-                        Index * 0.4f);
+                        Index * 0.4f,
+                        Index % 2 == 0 ? ESlimeFaction::A : ESlimeFaction::B);
         }
         SlimePaintStatus();
         if (APlayerController* PlayerController = GetPlayerController())

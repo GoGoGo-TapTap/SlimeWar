@@ -742,7 +742,8 @@ void USlimeCoreComponent::Detonate()
 			Origin,
 			Paint->GetFactionColor(Enemy->GetFaction()),
 			Radius * 0.65f,
-			FMath::FRandRange(0.f, 2.f * PI));
+			FMath::FRandRange(0.f, 2.f * PI),
+			Enemy->GetFaction());
 	}
         DrawDebugSphere(
                 GetWorld(),
