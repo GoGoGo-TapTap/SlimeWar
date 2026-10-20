@@ -2,7 +2,9 @@
 
 #include "Ecology/SlimeLocomotionComponent.h"
 
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Components/CapsuleComponent.h"
+#include "Core/SlimeHealthComponent.h"
 #include "Ecology/SlimeBodyInteractionComponent.h"
 #include "Ecology/SlimeEcologyBrainComponent.h"
 #include "Ecology/SlimeEcologyEnemy.h"
@@ -159,6 +161,10 @@ void USlimeLocomotionComponent::TickComponent(
 	{
 		return;
 	}
+
+	// Before every early return below: a suspended or frozen slime still has to be able to stop a
+	// loop that is already playing.
+	UpdateMoveAudio(DeltaTime);
 
 	UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
 	const USlimeBodyInteractionComponent* Body = GetBodyInteraction();
@@ -408,4 +414,66 @@ void USlimeLocomotionComponent::StopAtGoal()
 	{
 		Character->GetCharacterMovement()->StopMovementImmediately();
 	}
+}
+
+void USlimeLocomotionComponent::UpdateMoveAudio(float DeltaTime)
+{
+	USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this);
+	if (!Audio || !GetOwnerEnemy() || !GetOwnerEnemy()->HasActorBegunPlay())
+	{
+		return;
+	}
+
+	ASlimeEcologyEnemy* Enemy = GetOwnerEnemy();
+	const USlimeAudioConfig* Config = Audio->GetConfig();
+	const float EnterSpeed = Config ? Config->MoveLoopEnterSpeed : 40.f;
+	const float ExitSpeed = Config ? Config->MoveLoopExitSpeed : 15.f;
+	const float Dwell = Config ? Config->MoveLoopDwellSeconds : 0.2f;
+
+	// Frozen (run ended) or dead: cut immediately, never fade out into the settlement screen.
+	const USlimeHealthComponent* Health = Enemy->GetHealthComponent();
+	if (Enemy->IsRunFrozen() || (Health && Health->IsDead()))
+	{
+		MoveLoopOnSeconds = 0.f;
+		MoveLoopOffSeconds = 0.f;
+		Audio->StopLoop(MoveLoopPlayingID);
+		return;
+	}
+
+	// Measured speed, not GetDesiredSpeed(): ClearMoveGoal() leaves the desired speed at its old
+	// value, so a slime standing still on purpose would still report full speed.
+	const float Speed = Enemy->GetVelocity().Size2D();
+
+	if (MoveLoopPlayingID != USlimeAudioSubsystem::InvalidPlayingID)
+	{
+		// Hysteresis plus a dwell time: waypoint hand-offs dip the speed for a single frame and must
+		// not chop the loop into pieces.
+		MoveLoopOffSeconds = (Speed <= ExitSpeed) ? MoveLoopOffSeconds + DeltaTime : 0.f;
+		if (MoveLoopOffSeconds >= Dwell)
+		{
+			Audio->StopLoop(MoveLoopPlayingID);
+			MoveLoopOffSeconds = 0.f;
+		}
+		return;
+	}
+
+	MoveLoopOnSeconds = (Speed >= EnterSpeed) ? MoveLoopOnSeconds + DeltaTime : 0.f;
+	if (MoveLoopOnSeconds >= Dwell)
+	{
+		// Returns 0 when out of earshot; the timer simply restarts and tries again next window.
+		MoveLoopPlayingID = Audio->PlayLoop(ESlimeAudioEvent::MonsterMove, Enemy);
+		MoveLoopOnSeconds = 0.f;
+	}
+}
+
+void USlimeLocomotionComponent::EndPlay(const EEndPlayReason::Type Reason)
+{
+	// Covers level unload and merged-away bodies. PostEvent's bStopWhenAttachedToDestroyed is the
+	// second line of defence, but an explicit stop also clears the id.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->StopLoop(MoveLoopPlayingID);
+	}
+
+	Super::EndPlay(Reason);
 }

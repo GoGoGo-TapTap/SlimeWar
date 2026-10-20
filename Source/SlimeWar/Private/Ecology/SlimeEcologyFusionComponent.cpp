@@ -2,6 +2,7 @@
 
 #include "Ecology/SlimeEcologyFusionComponent.h"
 
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Components/CapsuleComponent.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarLog.h"
@@ -412,6 +413,14 @@ bool USlimeEcologyFusionComponent::BeginPairing(
 		InPath,
 		ProjectMeetingPoint(GetWorld(), Midpoint),
 		/*bInitiator=*/true);
+
+	// Fusion begins. Only the initiator reaches this line - the partner goes through AcceptPairing -
+	// so a pair cannot produce two start sounds.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayGatedEvent(ESlimeAudioEvent::MonsterMerge, GetOwnerEnemy());
+	}
+
 	return true;
 }
 
@@ -769,6 +778,13 @@ void USlimeEcologyFusionComponent::ResolvePairing()
                         ? FMath::Max(OtherBody->GetStunPending(), OtherBody->GetStunRemaining())
                         : 0.f);
 
+	// Fusion committed. Both bodies are still alive here; Other is destroyed a few lines below, so
+	// the sound has to be posted on the survivor to outlive it.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayGatedEvent(ESlimeAudioEvent::MonsterMergeEnd, Survivor);
+	}
+
 	bResolving = true;
 	OtherFusion->bResolving = true;
 	SetPairCollisionIgnore(Other, false);
@@ -876,6 +892,14 @@ void USlimeEcologyFusionComponent::ResolveForcedPair(ASlimeEcologyEnemy* Other)
                         : 0.f);
 
 	USlimeEcologyFusionComponent* OtherFusion = Other->GetEcologyFusionComponent();
+
+	// Second commit path: the player shoved one slime into another. Three contact merges and one
+	// shove merge are different code, and only covering ResolvePairing would leave shoves silent.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayGatedEvent(ESlimeAudioEvent::MonsterMergeEnd, Survivor);
+	}
+
 	bResolving = true;
 	if (OtherFusion)
 	{

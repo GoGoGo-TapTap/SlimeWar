@@ -15,6 +15,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Player/SlimeWarCharacter.h"
 #include "TimerManager.h"
+#include "UI/SlimeAimPreviewWidget.h"
 #include "UI/SlimeLevelSelectWidget.h"
 #include "UI/SlimeMainMenuWidget.h"
 #include "UI/SlimeResultWidget.h"
@@ -221,6 +222,10 @@ void USlimeUISubsystem::EnsureWidgets()
 		HUDWidget = CreateScreenWidget(Settings->HUDWidgetClass, TEXT("HUD"));
 		ResultWidget = CreateScreenWidget(Settings->ResultWidgetClass, TEXT("Result"));
 		PauseWidget = CreateScreenWidget(Settings->PauseWidgetClass, TEXT("Pause"));
+
+		// The aim overlay is optional: a project without the WBP (or without the C++ parent
+		// reparented) simply plays without a crosshair.
+		EnsureAimPreviewWidget();
 	}
 
 	// The drop point screen is deliberately absent: its class depends on the level, so it is created
@@ -301,6 +306,41 @@ void USlimeUISubsystem::EnsurePreparationWidget()
 	}
 }
 
+void USlimeUISubsystem::EnsureAimPreviewWidget()
+{
+	if (AimPreviewWidget)
+	{
+		return;
+	}
+
+	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+	if (!Settings || Settings->AimPreviewWidgetClass.IsNull())
+	{
+		// Optional screen: no crosshair is a supported state.
+		return;
+	}
+
+	UUserWidget* Widget = CreateScreenWidget(Settings->AimPreviewWidgetClass, TEXT("AimPreview"));
+	if (!Widget)
+	{
+		return;
+	}
+
+	// The parent class is what drives the ring and the crosshairs. A WBP still parented to plain
+	// UUserWidget would be a static overlay, which is worse than no overlay at all.
+	if (!Cast<USlimeAimPreviewWidget>(Widget))
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("USlimeUISubsystem: AimPreviewWidgetClass is not a USlimeAimPreviewWidget. ")
+			TEXT("Reparent WBP_AimPreview to SlimeAimPreviewWidget, or clear AimPreviewWidgetClass. ")
+			TEXT("The aim overlay is disabled until then."));
+		Widget->RemoveFromParent();
+		return;
+	}
+
+	AimPreviewWidget = Widget;
+}
+
 bool USlimeUISubsystem::ShouldEnterGameplay() const
 {
 	const USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
@@ -371,6 +411,7 @@ void USlimeUISubsystem::ApplyMenuState(ESlimeUIFlowState NewState)
 	Hide(LevelSelectWidget);
 	Hide(PreparationWidget);
 	Hide(HUDWidget);
+	Hide(AimPreviewWidget);
 	Hide(ResultWidget);
 	Hide(PauseWidget);
 
@@ -450,6 +491,7 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		EnsurePreparationWidget();
 		Show(PreparationWidget, true);
 		Show(HUDWidget, false);
+		Show(AimPreviewWidget, false);
 		Show(ResultWidget, false);
 		SetUIOnlyInput();
 		break;
@@ -459,6 +501,7 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		// Cinematics: no screen at all, the world is the presentation.
 		Show(PreparationWidget, false);
 		Show(HUDWidget, false);
+		Show(AimPreviewWidget, false);
 		Show(ResultWidget, false);
 		SetGameInput();
 		break;
@@ -468,6 +511,7 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		// Cinematics: no screen at all, the world is the presentation.
 		Show(PreparationWidget, false);
 		Show(HUDWidget, false);
+		Show(AimPreviewWidget, false);
 		Show(ResultWidget, false);
 		SetGameInput();
 		break;
@@ -477,6 +521,7 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		Show(PreparationWidget, false);
 		Show(ResultWidget, false);
 		Show(HUDWidget, true);
+		Show(AimPreviewWidget, true);
 		SetGameInput();
 		break;
 
@@ -484,6 +529,7 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		UIFlowState = ESlimeUIFlowState::Result;
 		Show(PreparationWidget, false);
 		Show(HUDWidget, false);
+		Show(AimPreviewWidget, false);
 		Show(ResultWidget, true);
 		SetUIOnlyInput();
 
@@ -629,6 +675,106 @@ void USlimeUISubsystem::RequestReselectDropPoint()
 void USlimeUISubsystem::RequestQuit()
 {
 	ReturnToMainMenu();
+}
+
+int32 USlimeUISubsystem::GetCurrentLevelIndex() const
+{
+	const USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
+	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+	if (!Session || !Settings)
+	{
+		return INDEX_NONE;
+	}
+
+	return Settings->IndexOfLevel(Session->GetSelectedLevelId());
+}
+
+bool USlimeUISubsystem::HasNextLevel() const
+{
+	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+	const int32 Current = GetCurrentLevelIndex();
+	if (!Settings || Current == INDEX_NONE)
+	{
+		return false;
+	}
+
+	// A slot may exist and still be unusable (no map), in which case the button must be grey.
+	const USlimeLevelDefinition* Next = Settings->FindLevelByIndex(Current + 1);
+	return Next != nullptr && !Next->MapAsset.IsNull();
+}
+
+bool USlimeUISubsystem::RequestNextLevel()
+{
+	if (bPaused)
+	{
+		SetPauseState(false);
+	}
+
+	const USlimeGameSettings* Settings = GetDefault<USlimeGameSettings>();
+	const int32 Current = GetCurrentLevelIndex();
+	if (!Settings || Current == INDEX_NONE)
+	{
+		UE_LOG(LogSlimeWar, Log,
+			TEXT("USlimeUISubsystem::RequestNextLevel: no level identity (PIE on a bare map?), ignored."));
+		return false;
+	}
+
+	const USlimeLevelDefinition* Next = Settings->FindLevelByIndex(Current + 1);
+	if (!Next || Next->MapAsset.IsNull())
+	{
+		UE_LOG(LogSlimeWar, Log,
+			TEXT("USlimeUISubsystem::RequestNextLevel: slot %d has no usable level."), Current + 1);
+		return false;
+	}
+
+	const FString MapPackage = Next->MapAsset.GetLongPackageName();
+	if (MapPackage.IsEmpty())
+	{
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("USlimeUISubsystem::RequestNextLevel: level %s has an unresolvable map path."),
+			*Next->LevelId.ToString());
+		return false;
+	}
+
+	USlimeSessionSubsystem* Session = USlimeSessionSubsystem::Get(this);
+	if (!Session)
+	{
+		return false;
+	}
+
+	// The drop point index cannot carry over: the next level may have a different number of points,
+	// so its own preparation screen has to ask again.
+	Session->SetSelectedLevelId(Next->LevelId);
+	Session->ClearSelectedDropPoint();
+	Session->RequestEnterGameplay();
+
+	UE_LOG(LogSlimeWar, Log, TEXT("USlimeUISubsystem: next level %s (%s)."),
+		*Next->LevelId.ToString(), *MapPackage);
+
+	UGameplayStatics::OpenLevel(this, FName(*MapPackage));
+	return true;
+}
+
+void USlimeUISubsystem::RequestLevelSelect()
+{
+	if (bPaused)
+	{
+		SetPauseState(false);
+	}
+
+	if (!LevelSelectWidget)
+	{
+		// Without a picker the player would be stuck on the settlement screen: fall back to the one
+		// screen that always exists.
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("USlimeUISubsystem::RequestLevelSelect: no level select widget, falling back to the main menu."));
+		ReturnToMainMenu();
+		return;
+	}
+
+	// Screen switch only. Reloading the world here would make "select level" a several-second
+	// black screen; the reload happens when a level is actually picked.
+	ApplyMenuState(ESlimeUIFlowState::LevelSelect);
 }
 
 void USlimeUISubsystem::HandlePauseRequested()

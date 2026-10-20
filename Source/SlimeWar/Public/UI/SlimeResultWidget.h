@@ -7,6 +7,8 @@
 #include "Flow/RunSubsystem.h"
 #include "SlimeResultWidget.generated.h"
 
+class UTexture;
+
 /**
  * Settlement screen (PD-10).
  *
@@ -48,4 +50,35 @@ public:
 	/** Convenience for the WBP: the same rule the settlement screen displays. */
 	UFUNCTION(BlueprintPure, Category = "Slime|UI")
 	bool WasPassed() const;
+
+	/**
+	 * The settlement photo taken by the level's ASlimeResultCamera.
+	 * Null when the level has no camera or nothing was captured yet - the WBP then falls back to
+	 * T_Result_BG. The render target is not a UTexture2D, so show it through the M_ResultPhoto
+	 * material instead of SetBrushFromTexture.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Slime|UI")
+	UTexture* GetResultPhoto() const;
+
+	/** Whether the next configured level exists and has a map. Drives the "next level" button. */
+	UFUNCTION(BlueprintPure, Category = "Slime|UI")
+	bool HasNextLevel() const;
+
+	/** Enter the next level's preparation screen. False (and a log line) when there is none. */
+	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
+	bool RequestNextLevel();
+
+	/** Open the level select screen: screen switch only, the world is not reloaded. */
+	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
+	void RequestLevelSelect();
+
+	/**
+	 * Fired once, when the screen is actually shown (phase == Ended).
+	 *
+	 * Numbers stay on OnResultReady. Animation and sound MUST use this one: OnResultReady also runs
+	 * when the level starts, with an all-zero result, so anything hooked there would play long
+	 * before the settlement screen appears.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
+	void OnResultShown();
 };

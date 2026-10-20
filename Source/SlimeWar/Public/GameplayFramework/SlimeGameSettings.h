@@ -7,6 +7,7 @@
 #include "SlimeGameSettings.generated.h"
 
 class UGameplayEffect;
+class USlimeAudioConfig;
 class USlimeLevelDefinition;
 class USlimeRunConfig;
 class UUserWidget;
@@ -52,6 +53,14 @@ public:
 	/** Level definition by stable id; null when nothing matches (including an empty id). */
 	const USlimeLevelDefinition* FindLevelById(FName LevelId) const;
 
+	/**
+	 * Position of a level in Levels, or INDEX_NONE when the id is empty or unknown.
+	 *
+	 * This is what "next level" is built on: index + 1 in the configured order. Deliberately not a
+	 * name comparison, so reordering the list moves the progression with it.
+	 */
+	int32 IndexOfLevel(FName LevelId) const;
+
 	/** Resolve a level when a map is opened directly in PIE or by a console Open command. */
 	const USlimeLevelDefinition* FindLevelByMapName(const FString& MapName) const;
 
@@ -66,6 +75,13 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> HUDWidgetClass;
+
+	/**
+	 * Aim overlay (charge ring + crosshairs). Created and shown only while the run is Running.
+	 * Leaving it empty keeps the game playable without a crosshair, so it degrades like the others.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UUserWidget> AimPreviewWidgetClass;
 
 	/**
 	 * Fallback drop point screen, used when the current level does not configure its own
@@ -104,6 +120,18 @@ public:
 	/** Fallback settlement orbit camera, used when the level does not configure one. */
 	UPROPERTY(config, EditAnywhere, Category = "UI")
 	FSoftObjectPath ResultSequence;
+
+	// -- Audio --
+
+	/**
+	 * Event table for the C++ side (USlimeAudioConfig).
+	 *
+	 * Leaving it empty is supported: the subsystem falls back to the class defaults, which already
+	 * point at the real Wwise events. Create the asset only when sound design needs to repoint an
+	 * event without a recompile.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<USlimeAudioConfig> AudioConfig;
 
 	/**
 	 * Editor convenience: start PIE directly on the preparation screen of the current map instead of

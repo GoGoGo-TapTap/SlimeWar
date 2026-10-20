@@ -30,7 +30,9 @@ public class SlimeWar : ModuleRules
 			"SlateCore",
 			// Phase D 演出：投放 / 结算的 Level Sequence 播放
 			"LevelSequence",
-			"MovieScene"
+			"MovieScene",
+			// 音频：C++ 侧直接 PostEvent / StopPlayingID（事件资产统一在 DA_AudioConfig 里配）
+			"AkAudio"
 		});
 
 		if (Target.bBuildEditor)

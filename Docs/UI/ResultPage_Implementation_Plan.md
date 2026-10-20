@@ -751,6 +751,14 @@ void USlimeUISubsystem::RequestLevelSelect()
 
 ### 5.1 A-01 摆放拍照相机
 
+> **2026-10-20 补丁：本文这一节已过时，按 `Docs/UI/UI执行清单_代码与WBP.md` §4.2 执行。**
+>
+> 两处变化：
+> 1. 地图不再是 `L_Whitebox_CityPlaza`，而是 `L_Ecology_DoublePoint` / `L_Ecology_ThreePoint`，**每关各放一台**。
+> 2. **不要对齐 `LS_Result` 末帧**（下面的第 2、4 步作废）。那条序列是白盒图时代做的、两关共用一条，机位对不上；现在相机自己就是构图，序列只负责运镜。
+>
+> 第 5 步的参数（1024×640、`Photo Delay = 0.3`、`Render Target Override` 留空）仍然有效。
+
 1. 打开 `L_Whitebox_CityPlaza`。
 2. 打开 `LS_Result`，把时间轴拖到**最后一帧**，选中序列里的 Spawnable 相机，记下 Location / Rotation / `Field of View`（Camera Component 上）。
 3. 回到关卡，Place Actors 搜 `SlimeResultCamera`，放到同样的 Location / Rotation，Camera Component 的 `Field of View` 填同一个值（`OnConstruction` 会把 FOV 同步给 SceneCapture）。

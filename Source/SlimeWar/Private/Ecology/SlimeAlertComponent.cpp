@@ -2,6 +2,7 @@
 
 #include "Ecology/SlimeAlertComponent.h"
 
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Core/SlimeWarLog.h"
 #include "Ecology/SlimeCoreComponent.h"
 #include "Ecology/SlimeEcologyEnemy.h"
@@ -43,6 +44,10 @@ void USlimeAlertComponent::RaiseAlert(AActor* Source, bool bPropagate)
 		return;
 	}
 
+	// Read before the warning timer is armed: this is the only moment that means "this slime just
+	// noticed something". Being hit again while already alerted must not re-report.
+	const bool bFirstAlert = !IsAlerted();
+
 	if (!IsAlerted())
 	{
 		WarningRemaining = Rules->AlertWarningTime;
@@ -57,6 +62,17 @@ void USlimeAlertComponent::RaiseAlert(AActor* Source, bool bPropagate)
 		WarningRemaining,
 		AlertRemaining,
 		bPropagate ? TEXT("yes") : TEXT("no"));
+
+	// Scout report. Only on the first notice, and gated rather than keyed on bPropagate: the
+	// propagation pass re-enters this function for every neighbour, which the throttle collapses into
+	// one sound. Keying on bPropagate instead would also silence the debug alert command.
+	if (bFirstAlert)
+	{
+		if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+		{
+			Audio->PlayGatedEvent(ESlimeAudioEvent::ScoutReport, Enemy);
+		}
+	}
 
 	if (!bPropagate)
 	{

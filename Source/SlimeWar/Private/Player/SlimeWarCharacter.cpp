@@ -3,9 +3,11 @@
 #include "Player/SlimeWarCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "CollisionQueryParams.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "Core/SlimeGameplayTags.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarCollisionChannels.h"
@@ -34,6 +36,8 @@
 #include "GameplayFramework/StatTableProvider.h"
 #include "InputActionValue.h"
 #include "InputCoreTypes.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Player/Abilities/GA_Die.h"
 #include "Player/Abilities/GA_ChargeFire.h"
 #include "Player/Abilities/GA_HitProtection.h"
@@ -43,6 +47,7 @@
 #include "Player/SlimePlayerAttributeSet.h"
 #include "Player/SlimeWeaponComponent.h"
 #include "Player/SlimeWeaponRules.h"
+#include "UObject/ConstructorHelpers.h"
 
 ASlimeWarCharacter::ASlimeWarCharacter()
 {
@@ -88,6 +93,21 @@ ASlimeWarCharacter::ASlimeWarCharacter()
 
 	Weapon = CreateDefaultSubobject<USlimeWeaponComponent>(TEXT("Weapon"));
 	AimAssist = CreateDefaultSubobject<USlimeAimAssistComponent>(TEXT("AimAssist"));
+
+	// Hurt indicator: a post process component owned by the character, so every map gets the red
+	// flash without anyone having to place a PostProcessVolume in it.
+	HurtPostProcess = CreateDefaultSubobject<UPostProcessComponent>(TEXT("HurtPostProcess"));
+	HurtPostProcess->bUnbound = true;
+	HurtPostProcess->Priority = 0.f;
+
+	// Hard reference on purpose: a soft path in a character would still need the asset cooked, and
+	// the material is tiny. The BP can override it in the details panel.
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> HurtIndicatorFinder(
+		TEXT("/Game/_SlimeWar/UI/M_HurtIndicator_PP.M_HurtIndicator_PP"));
+	if (HurtIndicatorFinder.Succeeded())
+	{
+		HurtIndicatorMaterial = HurtIndicatorFinder.Object;
+	}
 }
 
 UAbilitySystemComponent* ASlimeWarCharacter::GetAbilitySystemComponent() const
@@ -102,6 +122,28 @@ void ASlimeWarCharacter::BeginPlay()
 	TotalDamageTaken = 0.f;
 	InitAbilitySystem();
 	ApplyRunConfig();
+
+	// Hurt indicator: create the instance once, register it with the component, then listen for
+	// damage. Missing material is a supported state (no flash), so it only logs.
+	if (HurtPostProcess)
+	{
+		if (HurtIndicatorMaterial)
+		{
+			HurtIndicatorMID = UMaterialInstanceDynamic::Create(HurtIndicatorMaterial, this);
+			if (HurtIndicatorMID)
+			{
+				HurtPostProcess->Settings.AddBlendable(HurtIndicatorMID, 1.f);
+				HurtIndicatorMID->SetScalarParameterValue(TEXT("Intensity"), 0.f);
+			}
+		}
+		else
+		{
+			UE_LOG(LogSlimeWar, Warning,
+				TEXT("ASlimeWarCharacter: M_HurtIndicator_PP not found; the damage flash is disabled."));
+		}
+
+		OnPlayerDamaged.AddDynamic(this, &ASlimeWarCharacter::HandlePlayerDamagedForIndicator);
+	}
 }
 
 void ASlimeWarCharacter::InitAbilitySystem()
@@ -489,6 +531,43 @@ void ASlimeWarCharacter::Tick(float DeltaSeconds)
 	{
 		EndReloadVisuals();
 	}
+
+	UpdateHurtIndicator(DeltaSeconds);
+}
+
+void ASlimeWarCharacter::HandlePlayerDamagedForIndicator(FVector DamageDirection)
+{
+	// 0.8 rather than 1.0: a full-screen opaque red hides the slime that just hit the player.
+	HurtIndicatorAlpha = FMath::Max(HurtIndicatorAlpha, 0.8f);
+
+	// Reach zero in about 0.12 s. Stored as a rate so a second hit mid-fade restarts cleanly.
+	HurtIndicatorDecay = HurtIndicatorAlpha / 0.12f;
+}
+
+void ASlimeWarCharacter::UpdateHurtIndicator(float DeltaSeconds)
+{
+	if (!HurtIndicatorMID)
+	{
+		return;
+	}
+
+	const float LowHealthFloor = [this]() -> float
+	{
+		const USlimeHealthComponent* HealthComponent = GetHealthComponent();
+		if (!HealthComponent || HealthComponent->GetMaxHealth() <= 0.f)
+		{
+			return 0.f;
+		}
+
+		const float Fraction = HealthComponent->GetHealth() / HealthComponent->GetMaxHealth();
+		// A permanent faint red below 30%: a status readout that does not fight the hit flash.
+		return Fraction < 0.3f ? 0.15f : 0.f;
+	}();
+
+	HurtIndicatorAlpha = FMath::Max(0.f, HurtIndicatorAlpha - HurtIndicatorDecay * DeltaSeconds);
+	const float Intensity = FMath::Clamp(FMath::Max(HurtIndicatorAlpha, LowHealthFloor), 0.f, 1.f);
+
+	HurtIndicatorMID->SetScalarParameterValue(TEXT("Intensity"), Intensity);
 }
 
 float ASlimeWarCharacter::GetChargeAlpha() const
@@ -520,6 +599,13 @@ void ASlimeWarCharacter::BeginReloadVisuals(float Duration)
 	bReloadVisualActive = Duration > 0.f;
 	ReloadVisualDuration = FMath::Max(0.f, Duration);
 	ReloadVisualStart = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+
+	// Start of the reload only. EndReloadVisuals() is shared by "finished" and "interrupted", so a
+	// sound there would also fire every time an ability cancel cuts the reload short.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayEvent(ESlimeAudioEvent::WeaponReload, this);
+	}
 }
 
 void ASlimeWarCharacter::EndReloadVisuals()
@@ -729,6 +815,16 @@ void ASlimeWarCharacter::OnFirePressed()
 
 	if (!CanStartCharge())
 	{
+		// Dry fire: an empty magazine cannot start a charge, so this press only clicks. Gated on
+		// "not reloading" because during a reload the reload itself is the feedback.
+		if (Weapon && Weapon->IsMagazineEmpty() && !bReloadVisualActive)
+		{
+			if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+			{
+				Audio->PlayThrottledEvent(ESlimeAudioEvent::WeaponEmpty, this);
+			}
+		}
+
 		if (Weapon && Weapon->IsMagazineEmpty() && AbilitySystem
 			&& !bReloadVisualActive
 			&& !AbilitySystem->HasMatchingGameplayTag(TAG_State_Weapon_Reloading))
@@ -1405,5 +1501,14 @@ bool ASlimeWarCharacter::PerformChargedShot(
 		Shot.TargetActor,
 		Shot.AimPoint,
 		Shot.TargetActor != nullptr);
+
+	// The shot sound belongs here rather than in ConsumeShot(): that one also fires for a shot whose
+	// trajectory never solved (the early returns above still leave the round consumed), so this line
+	// is the only point that means "a shot actually happened".
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayEvent(ESlimeAudioEvent::WeaponFire, this);
+	}
+
 	return true;
 }

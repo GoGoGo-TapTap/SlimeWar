@@ -2,6 +2,7 @@
 
 #include "Ecology/SlimeEcologySubsystem.h"
 
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarLog.h"
 #include "Ecology/SlimeCargoPickup.h"
@@ -252,6 +253,13 @@ bool USlimeEcologySubsystem::TryGather(
 	}
 
 	Enemy->AddCargo(1);
+
+	// Gathering succeeded: one unit left the patch. Posted on the slime so the sound follows it.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayGatedEvent(ESlimeAudioEvent::ResourceCollect, Enemy);
+	}
+
 	return true;
 }
 
@@ -273,6 +281,14 @@ bool USlimeEcologySubsystem::TryDeliver(ASlimeEcologyEnemy* Enemy)
 	}
 
 	++DeliveredCargo;
+
+	// Delivered: posted on the slime rather than the site so a busy site does not stack one sound
+	// per arrival at a single point.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayGatedEvent(ESlimeAudioEvent::ResourceDeliver, Enemy);
+	}
+
 	Site->NotifyDelivered();
 	PendingSpawns.Add({Site});
 	return true;
@@ -297,6 +313,14 @@ bool USlimeEcologySubsystem::TryPickupCargo(
 	}
 
 	Enemy->AddCargo(1);
+
+	// Same event as TryGather on purpose: a slime hoovering up a cluster of loose cargo is one
+	// action to the player, and the shared throttle key keeps it from machine-gunning.
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayGatedEvent(ESlimeAudioEvent::ResourceCollect, Enemy);
+	}
+
 	return true;
 }
 
