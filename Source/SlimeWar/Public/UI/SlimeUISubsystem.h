@@ -157,8 +157,8 @@ protected:
 	/** Create the aim overlay on demand (Running only). */
 	void EnsureAimPreviewWidget();
 
-	/** Shared loader: soft class -> widget at viewport Z 0, hidden. Null when the class is missing. */
-	UUserWidget* CreateScreenWidget(const TSoftClassPtr<UUserWidget>& WidgetClass, const FString& Label);
+	/** Shared loader: soft class -> widget at the given viewport Z, hidden. Null when the class is missing. */
+	UUserWidget* CreateScreenWidget(const TSoftClassPtr<UUserWidget>& WidgetClass, const FString& Label, int32 ZOrder = 0);
 
 	void ApplyMenuState(ESlimeUIFlowState NewState);
 	bool ShouldEnterGameplay() const;

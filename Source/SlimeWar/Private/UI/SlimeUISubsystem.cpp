@@ -20,6 +20,17 @@
 #include "UI/SlimeMainMenuWidget.h"
 #include "UI/SlimeResultWidget.h"
 
+namespace
+{
+	/**
+	 * The engine clamps global time dilation to [0.0001, 20]. Asking for 0 only spams
+	 * "Time Dilation must be between 0.000100 and 20.000000" into the log on every pause, so the
+	 * pause asks for the clamped floor directly. The world still effectively freezes: a one-second
+	 * run timer needs ~2.7 hours to tick once at this scale.
+	 */
+	constexpr float PauseTimeDilation = 1.0e-4f;
+}
+
 USlimeUISubsystem* USlimeUISubsystem::Get(const UObject* WorldContextObject)
 {
 	if (!WorldContextObject || !GEngine)
@@ -219,9 +230,12 @@ void USlimeUISubsystem::EnsureWidgets()
 	// in the world that will actually run the game.
 	if (ShouldEnterGameplay())
 	{
-		HUDWidget = CreateScreenWidget(Settings->HUDWidgetClass, TEXT("HUD"));
-		ResultWidget = CreateScreenWidget(Settings->ResultWidgetClass, TEXT("Result"));
-		PauseWidget = CreateScreenWidget(Settings->PauseWidgetClass, TEXT("Pause"));
+		// ZOrder: the HUD and the aim overlay stay under every menu, the pause menu stays on top of
+		// everything (it is the only screen that may legitimately cover the settlement screen, e.g.
+		// when the pause key races the end of the run).
+		HUDWidget = CreateScreenWidget(Settings->HUDWidgetClass, TEXT("HUD"), /*ZOrder=*/-1);
+		ResultWidget = CreateScreenWidget(Settings->ResultWidgetClass, TEXT("Result"), /*ZOrder=*/10);
+		PauseWidget = CreateScreenWidget(Settings->PauseWidgetClass, TEXT("Pause"), /*ZOrder=*/20);
 
 		// The aim overlay is optional: a project without the WBP (or without the C++ parent
 		// reparented) simply plays without a crosshair.
@@ -232,7 +246,7 @@ void USlimeUISubsystem::EnsureWidgets()
 	// by EnsurePreparationWidget() the first time a phase actually needs it.
 }
 
-UUserWidget* USlimeUISubsystem::CreateScreenWidget(const TSoftClassPtr<UUserWidget>& WidgetClass, const FString& Label)
+UUserWidget* USlimeUISubsystem::CreateScreenWidget(const TSoftClassPtr<UUserWidget>& WidgetClass, const FString& Label, int32 ZOrder)
 {
 	APlayerController* PC = GetPlayerController();
 	if (!PC)
@@ -259,7 +273,7 @@ UUserWidget* USlimeUISubsystem::CreateScreenWidget(const TSoftClassPtr<UUserWidg
 	UUserWidget* Widget = CreateWidget<UUserWidget>(PC, Class);
 	if (Widget)
 	{
-		Widget->AddToViewport(0);
+		Widget->AddToViewport(ZOrder);
 		Widget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	return Widget;
@@ -320,7 +334,8 @@ void USlimeUISubsystem::EnsureAimPreviewWidget()
 		return;
 	}
 
-	UUserWidget* Widget = CreateScreenWidget(Settings->AimPreviewWidgetClass, TEXT("AimPreview"));
+	// Under every menu, same as the HUD: a pure overlay must never cover a clickable screen.
+	UUserWidget* Widget = CreateScreenWidget(Settings->AimPreviewWidgetClass, TEXT("AimPreview"), /*ZOrder=*/-1);
 	if (!Widget)
 	{
 		return;
@@ -470,7 +485,17 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 
 	if (bPaused)
 	{
-		// The pause menu owns the screen until it is dismissed.
+		// The pause menu owns the screen until it is dismissed. The HUD and the aim overlay must go
+		// with it: they were created after the pause menu at the same Z (so they rendered on top of
+		// it), and a hit-testable overlay swallows the clicks meant for the pause buttons.
+		if (HUDWidget)
+		{
+			HUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		if (AimPreviewWidget)
+		{
+			AimPreviewWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
 		return;
 	}
 
@@ -482,6 +507,25 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		}
 	};
 
+	// The HUD and the aim overlay are presentation only, so they are shown non-hit-testable: neither
+	// can ever again block a click meant for a menu, even if a future path forgets to hide them.
+	// SelfHitTestInvisible keeps the HUD's interactive children working; the aim overlay has none,
+	// so plain HitTestInvisible is enough for it.
+	auto ShowHud = [](UUserWidget* Widget, bool bVisible)
+	{
+		if (Widget)
+		{
+			Widget->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+		}
+	};
+	auto ShowAim = [](UUserWidget* Widget, bool bVisible)
+	{
+		if (Widget)
+		{
+			Widget->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		}
+	};
+
 	switch (Phase)
 	{
 	case ESlimeRunState::Idle:
@@ -490,8 +534,8 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		// SetupUI, so the screen is created here too.
 		EnsurePreparationWidget();
 		Show(PreparationWidget, true);
-		Show(HUDWidget, false);
-		Show(AimPreviewWidget, false);
+		ShowHud(HUDWidget, false);
+		ShowAim(AimPreviewWidget, false);
 		Show(ResultWidget, false);
 		SetUIOnlyInput();
 		break;
@@ -500,8 +544,8 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		UIFlowState = ESlimeUIFlowState::Deploying;
 		// Cinematics: no screen at all, the world is the presentation.
 		Show(PreparationWidget, false);
-		Show(HUDWidget, false);
-		Show(AimPreviewWidget, false);
+		ShowHud(HUDWidget, false);
+		ShowAim(AimPreviewWidget, false);
 		Show(ResultWidget, false);
 		SetGameInput();
 		break;
@@ -510,8 +554,8 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		UIFlowState = ESlimeUIFlowState::Result;
 		// Cinematics: no screen at all, the world is the presentation.
 		Show(PreparationWidget, false);
-		Show(HUDWidget, false);
-		Show(AimPreviewWidget, false);
+		ShowHud(HUDWidget, false);
+		ShowAim(AimPreviewWidget, false);
 		Show(ResultWidget, false);
 		SetGameInput();
 		break;
@@ -520,16 +564,16 @@ void USlimeUISubsystem::ApplyPhaseToScreens(ESlimeRunState Phase)
 		UIFlowState = ESlimeUIFlowState::Running;
 		Show(PreparationWidget, false);
 		Show(ResultWidget, false);
-		Show(HUDWidget, true);
-		Show(AimPreviewWidget, true);
+		ShowHud(HUDWidget, true);
+		ShowAim(AimPreviewWidget, true);
 		SetGameInput();
 		break;
 
 	case ESlimeRunState::Ended:
 		UIFlowState = ESlimeUIFlowState::Result;
 		Show(PreparationWidget, false);
-		Show(HUDWidget, false);
-		Show(AimPreviewWidget, false);
+		ShowHud(HUDWidget, false);
+		ShowAim(AimPreviewWidget, false);
 		Show(ResultWidget, true);
 		SetUIOnlyInput();
 
@@ -814,7 +858,7 @@ void USlimeUISubsystem::SetPauseState(bool bNewPaused)
 	// routing input to the menu, and getting that wrong is exactly the "paused but the buttons do
 	// not respond" bug. A zero dilation freezes movement, AI, fusion and the run timeline (world
 	// timers scale with it) while Slate - and therefore the menu - stays fully alive.
-	UGameplayStatics::SetGlobalTimeDilation(this, bPaused ? 0.f : 1.f);
+	UGameplayStatics::SetGlobalTimeDilation(this, bPaused ? PauseTimeDilation : 1.f);
 
 	// Firing is an event, not a delta-gated action, so the freeze alone would still let the player
 	// shoot; the run input gate is what closes it.
@@ -839,6 +883,17 @@ void USlimeUISubsystem::SetPauseState(bool bNewPaused)
 
 	if (bPaused)
 	{
+		// Same guarantee as the bPaused branch of ApplyPhaseToScreens: TogglePause() enters here
+		// without a phase broadcast, so this is the path that must not forget the overlays either.
+		if (HUDWidget)
+		{
+			HUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		if (AimPreviewWidget)
+		{
+			AimPreviewWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+
 		UIFlowState = ESlimeUIFlowState::Pause;
 		FInputModeGameAndUI Mode;
 		Mode.SetHideCursorDuringCapture(false);
