@@ -113,6 +113,11 @@ void USlimeCoreComponent::ArmCore(ESlimeCoreState InState)
 			CoreState == ESlimeCoreState::Hostile ? TEXT("Hostile")
 				: CoreState == ESlimeCoreState::Neutral ? TEXT("Neutral") : TEXT("None"));
 	}
+
+	if (ASlimeEcologyEnemy* Enemy = GetOwnerEnemy())
+	{
+		Enemy->RefreshCoreVisuals();
+	}
 }
 
 void USlimeCoreComponent::SetPlayerProvoked(float Seconds)

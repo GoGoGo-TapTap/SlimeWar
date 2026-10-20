@@ -59,6 +59,14 @@ void ASlimePaintField::BeginPlay()
 	{
 		Material = Rules->PaintSurfaceMaterial.LoadSynchronous();
 	}
+	if (!Material)
+	{
+		// Decal-based paint uses the level's own ground meshes; a default-material
+		// plane would cover the floor with the engine checker/grid material.
+		Surface->SetVisibility(false);
+		return;
+	}
+
 	if (Material && Paint->GetPaintRenderTarget())
 	{
 		SurfaceMID = UMaterialInstanceDynamic::Create(Material, this);

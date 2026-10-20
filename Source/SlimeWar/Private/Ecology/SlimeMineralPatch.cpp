@@ -5,8 +5,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Ecology/SlimeEcologySubsystem.h"
-#include "Engine/StaticMesh.h"
-#include "UObject/ConstructorHelpers.h"
 
 ASlimeMineralPatch::ASlimeMineralPatch()
 {
@@ -19,15 +17,9 @@ ASlimeMineralPatch::ASlimeMineralPatch()
 	CrystalMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Crystal"));
 	CrystalMesh->SetupAttachment(SceneRoot);
 	CrystalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMesh(
-		TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-	if (SphereMesh.Succeeded())
-	{
-		CrystalMesh->SetStaticMesh(SphereMesh.Object);
-	}
-	CrystalMesh->SetRelativeLocation(FVector(0.f, 0.f, 45.f));
-	CrystalMesh->SetRelativeScale3D(FVector(0.6f));
+	CrystalMesh->SetReceivesDecals(false);
+	// The real crystal model is authored in each level; do not draw an engine sphere.
+	CrystalMesh->SetVisibility(false);
 
 	Label = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Label"));
 	Label->SetupAttachment(SceneRoot);

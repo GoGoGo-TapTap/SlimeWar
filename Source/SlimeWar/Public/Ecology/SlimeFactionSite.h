@@ -44,7 +44,7 @@ public:
 	float SpawnRingMax = 400.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Site")
-	FLinearColor DisplayColor = FLinearColor(0.2f, 0.7f, 0.55f, 1.f);
+	FLinearColor DisplayColor = FLinearColor(0.518f, 0.863f, 0.996f, 1.f);
 
 	UFUNCTION(BlueprintPure, Category = "Slime|Ecology")
 	FVector GetDeliveryLocation() const { return GetActorLocation(); }

@@ -19,6 +19,7 @@ ASlimeFactionSite::ASlimeFactionSite()
 	PadMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Pad"));
 	PadMesh->SetupAttachment(SceneRoot);
 	PadMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	PadMesh->SetReceivesDecals(false);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMesh(
 		TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));

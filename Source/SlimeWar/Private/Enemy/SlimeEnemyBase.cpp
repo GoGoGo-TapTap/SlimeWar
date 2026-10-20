@@ -27,11 +27,13 @@ ASlimeEnemyBase::ASlimeEnemyBase()
 	{
 		SkeletalMesh->SetVisibility(false);
 		SkeletalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SkeletalMesh->SetReceivesDecals(false);
 	}
 
 	BodyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BodyMesh"));
 	BodyMesh->SetupAttachment(RootComponent);
 	BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	BodyMesh->SetReceivesDecals(false);
 	DefaultBodyMesh = TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(
 		TEXT("/Game/Characters/Slime/SM_Slime_Base.SM_Slime_Base")));
 
@@ -44,6 +46,7 @@ ASlimeEnemyBase::ASlimeEnemyBase()
 	// explicitly (the default Pawn profile is not guaranteed to).
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
+		Capsule->SetReceivesDecals(false);
 		Capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 		// The player's spring arm probes with ECC_Camera, and a Pawn capsule blocks that channel by

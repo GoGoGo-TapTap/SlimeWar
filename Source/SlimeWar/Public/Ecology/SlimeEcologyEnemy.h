@@ -16,6 +16,7 @@ class ASlimeFactionSite;
 class ASlimeCargoVisual;
 class USlimeLocomotionComponent;
 class USlimeWeakpointComponent;
+class UStaticMeshComponent;
 
 /** First runtime ecology body. It deliberately does not use the legacy StateTree assets. */
 UCLASS()
@@ -86,6 +87,7 @@ public:
 	/** Spawn/update the attachable cargo model; the class is replaceable like the slime mesh. */
 	void RefreshCarriedCargoVisual();
 	void ApplyAssimilation(ESlimeFaction InFaction);
+	void RefreshCoreVisuals();
 	void MarkChainKill() { bChainKill = true; }
 	void NotifyCombatDamage(AActor* Causer);
 
@@ -123,6 +125,18 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Ecology")
 	TObjectPtr<USlimeWeakpointComponent> Weakpoint;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Visual")
+	TObjectPtr<UStaticMeshComponent> CoreMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Visual")
+	TObjectPtr<UStaticMeshComponent> SpikeLeft;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Visual")
+	TObjectPtr<UStaticMeshComponent> SpikeRight;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime|Visual")
+	TObjectPtr<UStaticMeshComponent> WeakpointMesh;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slime|Ecology")
 	ESlimeFaction Faction = ESlimeFaction::A;
 
@@ -138,4 +152,7 @@ protected:
 	bool bSplitting = false;
 	bool bChainKill = false;
 	mutable TOptional<FSlimeKillContext> PendingKillContext;
+
+protected:
+	void ApplyFactionVisuals();
 };

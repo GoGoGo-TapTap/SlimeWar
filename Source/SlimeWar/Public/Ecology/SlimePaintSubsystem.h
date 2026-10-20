@@ -8,7 +8,9 @@
 #include "SlimePaintSubsystem.generated.h"
 
 class UMaterialInstanceDynamic;
+class UMaterialInterface;
 class UTextureRenderTarget2D;
+class UDecalComponent;
 
 struct FSlimePaintSplat
 {
@@ -45,12 +47,15 @@ public:
 private:
 	void EnsureRenderTarget();
 	void DrawSplatToRenderTarget(const FSlimePaintSplat& Splat);
+	void SpawnPaintDecal(const FSlimePaintSplat& Splat, UMaterialInterface* DecalMaterial);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextureRenderTarget2D> PaintRenderTarget = nullptr;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> SplatMID = nullptr;
+
+	TArray<TWeakObjectPtr<UDecalComponent>> PaintDecals;
 
 	TArray<FSlimePaintSplat> SplatRecords;
 	FVector WorldCentre = FVector::ZeroVector;

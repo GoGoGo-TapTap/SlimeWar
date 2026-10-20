@@ -12,6 +12,7 @@ ASlimeCargoVisual::ASlimeCargoVisual()
 	CargoMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CargoMesh"));
 	SetRootComponent(CargoMesh);
 	CargoMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CargoMesh->SetReceivesDecals(false);
 	CargoMeshAsset = TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(
 		TEXT("/Engine/BasicShapes/Cube.Cube")));
 }

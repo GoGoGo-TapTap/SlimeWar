@@ -49,6 +49,11 @@ ASlimeWarCharacter::ASlimeWarCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
 	GetCapsuleComponent()->InitCapsuleSize(43.f, 90.0f);
+	GetCapsuleComponent()->SetReceivesDecals(false);
+	if (USkeletalMeshComponent* SkeletalMesh = GetMesh())
+	{
+		SkeletalMesh->SetReceivesDecals(false);
+	}
 
 	// Normal slimes sit on their own object channel and the player *overlaps* them instead of
 	// blocking. Blocking two capsules makes the player's sweeps push the slime out of the way

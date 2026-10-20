@@ -945,6 +945,9 @@ bool USlimeEcologySubsystem::SpawnOneAtSite(ASlimeFactionSite* Site)
 		Site->GetActorLocation(),
 		Site->ActivityRadius);
 	Enemy->SetAssignedSite(Site);
+	// Reapply after the spawn/stat-row path so a faction material cannot be
+	// overwritten by an intermediate BeginPlay/ApplyStatRow call.
+	Enemy->SetFaction(Site->Faction);
 	return true;
 }
 

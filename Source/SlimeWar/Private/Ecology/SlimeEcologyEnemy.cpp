@@ -16,11 +16,14 @@
 #include "Ecology/SlimeLocomotionComponent.h"
 #include "Ecology/SlimeWeakpointComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Core/SlimeHealthComponent.h"
 #include "Core/SlimeWarLog.h"
 #include "Engine/GameInstance.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameplayFramework/StatTableProvider.h"
+#include "Materials/MaterialInterface.h"
 #include "NavigationSystem.h"
 #include "Player/SlimeWarCharacter.h"
 
@@ -38,11 +41,45 @@ ASlimeEcologyEnemy::ASlimeEcologyEnemy()
 	Core = CreateDefaultSubobject<USlimeCoreComponent>(TEXT("Core"));
 	Weakpoint = CreateDefaultSubobject<USlimeWeakpointComponent>(TEXT("Weakpoint"));
 	Weakpoint->SetupAttachment(GetCapsuleComponent());
+
+	CoreMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CoreMesh"));
+	CoreMesh->SetupAttachment(GetCapsuleComponent());
+	CoreMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CoreMesh->SetGenerateOverlapEvents(false);
+	CoreMesh->SetCanEverAffectNavigation(false);
+	CoreMesh->SetReceivesDecals(false);
+
+	SpikeLeft = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spike_Left"));
+	SpikeLeft->SetupAttachment(GetCapsuleComponent());
+	SpikeLeft->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SpikeLeft->SetGenerateOverlapEvents(false);
+	SpikeLeft->SetCanEverAffectNavigation(false);
+	SpikeLeft->SetReceivesDecals(false);
+	SpikeLeft->SetVisibility(false);
+
+	SpikeRight = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spike_Right"));
+	SpikeRight->SetupAttachment(GetCapsuleComponent());
+	SpikeRight->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SpikeRight->SetGenerateOverlapEvents(false);
+	SpikeRight->SetCanEverAffectNavigation(false);
+	SpikeRight->SetReceivesDecals(false);
+	SpikeRight->SetVisibility(false);
+
+	WeakpointMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeakpointMesh"));
+	WeakpointMesh->SetupAttachment(Weakpoint);
+	WeakpointMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeakpointMesh->SetGenerateOverlapEvents(false);
+	WeakpointMesh->SetCanEverAffectNavigation(false);
+	WeakpointMesh->SetReceivesDecals(false);
+	WeakpointMesh->SetVisibility(false);
 }
 
 void ASlimeEcologyEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	ApplyFactionVisuals();
+	RefreshCoreVisuals();
 
 	if (Brain)
 	{
@@ -114,6 +151,151 @@ void ASlimeEcologyEnemy::InitializeEcology(
 void ASlimeEcologyEnemy::SetFaction(ESlimeFaction InFaction)
 {
 	Faction = InFaction;
+	ApplyFactionVisuals();
+	RefreshCoreVisuals();
+}
+
+void ASlimeEcologyEnemy::ApplyFactionVisuals()
+{
+	const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this);
+	if (!Rules || !BodyMesh)
+	{
+		return;
+	}
+
+	const USlimeEcologyRules* DefaultRules = GetDefault<USlimeEcologyRules>();
+	bool bBodyMeshChanged = false;
+	UMaterialInterface* FactionMaterial = nullptr;
+
+	const FSlimeFactionVisual* Visual = Rules->FindFactionVisual(Faction);
+	if (!Visual)
+	{
+		Visual = GetDefault<USlimeEcologyRules>()->FindFactionVisual(Faction);
+	}
+
+	if (Visual)
+	{
+		if (UStaticMesh* LoadedBodyMesh = Visual->BodyMesh.LoadSynchronous())
+		{
+			if (BodyMesh->GetStaticMesh() != LoadedBodyMesh)
+			{
+				BodyMesh->SetStaticMesh(LoadedBodyMesh);
+				bBodyMeshChanged = true;
+			}
+		}
+
+		FactionMaterial = Visual->BodyMaterial.LoadSynchronous();
+		if (FactionMaterial)
+		{
+			// SM_Slime_Base has separate eye/body sections. Apply the faction
+			// instance to every body section so the white body does not remain.
+			for (int32 MaterialIndex = 0; MaterialIndex < BodyMesh->GetNumMaterials(); ++MaterialIndex)
+			{
+				BodyMesh->SetMaterial(MaterialIndex, FactionMaterial);
+			}
+		}
+	}
+
+	if (SpikeLeft)
+	{
+		const TSoftObjectPtr<UStaticMesh>& SpikeAsset =
+			Rules->SpikeMesh.IsNull() ? DefaultRules->SpikeMesh : Rules->SpikeMesh;
+		if (UStaticMesh* LoadedSpikeMesh = SpikeAsset.LoadSynchronous())
+		{
+			SpikeLeft->SetStaticMesh(LoadedSpikeMesh);
+		}
+		SpikeLeft->SetMaterial(0, FactionMaterial);
+	}
+
+	if (SpikeRight)
+	{
+		const TSoftObjectPtr<UStaticMesh>& SpikeAsset =
+			Rules->SpikeMesh.IsNull() ? DefaultRules->SpikeMesh : Rules->SpikeMesh;
+		if (UStaticMesh* LoadedSpikeMesh = SpikeAsset.LoadSynchronous())
+		{
+			SpikeRight->SetStaticMesh(LoadedSpikeMesh);
+		}
+		SpikeRight->SetMaterial(0, FactionMaterial);
+	}
+
+	if (CoreMesh)
+	{
+		const TSoftObjectPtr<UStaticMesh>& CoreAsset =
+			Rules->CoreMesh.IsNull() ? DefaultRules->CoreMesh : Rules->CoreMesh;
+		const TSoftObjectPtr<UMaterialInterface>& CoreMaterialAsset =
+			Rules->CoreMaterial.IsNull() ? DefaultRules->CoreMaterial : Rules->CoreMaterial;
+		if (UStaticMesh* LoadedCoreMesh = CoreAsset.LoadSynchronous())
+		{
+			CoreMesh->SetStaticMesh(LoadedCoreMesh);
+		}
+		CoreMesh->SetMaterial(0, CoreMaterialAsset.LoadSynchronous());
+	}
+
+	if (WeakpointMesh)
+	{
+		const TSoftObjectPtr<UStaticMesh>& WeakpointAsset =
+			Rules->WeakpointMesh.IsNull() ? DefaultRules->WeakpointMesh : Rules->WeakpointMesh;
+		const TSoftObjectPtr<UMaterialInterface>& WeakpointMaterialAsset =
+			Rules->WeakpointMaterial.IsNull() ? DefaultRules->WeakpointMaterial : Rules->WeakpointMaterial;
+		if (UStaticMesh* LoadedWeakpointMesh = WeakpointAsset.LoadSynchronous())
+		{
+			WeakpointMesh->SetStaticMesh(LoadedWeakpointMesh);
+		}
+		WeakpointMesh->SetMaterial(0, WeakpointMaterialAsset.LoadSynchronous());
+	}
+
+	const UCapsuleComponent* Capsule = GetCapsuleComponent();
+	const float Radius = Capsule ? Capsule->GetScaledCapsuleRadius() : 20.f;
+	const float AttachmentScale = Radius / 20.f;
+
+	if (CoreMesh)
+	{
+		CoreMesh->SetRelativeLocation(FVector(0.f, 0.f, Radius * 0.5f));
+		CoreMesh->SetRelativeScale3D(FVector(AttachmentScale));
+	}
+	if (SpikeLeft)
+	{
+		SpikeLeft->SetRelativeLocation(FVector(-Radius * 0.7f, 0.f, Radius * 0.3f));
+		SpikeLeft->SetRelativeScale3D(FVector(AttachmentScale));
+	}
+	if (SpikeRight)
+	{
+		SpikeRight->SetRelativeLocation(FVector(Radius * 0.7f, 0.f, Radius * 0.3f));
+		SpikeRight->SetRelativeScale3D(FVector(AttachmentScale));
+	}
+	if (WeakpointMesh)
+	{
+		WeakpointMesh->SetRelativeLocation(FVector::ZeroVector);
+		WeakpointMesh->SetRelativeScale3D(FVector::OneVector);
+		WeakpointMesh->SetVisibility(Weakpoint && Weakpoint->IsVisible(), true);
+	}
+
+	if (bBodyMeshChanged && Radius > 0.f)
+	{
+		ApplyBodyRadius(Radius);
+	}
+}
+
+void ASlimeEcologyEnemy::RefreshCoreVisuals()
+{
+	const bool bHostile = Core && Core->IsHostileCore();
+
+	if (CoreMesh)
+	{
+		CoreMesh->SetVisibility(true, true);
+	}
+	if (SpikeLeft)
+	{
+		SpikeLeft->SetVisibility(bHostile, true);
+	}
+	if (SpikeRight)
+	{
+		SpikeRight->SetVisibility(bHostile, true);
+	}
+	if (WeakpointMesh)
+	{
+		WeakpointMesh->SetVisibility(Weakpoint && Weakpoint->IsVisible(), true);
+	}
 }
 
 void ASlimeEcologyEnemy::HandleDamaged(AActor* Causer)
@@ -265,6 +447,9 @@ void ASlimeEcologyEnemy::OnBodyStatsApplied(int32 NewMass, float BodyRadius)
 	{
 		Weakpoint->ConfigureForMass(NewMass, BodyRadius);
 	}
+
+	ApplyFactionVisuals();
+	RefreshCoreVisuals();
 }
 
 void ASlimeEcologyEnemy::SetEcologyTotals(int32 InCargo, int32 InBodyScoreCredit)

@@ -4,9 +4,11 @@
 
 #include "Ecology/SlimeEcologyRules.h"
 #include "Ecology/SlimePaintField.h"
+#include "Components/DecalComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -23,6 +25,7 @@ void USlimePaintSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void USlimePaintSubsystem::Deinitialize()
 {
+	ResetPaint();
 	SplatRecords.Reset();
 	PaintRenderTarget = nullptr;
 	SplatMID = nullptr;
@@ -80,6 +83,15 @@ void USlimePaintSubsystem::BeginRun()
 
 void USlimePaintSubsystem::ResetPaint()
 {
+	for (const TWeakObjectPtr<UDecalComponent>& Decal : PaintDecals)
+	{
+		if (UDecalComponent* DecalComponent = Decal.Get())
+		{
+			DecalComponent->DestroyComponent();
+		}
+	}
+	PaintDecals.Reset();
+
 	SplatRecords.Reset();
 	SplatCount = 0;
 	if (PaintRenderTarget)
@@ -121,17 +133,58 @@ void USlimePaintSubsystem::RegisterSplat(
 		SplatRecords.Add(Splat);
 	}
 	++SplatCount;
-	DrawSplatToRenderTarget(Splat);
+
+	const USlimeEcologyRules* DefaultRules = GetDefault<USlimeEcologyRules>();
+	const TSoftObjectPtr<UMaterialInterface>& DecalAsset =
+		(Rules && !Rules->PaintDecalMaterial.IsNull())
+			? Rules->PaintDecalMaterial
+			: DefaultRules->PaintDecalMaterial;
+	if (UMaterialInterface* DecalMaterial = DecalAsset.LoadSynchronous())
+	{
+		SpawnPaintDecal(Splat, DecalMaterial);
+	}
+	else
+	{
+		DrawSplatToRenderTarget(Splat);
+	}
 }
 
 FLinearColor USlimePaintSubsystem::GetFactionColor(ESlimeFaction Faction) const
 {
-	switch (Faction)
+	if (const USlimeEcologyRules* Rules = USlimeEcologyRules::GetFor(this))
 	{
-	case ESlimeFaction::A: return FLinearColor(0.33f, 0.85f, 0.67f, 0.9f);
-	case ESlimeFaction::B: return FLinearColor(0.95f, 0.72f, 0.36f, 0.9f);
-	case ESlimeFaction::C: return FLinearColor(0.71f, 0.61f, 1.f, 0.9f);
-	default: return FLinearColor::White;
+		FLinearColor Color = Rules->GetFactionColorOrDefault(Faction);
+		Color.A = 0.9f;
+		return Color;
+	}
+
+	return FLinearColor::White;
+}
+
+void USlimePaintSubsystem::SpawnPaintDecal(
+	const FSlimePaintSplat& Splat,
+	UMaterialInterface* DecalMaterial)
+{
+	UWorld* World = GetWorld();
+	if (!World || !DecalMaterial)
+	{
+		return;
+	}
+
+	const FVector DecalSize(
+		FMath::Max(1.f, Splat.Radius * 0.5f),
+		FMath::Max(1.f, Splat.Radius * 2.f),
+		FMath::Max(1.f, Splat.Radius * 2.f));
+	UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(
+		this,
+		DecalMaterial,
+		DecalSize,
+		Splat.Location + FVector(0.f, 0.f, 2.f),
+		FRotator(-90.f, Splat.Rotation, 0.f),
+		0.f);
+	if (Decal)
+	{
+		PaintDecals.Add(Decal);
 	}
 }
 

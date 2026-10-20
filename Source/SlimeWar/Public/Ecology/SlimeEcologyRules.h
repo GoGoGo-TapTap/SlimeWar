@@ -3,10 +3,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/SlimeWarCoreTypes.h"
 #include "Engine/DataAsset.h"
 #include "SlimeEcologyRules.generated.h"
 
 class UMaterialInterface;
+class UStaticMesh;
+
+USTRUCT(BlueprintType)
+struct FSlimeFactionVisual
+{
+	GENERATED_BODY()
+
+	/** Body mesh used by this faction. Empty keeps the mass-table/default body mesh. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UStaticMesh> BodyMesh;
+
+	/** Material applied to the body and faction-colored attachments. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UMaterialInterface> BodyMaterial;
+};
 
 /**
  * M2 ecology tuning. The defaults make a newly-created asset immediately usable; the canonical
@@ -18,8 +34,39 @@ class SLIMEWAR_API USlimeEcologyRules : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	USlimeEcologyRules();
+
 	/** Resolve the level/provider-owned rules, falling back to the class defaults. */
 	static const USlimeEcologyRules* GetFor(const UObject* WorldContextObject);
+
+	/** Faction body/material record; null when the faction has no explicit override. */
+	const FSlimeFactionVisual* FindFactionVisual(ESlimeFaction Faction) const;
+
+	/** Faction color from the data asset, falling back to the v2 palette. */
+	FLinearColor GetFactionColorOrDefault(ESlimeFaction Faction) const;
+
+	// -- Faction / attachment visuals --
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TMap<ESlimeFaction, FSlimeFactionVisual> FactionVisuals;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TMap<ESlimeFaction, FLinearColor> FactionColors;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UStaticMesh> SpikeMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UStaticMesh> CoreMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UStaticMesh> WeakpointMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UMaterialInterface> CoreMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
+	TSoftObjectPtr<UMaterialInterface> WeakpointMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perception")
 	float PerceptionInterval = 0.25f;
@@ -455,6 +502,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
 	TSoftObjectPtr<UMaterialInterface> PaintSurfaceMaterial;
+
+	/** Deferred-decal material used for one decal actor per splat. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
+	TSoftObjectPtr<UMaterialInterface> PaintDecalMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paint")
 	FName PaintTextureParameter = TEXT("SlimePaint");
