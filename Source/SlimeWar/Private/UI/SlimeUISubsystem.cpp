@@ -233,13 +233,17 @@ void USlimeUISubsystem::FocusMenuCamera(ESlimeUIFlowState State)
 		return;
 	}
 
-	// Match by the Outliner label rather than the UObject name: the level author names the actor in
-	// the editor ("Camera_MainMenu"), and GetActorLabel returns exactly that string in PIE and in
-	// packaged builds. A world that does not place the matching camera just keeps the view target,
-	// so missing cameras degrade silently.
+	// GetActorLabel() is editor-only and is unavailable in packaged Windows builds. Use an
+	// Actor Tag first (fully runtime-safe), then the object name, and only compare the Outliner
+	// label when compiling the editor. A missing camera keeps the current view target.
+	const FString CameraName = CameraLabel.ToString();
 	for (TActorIterator<ACameraActor> It(World); It; ++It)
 	{
-		if (It->GetActorLabel() == CameraLabel.ToString())
+		bool bMatches = It->ActorHasTag(CameraLabel) || It->GetName() == CameraName;
+#if WITH_EDITOR
+		bMatches = bMatches || It->GetActorLabel() == CameraName;
+#endif
+		if (bMatches)
 		{
 			PC->SetViewTargetWithBlend(*It, 0.5f, EViewTargetBlendFunction::VTBlend_Cubic);
 			return;

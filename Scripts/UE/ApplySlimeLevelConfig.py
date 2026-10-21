@@ -26,10 +26,10 @@ LEVELS = [
         "player_start": None,
         "floor_blocker": None,
         "sites": [
-            ("A", unreal.SlimeFaction.A, vector(-680, -810), color_a()),
+            ("A", unreal.SlimeFaction.A, vector(-749.98, -857.089999), color_a()),
         ],
         "minerals": [
-            ("NonRegen_0", vector(0, -210), False),
+            ("NonRegen_0", vector(0, 0), False),
             ("Regen_0", vector(1000, 600), True),
         ],
         "paint": (vector(500, 1455, 2), (3000.0, 4910.0)),
@@ -139,6 +139,70 @@ def set_bool_property(actor, value):
     raise RuntimeError("Could not set mineral regeneration boolean on {}".format(actor))
 
 
+def configure_sites(site_defs):
+    actors = [
+        actor for actor in unreal.EditorLevelLibrary.get_all_level_actors()
+        if actor.get_class().get_name() == "SlimeFactionSite"
+    ]
+
+    for index, (site_id, faction, location, display_color) in enumerate(site_defs):
+        if index < len(actors):
+            actor = actors[index]
+        else:
+            editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+            actor = editor_actor_subsystem.spawn_actor_from_class(
+                FACTION_SITE_CLASS, location, unreal.Rotator(0, 0, 0)
+            )
+
+        actor.set_actor_label("SlimeConfig_Site_{}".format(site_id))
+        actor.set_actor_location(location, False, False)
+        actor.set_editor_property("site_id", site_id)
+        actor.set_editor_property("faction", faction)
+        actor.set_editor_property("initial_population", 10)
+        actor.set_editor_property("activity_radius", 1200.0)
+        actor.set_editor_property("delivery_radius", 130.0)
+        actor.set_editor_property("spawn_ring_min", 250.0)
+        actor.set_editor_property("spawn_ring_max", 400.0)
+        actor.set_editor_property("display_color", display_color)
+
+    for extra in actors[len(site_defs):]:
+        try:
+            unreal.EditorLevelLibrary.destroy_actor(extra)
+        except Exception:
+            extra.destroy()
+
+
+def configure_minerals(mineral_defs):
+    actors = [
+        actor for actor in unreal.EditorLevelLibrary.get_all_level_actors()
+        if actor.get_class().get_name() == "SlimeMineralPatch"
+    ]
+
+    for index, (patch_id, location, regenerates) in enumerate(mineral_defs):
+        if index < len(actors):
+            actor = actors[index]
+        else:
+            editor_actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+            actor = editor_actor_subsystem.spawn_actor_from_class(
+                MINERAL_CLASS, location, unreal.Rotator(0, 0, 0)
+            )
+
+        actor.set_actor_label("SlimeConfig_Mineral_{}".format(patch_id))
+        actor.set_actor_location(location, False, False)
+        actor.set_editor_property("patch_id", patch_id)
+        actor.set_editor_property("initial_stock", 4)
+        actor.set_editor_property("max_stock", 4)
+        set_bool_property(actor, regenerates)
+        actor.set_editor_property("regrow_seconds", 5.0)
+        actor.set_editor_property("gather_range", 120.0)
+
+    for extra in actors[len(mineral_defs):]:
+        try:
+            unreal.EditorLevelLibrary.destroy_actor(extra)
+        except Exception:
+            extra.destroy()
+
+
 def configure_level(config):
     layout = unreal.load_asset(config["spawn_layout"])
     if not layout:
@@ -151,33 +215,8 @@ def configure_level(config):
     if not world:
         raise RuntimeError("Missing map {}".format(config["map"]))
 
-    for site_id, faction, location, display_color in config["sites"]:
-        actor = spawn_or_move(
-            FACTION_SITE_CLASS,
-            "SlimeConfig_Site_{}".format(site_id),
-            location,
-        )
-        actor.set_editor_property("site_id", site_id)
-        actor.set_editor_property("faction", faction)
-        actor.set_editor_property("initial_population", 10)
-        actor.set_editor_property("activity_radius", 1200.0)
-        actor.set_editor_property("delivery_radius", 130.0)
-        actor.set_editor_property("spawn_ring_min", 250.0)
-        actor.set_editor_property("spawn_ring_max", 400.0)
-        actor.set_editor_property("display_color", display_color)
-
-    for patch_id, location, regenerates in config["minerals"]:
-        actor = spawn_or_move(
-            MINERAL_CLASS,
-            "SlimeConfig_Mineral_{}".format(patch_id),
-            location,
-        )
-        actor.set_editor_property("patch_id", patch_id)
-        actor.set_editor_property("initial_stock", 4)
-        actor.set_editor_property("max_stock", 4)
-        set_bool_property(actor, regenerates)
-        actor.set_editor_property("regrow_seconds", 5.0)
-        actor.set_editor_property("gather_range", 120.0)
+    configure_sites(config["sites"])
+    configure_minerals(config["minerals"])
 
     nav_location, nav_scale = config["nav_bounds"]
     nav = find_or_spawn_by_class(

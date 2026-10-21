@@ -20,6 +20,9 @@
 - [x] 三个 SpawnLayout 已写入实际落点坐标
 - [x] 三张地图已创建站点、矿点、PaintField 并保存
 - [x] 粘液改用 `M_Slime_Splatter_Decal` 生成 Decal；`PaintSplatMaterial` / `PaintSurfaceMaterial` 可为空
+- [x] 死亡 Decal 已配置 A/B/C 三套材质：`M_Slime_Splatter_Decal_A/B/C`
+- [x] `ResourceExplorationRange` 已提高到 `8000 cm`
+- [x] Rooftop A 站点设为 `(-749.980000, -857.089999, 0)`
 - [x] Rooftop A 站点已调整为 `(-680, -810, 0)`
 - [x] Rooftop 不可再生矿点已调整为 `(0, -210, 0)`
 - [x] 矿点默认球体模型已移除，使用场景内真实模型
