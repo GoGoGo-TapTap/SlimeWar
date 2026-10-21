@@ -90,6 +90,7 @@ void ASlimePaintField::Tick(float DeltaSeconds)
 
 	for (const FSlimePaintSplat& Splat : Paint->GetSplatRecords())
 	{
+#if ENABLE_DRAW_DEBUG
 		DrawDebugCircle(
 			GetWorld(),
 			FVector(Splat.Location.X, Splat.Location.Y, GetActorLocation().Z + 2.f),
@@ -103,5 +104,6 @@ void ASlimePaintField::Tick(float DeltaSeconds)
 			FVector::ForwardVector,
 			FVector::RightVector,
 			false);
+#endif
 	}
 }

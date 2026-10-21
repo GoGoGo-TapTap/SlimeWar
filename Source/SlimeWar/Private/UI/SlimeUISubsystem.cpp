@@ -223,6 +223,10 @@ void USlimeUISubsystem::FocusMenuCamera(ESlimeUIFlowState State)
 		return;
 	}
 
+	// Camera lookup by editor label is editor-only: GetActorLabel is WITH_EDITORONLY_DATA and is
+	// stripped from packaged builds. In shipping the view target stays as-is, so the player simply
+	// keeps the default camera and missing cameras degrade silently.
+#if WITH_EDITOR
 	FName CameraLabel;
 	switch (State)
 	{
@@ -233,10 +237,6 @@ void USlimeUISubsystem::FocusMenuCamera(ESlimeUIFlowState State)
 		return;
 	}
 
-	// Match by the Outliner label rather than the UObject name: the level author names the actor in
-	// the editor ("Camera_MainMenu"), and GetActorLabel returns exactly that string in PIE and in
-	// packaged builds. A world that does not place the matching camera just keeps the view target,
-	// so missing cameras degrade silently.
 	for (TActorIterator<ACameraActor> It(World); It; ++It)
 	{
 		if (It->GetActorLabel() == CameraLabel.ToString())
@@ -245,6 +245,7 @@ void USlimeUISubsystem::FocusMenuCamera(ESlimeUIFlowState State)
 			return;
 		}
 	}
+#endif
 }
 
 void USlimeUISubsystem::EnsureWidgets()
