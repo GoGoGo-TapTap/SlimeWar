@@ -2,12 +2,15 @@ Event	ID	Name			Wwise Object Path	Notes
 	88885899	ui_nagetive			\Default Work Unit\SFX\ui\ui_nagetive	
 	215992295	player_health			\Default Work Unit\SFX\player\player_health	
 	506287935	ui_shoot			\Default Work Unit\SFX\ui\ui_shoot	
+	529726532	end			\Default Work Unit\BGM\end	
 	562758224	ui_collect			\Default Work Unit\SFX\ui\ui_collect	
 	581999743	resource_deliver			\Default Work Unit\SFX\other\resource_deliver	
 	664984855	ui_positive			\Default Work Unit\SFX\ui\ui_positive	
 	673286149	ui_alert01			\Default Work Unit\SFX\ui\ui_alert01	
 	673286150	ui_alert02			\Default Work Unit\SFX\ui\ui_alert02	
+	702482391	game			\Default Work Unit\BGM\game	
 	871813740	player_hit			\Default Work Unit\SFX\player\player_hit	
+	1281810935	start			\Default Work Unit\BGM\start	
 	1423837695	ui_ending_positive			\Default Work Unit\SFX\ui\ui_ending_positive	
 	1765917915	ui_news			\Default Work Unit\SFX\ui\ui_news	
 	1869858337	weapon_01			\Default Work Unit\SFX\weapon\weapon_01	
@@ -17,6 +20,7 @@ Event	ID	Name			Wwise Object Path	Notes
 	2407763367	monster_move			\Default Work Unit\SFX\other\monster_move	
 	2453392179	player_footstep			\Default Work Unit\SFX\player\player_footstep	
 	2681230974	scout_report			\Default Work Unit\SFX\other\scout_report	
+	2893404687	weapon02			\Default Work Unit\SFX\weapon\weapon02	
 	3083087645	player_death			\Default Work Unit\SFX\player\player_death	
 	3422627571	monster_attact			\Default Work Unit\SFX\other\monster_attact	
 	3508117276	monster_merge			\Default Work Unit\SFX\other\monster_merge	
@@ -31,6 +35,7 @@ Event	ID	Name			Wwise Object Path	Notes
 
 Game Parameter	ID	Name			Wwise Object Path	Notes
 	393239870	sfx			\Default Work Unit\sfx	
+	412724365	bgm			\Default Work Unit\bgm	
 	1100754030	all			\Default Work Unit\all	
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
@@ -45,15 +50,18 @@ In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	322176472	monster_merge_end	E:\GJ2026\2026taptap\.cache\65\{65981E6C-CB56-B95B-14CB-3F414DB18AA9}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\monster_merge_end		285940
 	358552951	move04	E:\GJ2026\2026taptap\.cache\96\{9601CF93-510B-6427-05A3-135F0FBF1984}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move04		160708
 	394469846	weapon_hit_01	E:\GJ2026\2026taptap\.cache\5A\{5AFBCBE7-391C-1EAC-F60D-5D9F3ABFC8BD}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon_hit\weapon_hit_01		149008
+	410054383	end	E:\GJ2026\2026taptap\.cache\09\{0948FD59-7A21-7BF9-B921-794F7A2BEF1D}.wem		\Actor-Mixer Hierarchy\Default Work Unit\MUSIC\end		7979480
 	419171517	player_footstep_02	E:\GJ2026\2026taptap\.cache\86\{869613AB-28BE-0F98-49E7-0B3C28B68D26}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_02		62720
 	482004822	ui_go	E:\GJ2026\2026taptap\.cache\66\{668EF40A-2B61-DC26-0E44-AFCF3EFD558E}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_go		156192
 	497441416	weapon_hit_03	E:\GJ2026\2026taptap\.cache\68\{6897570A-47AD-B527-4E3F-6932C7D4591A}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon_hit\weapon_hit_03		183632
+	507279390	start	E:\GJ2026\2026taptap\.cache\88\{88CB2555-D40A-C910-0F0A-B9A5A3604EA8}.wem		\Actor-Mixer Hierarchy\Default Work Unit\MUSIC\start		6170420
 	526628607	player_footstep_01	E:\GJ2026\2026taptap\.cache\A5\{A5A14E46-B0CA-E1BD-6982-90C36010AD76}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_01		71656
 	543374751	choose03	E:\GJ2026\2026taptap\.cache\4C\{4C0AF8EA-58AE-10CF-B6AA-0FDFCBFF6F02}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\choose03		38752
 	557634748	player_footstep_03	E:\GJ2026\2026taptap\.cache\41\{417B4DDC-DC6C-0C70-1F37-49E1C477156C}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_03		82384
 	597695863	reload	E:\GJ2026\2026taptap\.cache\D9\{D9FEF289-7FF2-3CF3-D4B0-70163838056A}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\reload		146504
 	607211103	weapon	E:\GJ2026\2026taptap\.cache\0B\{0B2C5E95-4120-23D2-D12E-ACD78E3CF82C}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon		169760
 	622622811	player_footstep_04	E:\GJ2026\2026taptap\.cache\54\{54F79480-850C-0F48-1DF4-A48C66FB113D}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\player\player_footstep\player_footstep_04		60932
+	624531788	Start the battle	E:\GJ2026\2026taptap\.cache\E0\{E0637AEF-446E-8CC3-FA24-51AA925F1179}.wem		\Actor-Mixer Hierarchy\Default Work Unit\MUSIC\Start the battle		20321376
 	635452055	move05	E:\GJ2026\2026taptap\.cache\71\{7123E135-68C2-BA12-8307-4AD3B1DCAE77}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move05		207924
 	647578506	ui_ending_positive	E:\GJ2026\2026taptap\.cache\5F\{5F9FAB3F-5B8F-49B3-5035-B19DE43EA8C7}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_ending_positive		172200
 	651108116	move03	E:\GJ2026\2026taptap\.cache\C1\{C1418BCE-0BB1-EE36-78CA-4859E900DDF8}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\other\move\move03		100444
@@ -68,6 +76,7 @@ In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	815094602	ui_click	E:\GJ2026\2026taptap\.cache\62\{6205A1A2-54C4-DFCB-8CEB-B9267B1F97FA}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_click		35868
 	833053697	ui_positive	E:\GJ2026\2026taptap\.cache\F8\{F8FD72A9-AFB2-A574-3E09-95AD4ED8BDCB}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_positive		67312
 	850429678	choose02	E:\GJ2026\2026taptap\.cache\E3\{E3EC0E24-7D6E-419A-0AC7-DFE70B911164}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\choose02		50780
+	880548156	weapon02	E:\GJ2026\2026taptap\.cache\AD\{AD307684-F0A7-F186-BDF0-97F040630086}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\weapon\weapon02		142620
 	886147513	ui_alert02	E:\GJ2026\2026taptap\.cache\CC\{CCECA313-2CB7-98D1-C124-4ADF95CC772E}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_alert02		982216
 	910166325	choose	E:\GJ2026\2026taptap\.cache\DC\{DC424F1A-172A-CD5C-DE41-189C6152253B}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\choose		22712
 	923336675	ui_collect	E:\GJ2026\2026taptap\.cache\C0\{C0781AC9-CEF5-9282-48C7-5517B4577B2C}.wem		\Actor-Mixer Hierarchy\Default Work Unit\SFX\ui\ui_collect		60444

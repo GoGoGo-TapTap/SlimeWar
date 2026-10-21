@@ -135,6 +135,7 @@ void ASlimeRunGameState::HandleRunStateChanged(ESlimeRunState NewState)
 	}
 
 	OnRunStateChanged.Broadcast(RunState);
+	BP_OnRunStateChanged.Broadcast(RunState);
 }
 
 void ASlimeRunGameState::HandleRunEnded(ERunEndReason Reason)

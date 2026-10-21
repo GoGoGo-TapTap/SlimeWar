@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{72E6972D-3944-416A-B096-A680A915B9A3}",
     "Language": "SFX",
-    "Hash": "{3ED0AAB1-23F3-A61A-09F2-65FF52FD3335}",
+    "Hash": "{7B348B32-B241-C8D9-6223-A9536399A466}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\GJ2026",
     "ShortName": "GJ2026",
     "Path": "GJ2026.bnk",
@@ -104,6 +104,14 @@
       "CachePath": "5A/{5AFBCBE7-391C-1EAC-F60D-5D9F3ABFC8BD}.wem"
      },
      {
+      "Id": "410054383",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "end.wav",
+      "CachePath": "09/{0948FD59-7A21-7BF9-B921-794F7A2BEF1D}.wem"
+     },
+     {
       "Id": "419171517",
       "Language": "SFX",
       "Streaming": "false",
@@ -126,6 +134,14 @@
       "Location": "Memory",
       "ShortName": "weapon_hit.wav",
       "CachePath": "68/{6897570A-47AD-B527-4E3F-6932C7D4591A}.wem"
+     },
+     {
+      "Id": "507279390",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "start.wav",
+      "CachePath": "88/{88CB2555-D40A-C910-0F0A-B9A5A3604EA8}.wem"
      },
      {
       "Id": "526628607",
@@ -174,6 +190,14 @@
       "Location": "Memory",
       "ShortName": "player_footstep.wav",
       "CachePath": "54/{54F79480-850C-0F48-1DF4-A48C66FB113D}.wem"
+     },
+     {
+      "Id": "624531788",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Start the battle.wav",
+      "CachePath": "E0/{E0637AEF-446E-8CC3-FA24-51AA925F1179}.wem"
      },
      {
       "Id": "635452055",
@@ -288,6 +312,14 @@
       "CachePath": "E3/{E3EC0E24-7D6E-419A-0AC7-DFE70B911164}.wem"
      },
      {
+      "Id": "880548156",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "weapon02.wav",
+      "CachePath": "AD/{AD307684-F0A7-F186-BDF0-97F040630086}.wem"
+     },
+     {
       "Id": "886147513",
       "Language": "SFX",
       "Streaming": "false",
@@ -337,6 +369,30 @@
      }
     ],
     "Events": [
+     {
+      "Id": "529726532",
+      "Name": "end",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\end",
+      "GUID": "{ADD6F9FD-6F8F-4506-BC77-5405335495B6}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "410054383"
+       }
+      ]
+     },
+     {
+      "Id": "702482391",
+      "Name": "game",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\game",
+      "GUID": "{DD15D680-4FEC-43BA-9CAA-F33C17CBD93F}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "624531788"
+       }
+      ]
+     },
      {
       "Id": "3422627571",
       "Name": "monster_attact",
@@ -518,6 +574,18 @@
       "MediaRefs": [
        {
         "Id": "702792096"
+       }
+      ]
+     },
+     {
+      "Id": "1281810935",
+      "Name": "start",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\start",
+      "GUID": "{43F137B8-EFAD-4EBE-A3C3-49FC30EF62C5}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "507279390"
        }
       ]
      },
@@ -716,6 +784,20 @@
       ]
      },
      {
+      "Id": "2893404687",
+      "Name": "weapon02",
+      "ObjectPath": "\\Events\\Default Work Unit\\SFX\\weapon\\weapon02",
+      "GUID": "{655E1345-DC9B-4E1F-BB31-249BC03F97BB}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.8076871",
+      "DurationMax": "0.8076871",
+      "MediaRefs": [
+       {
+        "Id": "880548156"
+       }
+      ]
+     },
+     {
       "Id": "1869858337",
       "Name": "weapon_01",
       "ObjectPath": "\\Events\\Default Work Unit\\SFX\\weapon\\weapon_01",
@@ -789,6 +871,12 @@
       "GUID": "{23A23A39-28CD-43E5-937F-6BE65E176D5C}"
      },
      {
+      "Id": "412724365",
+      "Name": "bgm",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\bgm",
+      "GUID": "{2C5223D6-CBDE-4762-8057-32F31A76C5EB}"
+     },
+     {
       "Id": "1100754030",
       "Name": "all",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\all",
@@ -797,6 +885,6 @@
     ]
    }
   ],
-  "FileHash": "{40AD8732-3F9D-585C-AD1E-122FD2ABFFA9}"
+  "FileHash": "{F7037FA2-690F-CF46-F25F-972AF82629E3}"
  }
 }

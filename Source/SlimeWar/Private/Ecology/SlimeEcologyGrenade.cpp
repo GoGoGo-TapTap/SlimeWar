@@ -2,6 +2,7 @@
 
 #include "Ecology/SlimeEcologyGrenade.h"
 
+#include "Audio/SlimeAudioSubsystem.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/SlimeWarLog.h"
@@ -117,6 +118,12 @@ void ASlimeEcologyGrenade::Detonate()
 		return;
 	}
 	bDetonated = true;
+
+	if (USlimeAudioSubsystem* Audio = USlimeAudioSubsystem::Get(this))
+	{
+		Audio->PlayEvent(ESlimeAudioEvent::GrenadeExplosion, this);
+	}
+
 	if (GrenadeType == ESlimeGrenadeType::Assimilation)
 	{
 		ApplyAssimilation();

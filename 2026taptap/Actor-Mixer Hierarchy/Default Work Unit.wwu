@@ -1536,11 +1536,6 @@
 												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
 												<Property Name="TrimBegin" Type="Real64" Value="0.153382412549957"/>
 												<Property Name="TrimEnd" Type="Real64" Value="1.11750044137482"/>
-												<Property Name="VolumeOffset" Type="Real64">
-													<ValueList>
-														<Value>-8</Value>
-													</ValueList>
-												</Property>
 											</PropertyList>
 											<Language>SFX</Language>
 											<AudioFile>ui_alert01.wav</AudioFile>
@@ -1641,13 +1636,6 @@
 									</ReferenceList>
 									<ChildrenList>
 										<AudioFileSource Name="ui_alert02" ID="{3AF8F821-D7CC-4A2F-ABBD-79194B0ECD8F}">
-											<PropertyList>
-												<Property Name="VolumeOffset" Type="Real64">
-													<ValueList>
-														<Value>-3</Value>
-													</ValueList>
-												</Property>
-											</PropertyList>
 											<Language>SFX</Language>
 											<AudioFile>ui_alert02.wav</AudioFile>
 											<MediaIDList>
@@ -3213,11 +3201,354 @@
 										</ObjectList>
 									</ObjectLists>
 								</RandomSequenceContainer>
+								<Sound Name="weapon02" ID="{53364708-678F-4B22-881A-5E1BFC941316}" ShortID="329576126">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="weapon02" ID="{CED5AB61-2677-4D3B-A661-6DEF634DC745}">
+											<Language>SFX</Language>
+											<AudioFile>weapon02.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="880548156"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="weapon02" ID="{CED5AB61-2677-4D3B-A661-6DEF634DC745}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
 							</ChildrenList>
 						</Folder>
 					</ChildrenList>
 				</Folder>
-				<Folder Name="MUSIC" ID="{D0C2396E-15C3-49B3-8ADF-CEC002371ACE}" ShortID="676825635"/>
+				<Folder Name="MUSIC" ID="{D0C2396E-15C3-49B3-8ADF-CEC002371ACE}" ShortID="676825635">
+					<ChildrenList>
+						<Sound Name="end" ID="{06F27F50-146C-4D7A-AA47-950E2A66760F}" ShortID="515455753">
+							<PropertyList>
+								<Property Name="IsLoopingEnabled" Type="bool" Value="True"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="end" ID="{276E6CB0-6249-44D5-AC24-936EE704CD2D}">
+									<PropertyList>
+										<Property Name="VolumeOffset" Type="Real64">
+											<ValueList>
+												<Value>-14</Value>
+											</ValueList>
+										</Property>
+									</PropertyList>
+									<Language>SFX</Language>
+									<AudioFile>end.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="410054383"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ObjectLists>
+								<ObjectList Name="RTPC">
+									<Reference>
+										<Local>
+											<RTPC Name="" ID="{3CEA6D20-C860-4CB2-97C7-5522592A7D4E}" ShortID="901065927">
+												<PropertyList>
+													<Property Name="PropertyName" Type="string" Value="Volume"/>
+												</PropertyList>
+												<ReferenceList>
+													<Reference Name="ControlInput">
+														<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+													</Reference>
+													<Reference Name="Curve">
+														<Custom>
+															<Curve Name="" ID="{EB7C1F91-2367-4BFA-AC2E-473E164DE339}">
+																<PropertyList>
+																	<Property Name="Flags" Type="int32" Value="3"/>
+																</PropertyList>
+																<PointList>
+																	<Point>
+																		<XPos>0</XPos>
+																		<YPos>-200</YPos>
+																		<Flags>5</Flags>
+																	</Point>
+																	<Point>
+																		<XPos>100</XPos>
+																		<YPos>0</YPos>
+																		<Flags>37</Flags>
+																	</Point>
+																</PointList>
+															</Curve>
+														</Custom>
+													</Reference>
+												</ReferenceList>
+											</RTPC>
+										</Local>
+									</Reference>
+									<Reference>
+										<Local>
+											<RTPC Name="" ID="{3C525A8D-BF4A-4F5A-8BF8-8A653AA97ADD}" ShortID="309678042">
+												<PropertyList>
+													<Property Name="PropertyName" Type="string" Value="Volume"/>
+												</PropertyList>
+												<ReferenceList>
+													<Reference Name="ControlInput">
+														<ObjectRef Name="bgm" ID="{2C5223D6-CBDE-4762-8057-32F31A76C5EB}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+													</Reference>
+													<Reference Name="Curve">
+														<Custom>
+															<Curve Name="" ID="{5297D74C-C834-4DE2-B7EA-4D15983BCDBA}">
+																<PropertyList>
+																	<Property Name="Flags" Type="int32" Value="3"/>
+																</PropertyList>
+																<PointList>
+																	<Point>
+																		<XPos>0</XPos>
+																		<YPos>-200</YPos>
+																		<Flags>5</Flags>
+																	</Point>
+																	<Point>
+																		<XPos>100</XPos>
+																		<YPos>0</YPos>
+																		<Flags>37</Flags>
+																	</Point>
+																</PointList>
+															</Curve>
+														</Custom>
+													</Reference>
+												</ReferenceList>
+											</RTPC>
+										</Local>
+									</Reference>
+								</ObjectList>
+							</ObjectLists>
+							<ActiveSourceList>
+								<ActiveSource Name="end" ID="{276E6CB0-6249-44D5-AC24-936EE704CD2D}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Start the battle" ID="{A2E42B7D-74ED-494E-9E23-6F8E39FA9E46}" ShortID="114484842">
+							<PropertyList>
+								<Property Name="IsLoopingEnabled" Type="bool" Value="True"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="Start the battle" ID="{9FF3E844-426F-4347-B8EE-3EE83A1B422D}">
+									<PropertyList>
+										<Property Name="VolumeOffset" Type="Real64">
+											<ValueList>
+												<Value>-15</Value>
+											</ValueList>
+										</Property>
+									</PropertyList>
+									<Language>SFX</Language>
+									<AudioFile>Start the battle.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="624531788"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ObjectLists>
+								<ObjectList Name="RTPC">
+									<Reference>
+										<Local>
+											<RTPC Name="" ID="{BC2CDCBE-90C0-40A0-AC40-6687C7698224}" ShortID="209984936">
+												<PropertyList>
+													<Property Name="PropertyName" Type="string" Value="Volume"/>
+												</PropertyList>
+												<ReferenceList>
+													<Reference Name="ControlInput">
+														<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+													</Reference>
+													<Reference Name="Curve">
+														<Custom>
+															<Curve Name="" ID="{5727C135-D301-4C18-BE12-D1E1AD7C1A85}">
+																<PropertyList>
+																	<Property Name="Flags" Type="int32" Value="3"/>
+																</PropertyList>
+																<PointList>
+																	<Point>
+																		<XPos>0</XPos>
+																		<YPos>-200</YPos>
+																		<Flags>5</Flags>
+																	</Point>
+																	<Point>
+																		<XPos>100</XPos>
+																		<YPos>0</YPos>
+																		<Flags>37</Flags>
+																	</Point>
+																</PointList>
+															</Curve>
+														</Custom>
+													</Reference>
+												</ReferenceList>
+											</RTPC>
+										</Local>
+									</Reference>
+									<Reference>
+										<Local>
+											<RTPC Name="" ID="{5E73C1E9-C7F6-45A3-9557-4C849918D3B4}" ShortID="699343642">
+												<PropertyList>
+													<Property Name="PropertyName" Type="string" Value="Volume"/>
+												</PropertyList>
+												<ReferenceList>
+													<Reference Name="ControlInput">
+														<ObjectRef Name="bgm" ID="{2C5223D6-CBDE-4762-8057-32F31A76C5EB}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+													</Reference>
+													<Reference Name="Curve">
+														<Custom>
+															<Curve Name="" ID="{5F9BF128-2F9D-4069-A487-1692BD7B4A00}">
+																<PropertyList>
+																	<Property Name="Flags" Type="int32" Value="3"/>
+																</PropertyList>
+																<PointList>
+																	<Point>
+																		<XPos>0</XPos>
+																		<YPos>-200</YPos>
+																		<Flags>5</Flags>
+																	</Point>
+																	<Point>
+																		<XPos>100</XPos>
+																		<YPos>0</YPos>
+																		<Flags>37</Flags>
+																	</Point>
+																</PointList>
+															</Curve>
+														</Custom>
+													</Reference>
+												</ReferenceList>
+											</RTPC>
+										</Local>
+									</Reference>
+								</ObjectList>
+							</ObjectLists>
+							<ActiveSourceList>
+								<ActiveSource Name="Start the battle" ID="{9FF3E844-426F-4347-B8EE-3EE83A1B422D}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="start" ID="{6B35AEFE-3BDD-4E7E-80DE-1A92E1F3F8F0}" ShortID="579802889">
+							<PropertyList>
+								<Property Name="IsLoopingEnabled" Type="bool" Value="True"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{CD1CC8ED-A609-4626-BCB6-833E98142F0F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{771FF52D-1846-40C0-9840-8546CEDD156F}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="start" ID="{9B0147D0-8FAA-405C-A29D-C2497B82272C}">
+									<PropertyList>
+										<Property Name="VolumeOffset" Type="Real64">
+											<ValueList>
+												<Value>-10</Value>
+											</ValueList>
+										</Property>
+									</PropertyList>
+									<Language>SFX</Language>
+									<AudioFile>start.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="507279390"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ObjectLists>
+								<ObjectList Name="RTPC">
+									<Reference>
+										<Local>
+											<RTPC Name="" ID="{FEC56B9B-9381-453A-924F-F0664B1F2CC3}" ShortID="1004409751">
+												<PropertyList>
+													<Property Name="PropertyName" Type="string" Value="Volume"/>
+												</PropertyList>
+												<ReferenceList>
+													<Reference Name="ControlInput">
+														<ObjectRef Name="all" ID="{C805F820-C0AC-4600-8A51-96CD63DB3A78}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+													</Reference>
+													<Reference Name="Curve">
+														<Custom>
+															<Curve Name="" ID="{CFA6FBCC-8C17-4A2A-9EF7-CDC9DD22B8A3}">
+																<PropertyList>
+																	<Property Name="Flags" Type="int32" Value="3"/>
+																</PropertyList>
+																<PointList>
+																	<Point>
+																		<XPos>0</XPos>
+																		<YPos>-200</YPos>
+																		<Flags>5</Flags>
+																	</Point>
+																	<Point>
+																		<XPos>100</XPos>
+																		<YPos>0</YPos>
+																		<Flags>37</Flags>
+																	</Point>
+																</PointList>
+															</Curve>
+														</Custom>
+													</Reference>
+												</ReferenceList>
+											</RTPC>
+										</Local>
+									</Reference>
+									<Reference>
+										<Local>
+											<RTPC Name="" ID="{EB41ACCE-3389-46B2-AE27-1C9CB87F0C10}" ShortID="266786787">
+												<PropertyList>
+													<Property Name="PropertyName" Type="string" Value="Volume"/>
+												</PropertyList>
+												<ReferenceList>
+													<Reference Name="ControlInput">
+														<ObjectRef Name="bgm" ID="{2C5223D6-CBDE-4762-8057-32F31A76C5EB}" WorkUnitID="{D786F211-4CE5-4DEC-B6B5-CB1C2D4BE147}"/>
+													</Reference>
+													<Reference Name="Curve">
+														<Custom>
+															<Curve Name="" ID="{AA62292A-0135-4F93-869E-ABF553C88B52}">
+																<PropertyList>
+																	<Property Name="Flags" Type="int32" Value="3"/>
+																</PropertyList>
+																<PointList>
+																	<Point>
+																		<XPos>0</XPos>
+																		<YPos>-200</YPos>
+																		<Flags>5</Flags>
+																	</Point>
+																	<Point>
+																		<XPos>100</XPos>
+																		<YPos>0</YPos>
+																		<Flags>37</Flags>
+																	</Point>
+																</PointList>
+															</Curve>
+														</Custom>
+													</Reference>
+												</ReferenceList>
+											</RTPC>
+										</Local>
+									</Reference>
+								</ObjectList>
+							</ObjectLists>
+							<ActiveSourceList>
+								<ActiveSource Name="start" ID="{9B0147D0-8FAA-405C-A29D-C2497B82272C}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+					</ChildrenList>
+				</Folder>
 			</ChildrenList>
 		</WorkUnit>
 	</AudioObjects>

@@ -13,6 +13,9 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateRunStateChanged, ESlimeRunSta
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateRunEnded, ERunEndReason /*Reason*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateFusionHint, FVector /*Location*/);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimeGameStateRunStateChangedBP, ESlimeRunState, NewState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSlimeGameStatePauseStateChangedBP, bool, bPaused);
+
 /**
  * Read-only mirror of the run (PC-09).
  *
@@ -23,7 +26,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FSlimeGameStateFusionHint, FVector /*Locatio
  * Fast changing debug numbers (live enemy counts, peak, current batch) are deliberately NOT mirrored
  * here - the debug HUD asks the subsystems directly for those.
  */
-UCLASS()
+UCLASS(BlueprintType)
 class ASlimeRunGameState : public AGameStateBase
 {
 	GENERATED_BODY()
@@ -77,6 +80,14 @@ public:
 	FSlimeGameStateValueChanged OnClearedPointCountChanged;
 	FSlimeGameStateRunStateChanged OnRunStateChanged;
 	FSlimeGameStateRunEnded OnRunEnded;
+
+	/** Blueprint hook for BGM / camera / ambient changes that follow the run phase. */
+	UPROPERTY(BlueprintAssignable, Category = "Slime|Run")
+	FSlimeGameStateRunStateChangedBP BP_OnRunStateChanged;
+
+	/** Blueprint hook for pausing/resuming continuous media (BGM) without polling. */
+	UPROPERTY(BlueprintAssignable, Category = "Slime|Run")
+	FSlimeGameStatePauseStateChangedBP BP_OnPauseStateChanged;
 
 	/** Fires at most once per run: the first fusion close enough for the tutorial hint (PD-12). */
 	FSlimeGameStateFusionHint OnFusionHint;

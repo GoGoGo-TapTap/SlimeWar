@@ -29,6 +29,8 @@ USlimeAudioConfig::USlimeAudioConfig()
 	WeaponEmpty = MakeSfx(TEXT("weapon/weapon_empty.weapon_empty"));
 	WeaponReload = MakeSfx(TEXT("weapon/weapon_reload.weapon_reload"));
 
+	GrenadeExplosion = MakeSfx(TEXT("weapon/weapon02.weapon02"));
+
 	ScoutReport = MakeSfx(TEXT("other/scout_report.scout_report"));
 	MonsterAttack = MakeSfx(TEXT("other/monster_attact.monster_attact"));
 	MonsterMergeEnd = MakeSfx(TEXT("other/monster_merge_end.monster_merge_end"));
@@ -54,6 +56,7 @@ UAkAudioEvent* USlimeAudioConfig::GetEvent(ESlimeAudioEvent InEvent) const
 	case ESlimeAudioEvent::WeaponFire:       Field = &WeaponFire; break;
 	case ESlimeAudioEvent::WeaponEmpty:      Field = &WeaponEmpty; break;
 	case ESlimeAudioEvent::WeaponReload:     Field = &WeaponReload; break;
+	case ESlimeAudioEvent::GrenadeExplosion: Field = &GrenadeExplosion; break;
 	case ESlimeAudioEvent::ScoutReport:      Field = &ScoutReport; break;
 	case ESlimeAudioEvent::MonsterAttack:    Field = &MonsterAttack; break;
 	case ESlimeAudioEvent::MonsterMerge:     Field = &MonsterMerge; break;

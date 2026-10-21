@@ -24,6 +24,8 @@ enum class ESlimeAudioEvent : uint8
 	WeaponEmpty,
 	WeaponReload,
 
+	GrenadeExplosion,
+
 	ScoutReport,
 	MonsterAttack,
 	MonsterMerge,
@@ -74,6 +76,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Events|Weapon")
 	TSoftObjectPtr<UAkAudioEvent> WeaponReload;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Events|Weapon")
+	TSoftObjectPtr<UAkAudioEvent> GrenadeExplosion;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Events|Ecology")
 	TSoftObjectPtr<UAkAudioEvent> ScoutReport;

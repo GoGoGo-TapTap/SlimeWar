@@ -914,6 +914,12 @@ void USlimeUISubsystem::SetPauseState(bool bNewPaused)
 
 	bPaused = bNewPaused;
 
+	// Notify blueprint listeners (BGM manager) so they can pause/resume continuous media.
+	if (ASlimeRunGameState* RunState = GetRunGameState())
+	{
+		RunState->BP_OnPauseStateChanged.Broadcast(bPaused);
+	}
+
 	// The world is frozen with a zero time dilation rather than an engine pause.
 	//
 	// An engine pause needs APlayerController::bShouldPerformFullTickWhenPaused (protected) to keep
