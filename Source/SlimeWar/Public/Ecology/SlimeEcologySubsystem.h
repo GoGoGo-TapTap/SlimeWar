@@ -63,7 +63,8 @@ public:
 
 	ASlimeMineralPatch* FindBestMineralPatch(
 		const ASlimeEcologyEnemy* Enemy,
-		float MaxRange) const;
+		float MaxRange,
+		const TSet<TWeakObjectPtr<ASlimeMineralPatch>>* IgnoredPatches = nullptr) const;
 	ASlimeCargoPickup* FindNearestCargoPickup(
 		const ASlimeEcologyEnemy* Enemy,
 		float MaxRange) const;
@@ -79,6 +80,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Slime|Ecology")
 	int32 GetRegisteredCount() const;
+	int32 GetLiveAgentCount() const;
 
 	int32 GetRebuildCount() const { return RebuildCount; }
 	int32 GetLastQueryVisitedCells() const { return LastQueryVisitedCells; }

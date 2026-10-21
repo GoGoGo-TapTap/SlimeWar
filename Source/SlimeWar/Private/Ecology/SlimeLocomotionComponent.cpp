@@ -71,23 +71,31 @@ void USlimeLocomotionComponent::SetMoveGoal(
 	float InSpeed,
 	float InArrivalRadius)
 {
-	const bool bNewGoal =
+	const bool bGoalChanged =
 		!bHasGoal || FVector::DistSquared2D(Goal, InGoal) > FMath::Square(25.f);
 
 	DesiredSpeed = FMath::Max(0.f, InSpeed);
 	GoalArrivalRadius = InArrivalRadius;
-        bAutonomousSuspended = false;
+	bAutonomousSuspended = false;
 	bHasGoal = true;
 	bAtGoal = false;
-	bStuckExhausted = false;
 	bStopped = false;
 
-	if (bNewGoal || PathPoints.Num() == 0)
+	if (bGoalChanged)
 	{
-                Goal = InGoal;
+		Goal = InGoal;
 		PathFailures = 0;
 		PathIndex = 0;
 		PathRefreshRemaining = 0.f;
+		bStuckExhausted = false;
+		RefreshPath();
+	}
+	else if (!PathPoints.IsValidIndex(PathIndex)
+		&& PathRefreshRemaining <= 0.f
+		&& PathFailures <= (GetRules() ? GetRules()->MaxPathFailures : 3))
+	{
+		// Retry at the path cooldown. Failures accumulate across refreshes so the decision layer
+		// can blacklist this goal instead of resetting the counter every 0.25 s.
 		RefreshPath();
 	}
 }
@@ -293,10 +301,15 @@ void USlimeLocomotionComponent::RefreshPath()
 	if (IsDirectPathClear(Start, Goal))
 	{
 		PathPoints.Add(Goal);
+		PathFailures = 0;
 	}
 	else if (!BuildNavPath(Start, Goal, PathPoints))
 	{
 		++PathFailures;
+	}
+	else
+	{
+		PathFailures = 0;
 	}
 
 	++PathRequestCount;

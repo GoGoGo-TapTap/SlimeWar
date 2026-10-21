@@ -4,6 +4,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Core/SlimeHealthComponent.h"
+#include "Core/SlimeWarLog.h"
 #include "Ecology/SlimeBodyInteractionComponent.h"
 #include "Ecology/SlimeAlertComponent.h"
 #include "Ecology/SlimeCargoPickup.h"
@@ -157,6 +158,14 @@ void USlimeEcologyBrainComponent::TickComponent(
 
         ResourceMemoryRemaining = FMath::Max(0.f, ResourceMemoryRemaining - DeltaTime);
         GatherRestRemaining = FMath::Max(0.f, GatherRestRemaining - DeltaTime);
+        for (auto It = MineralTargetCooldownRemaining.CreateIterator(); It; ++It)
+        {
+                It.Value() -= DeltaTime;
+                if (!It.Key().IsValid() || It.Value() <= 0.f)
+                {
+                        It.RemoveCurrent();
+                }
+        }
 
 	if (const USlimeCoreComponent* Core = Enemy->GetCoreComponent())
 	{
@@ -687,17 +696,53 @@ bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
                 FMath::Max(0.f, ResourceTargetHoldRemaining - Rules->PerceptionInterval);
 
         ASlimeMineralPatch* Patch = MineralTarget.Get();
+        if (Patch && Patch->Stock > 0
+                && FVector::DistSquared2D(Locomotion->GetGoal(), Patch->GetActorLocation())
+                        <= FMath::Square(25.f)
+                && Locomotion->GetPathFailureCount() >= Rules->MaxPathFailures)
+        {
+                MineralTargetCooldownRemaining.Add(
+                        Patch,
+                        Rules->ResourceUnreachableRetrySeconds);
+                UE_LOG(LogSlimeWar, Warning,
+                        TEXT("EcologyResource: %s cannot path to %s; ignoring it for %.1f s."),
+                        *GetNameSafe(Enemy),
+                        *GetNameSafe(Patch),
+                        Rules->ResourceUnreachableRetrySeconds);
+                MineralTarget = nullptr;
+                ResourceMemoryRemaining = 0.f;
+                ResourceTargetHoldRemaining = 0.f;
+                GatherTimeRemaining = 0.f;
+                Patch = nullptr;
+                return false;
+        }
+
+        TSet<TWeakObjectPtr<ASlimeMineralPatch>> IgnoredPatches;
+        for (const auto& Pair : MineralTargetCooldownRemaining)
+        {
+                if (Pair.Key.IsValid())
+                {
+                        IgnoredPatches.Add(Pair.Key);
+                }
+        }
+
         const bool bTargetInvalid =
                 !Patch || Patch->Stock <= 0 || ResourceMemoryRemaining <= 0.f;
         bool bShouldSelectTarget = bTargetInvalid;
         if (!bTargetInvalid && ResourceTargetHoldRemaining <= 0.f)
         {
                 ASlimeMineralPatch* BetterPatch =
-                        Ecology->FindBestMineralPatch(Enemy, Rules->ResourceSenseRange);
+                        Ecology->FindBestMineralPatch(
+                                Enemy,
+                                Rules->ResourceSenseRange,
+                                &IgnoredPatches);
                 if (!BetterPatch)
                 {
                         BetterPatch =
-                                Ecology->FindBestMineralPatch(Enemy, Rules->ResourceExplorationRange);
+                                Ecology->FindBestMineralPatch(
+                                        Enemy,
+                                        Rules->ResourceExplorationRange,
+                                        &IgnoredPatches);
                 }
                 if (BetterPatch && BetterPatch != Patch)
                 {
@@ -711,10 +756,16 @@ bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
 
         if (bShouldSelectTarget)
 	{
-		Patch = Ecology->FindBestMineralPatch(Enemy, Rules->ResourceSenseRange);
+		Patch = Ecology->FindBestMineralPatch(
+                        Enemy,
+                        Rules->ResourceSenseRange,
+                        &IgnoredPatches);
 		if (!Patch)
 		{
-			Patch = Ecology->FindBestMineralPatch(Enemy, Rules->ResourceExplorationRange);
+			Patch = Ecology->FindBestMineralPatch(
+                                Enemy,
+                                Rules->ResourceExplorationRange,
+                                &IgnoredPatches);
 		}
 		MineralTarget = Patch;
 		ResourceMemoryRemaining = Patch ? Rules->ResourceMemory : 0.f;
@@ -752,6 +803,21 @@ bool USlimeEcologyBrainComponent::UpdateResourceBehavior()
 		}
 		return true;
 	}
+
+        if (Patch)
+        {
+                UE_LOG(LogSlimeWar, Verbose,
+                        TEXT("EcologyResource: %s selected %s at %.0f cm."),
+                        *GetNameSafe(Enemy),
+                        *GetNameSafe(Patch),
+                        FVector::Dist2D(Enemy->GetActorLocation(), Patch->GetActorLocation()));
+        }
+        else
+        {
+                UE_LOG(LogSlimeWar, Verbose,
+                        TEXT("EcologyResource: %s has no reachable mineral target; exploring."),
+                        *GetNameSafe(Enemy));
+        }
 
 	return false;
 }

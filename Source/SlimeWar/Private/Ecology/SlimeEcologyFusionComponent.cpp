@@ -59,6 +59,13 @@ namespace
 		}
 		return Midpoint;
 	}
+
+	bool HasHostileIntent(const ASlimeEcologyEnemy* Enemy)
+	{
+		const USlimeCoreComponent* Core = Enemy ? Enemy->GetCoreComponent() : nullptr;
+		const USlimeAlertComponent* Alert = Enemy ? Enemy->GetAlertComponent() : nullptr;
+		return (Core && Core->IsHostileCore()) || (Alert && Alert->IsAlerted());
+	}
 }
 
 USlimeEcologyFusionComponent::USlimeEcologyFusionComponent()
@@ -118,6 +125,17 @@ void USlimeEcologyFusionComponent::ResetAutoReady()
 void USlimeEcologyFusionComponent::ForceReady()
 {
 	AutoReadyRemaining = 0.f;
+}
+
+void USlimeEcologyFusionComponent::NotifyAlertForHostileFusion(float ReadyDelay)
+{
+	bHostileIntentSnapshot = true;
+	if (!IsEngaged())
+	{
+		AutoReadyRemaining = FMath::Min(
+			AutoReadyRemaining,
+			FMath::Max(0.f, ReadyDelay));
+	}
 }
 
 bool USlimeEcologyFusionComponent::IsEngaged() const
@@ -355,6 +373,8 @@ void USlimeEcologyFusionComponent::SetupLocalPairing(
 	ContactTime = 0.f;
 	SeekElapsed = 0.f;
 	bInitiator = InIsInitiator;
+	bHostileIntentSnapshot =
+		HasHostileIntent(GetOwnerEnemy()) || HasHostileIntent(Other);
 	SetPairCollisionIgnore(Other, true);
 	SetState(InPath == ESlimeEcologyFusionPath::Contact
 		? ESlimeEcologyFusionState::Contacting
@@ -663,6 +683,7 @@ void USlimeEcologyFusionComponent::ClearPairing()
 	ContactTime = 0.f;
 	SeekElapsed = 0.f;
 	bInitiator = false;
+	bHostileIntentSnapshot = false;
 	if (Owner)
 	{
 		if (USlimeLocomotionComponent* Loco = GetLocomotion())
@@ -764,7 +785,8 @@ void USlimeEcologyFusionComponent::ResolvePairing()
 	const int32 NewCredit =
 		Survivor->GetBodyScoreCredit() + Other->GetBodyScoreCredit();
         const bool bHostileCore =
-            (Survivor->GetCoreComponent() && Survivor->GetCoreComponent()->IsHostileCore())
+            bHostileIntentSnapshot
+            || (Survivor->GetCoreComponent() && Survivor->GetCoreComponent()->IsHostileCore())
             || (Other->GetCoreComponent() && Other->GetCoreComponent()->IsHostileCore())
             || (Survivor->GetAlertComponent() && Survivor->GetAlertComponent()->IsAlerted())
             || (Other->GetAlertComponent() && Other->GetAlertComponent()->IsAlerted());
@@ -799,6 +821,7 @@ void USlimeEcologyFusionComponent::ResolvePairing()
 	Partner.Reset();
 	Path = ESlimeEcologyFusionPath::None;
 	ContactTime = 0.f;
+	bHostileIntentSnapshot = false;
 	Survivor->ApplyStatRow(NewMass, HealthFraction);
 	Survivor->SetEcologyTotals(NewCargo, NewCredit);
         if (CombinedStun > 0.f && Survivor->GetBodyInteraction())
@@ -877,7 +900,8 @@ void USlimeEcologyFusionComponent::ResolveForcedPair(ASlimeEcologyEnemy* Other)
 	const int32 NewCargo = Survivor->GetCargo() + Other->GetCargo();
 	const int32 NewCredit = Survivor->GetBodyScoreCredit() + Other->GetBodyScoreCredit();
         const bool bHostileCore =
-            (Survivor->GetCoreComponent() && Survivor->GetCoreComponent()->IsHostileCore())
+            bHostileIntentSnapshot
+            || (Survivor->GetCoreComponent() && Survivor->GetCoreComponent()->IsHostileCore())
             || (Other->GetCoreComponent() && Other->GetCoreComponent()->IsHostileCore())
             || (Survivor->GetAlertComponent() && Survivor->GetAlertComponent()->IsAlerted())
             || (Other->GetAlertComponent() && Other->GetAlertComponent()->IsAlerted());
@@ -934,6 +958,7 @@ void USlimeEcologyFusionComponent::ResolveForcedPair(ASlimeEcologyEnemy* Other)
                 Alert->ClearAlert();
         }
 	Survivor->GetBodyInteraction()->ClearForcedFusionWindow();
+	bHostileIntentSnapshot = false;
 	CooldownRemaining = Rules->FusionSuccessCooldown;
 	ResetAutoReady();
 	SetState(ESlimeEcologyFusionState::Cooldown);
@@ -1050,6 +1075,7 @@ void USlimeEcologyFusionComponent::ResetForAssimilation()
 	SplitCalmRemaining = 0.f;
 	ContactTime = 0.f;
 	SeekElapsed = 0.f;
+	bHostileIntentSnapshot = false;
 }
 
 void USlimeEcologyFusionComponent::SetTemporaryContactReady(float Seconds)

@@ -738,12 +738,16 @@ void USlimeCoreComponent::Detonate()
 		*GetNameSafe(Causer));
 	if (USlimePaintSubsystem* Paint = GetWorld()->GetSubsystem<USlimePaintSubsystem>())
 	{
+		const float CapsuleRadius = Enemy->GetCapsuleComponent()
+			? Enemy->GetCapsuleComponent()->GetScaledCapsuleRadius()
+			: 20.f;
 		Paint->RegisterSplat(
 			Origin,
 			Paint->GetFactionColor(Enemy->GetFaction()),
 			Radius * 0.65f,
 			FMath::FRandRange(0.f, 2.f * PI),
-			Enemy->GetFaction());
+			Enemy->GetFaction(),
+			CapsuleRadius);
 	}
 #if ENABLE_DRAW_DEBUG
         DrawDebugSphere(

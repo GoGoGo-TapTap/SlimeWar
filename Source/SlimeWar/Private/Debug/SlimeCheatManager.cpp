@@ -22,6 +22,7 @@
 #include "Ecology/SlimeEcologySubsystem.h"
 #include "Ecology/SlimeFactionSite.h"
 #include "Ecology/SlimeLocomotionComponent.h"
+#include "Ecology/SlimeMineralPatch.h"
 #include "Ecology/SlimePaintSubsystem.h"
 #include "Ecology/SlimePaintField.h"
 #include "Ecology/SlimeWeakpointComponent.h"
@@ -41,8 +42,10 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameplayFramework/SlimeCombatSubsystem.h"
 #include "GameplayFramework/StatTableProvider.h"
+#include "Kismet/GameplayStatics.h"
 #include "Math/NumericLimits.h"
 #include "NavigationSystem.h"
+#include "NavigationPath.h"
 #include "Player/SlimeAimAssistComponent.h"
 #include "Player/SlimeWarCharacter.h"
 #include "Player/SlimeWeaponComponent.h"
@@ -141,6 +144,114 @@ namespace
 		}
 
 		return Best;
+	}
+}
+
+void USlimeCheatManager::SlimeEcologyNavigationValidation()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(
+		EcologyResourceSoakTimer,
+		this,
+		&USlimeCheatManager::ValidateEcologyNavigationNow,
+		2.f,
+		false);
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("SlimeEcologyNavigationValidation: scheduled after runtime navigation startup."));
+}
+
+void USlimeCheatManager::ValidateEcologyNavigationNow()
+{
+	UWorld* World = GetWorld();
+	UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
+	if (!World || !Nav)
+	{
+		UE_LOG(LogSlimeWar, Error,
+			TEXT("SlimeEcologyNavigationValidation: navigation is unavailable."));
+		return;
+	}
+
+	TArray<ASlimeFactionSite*> Sites;
+	TArray<ASlimeMineralPatch*> AllMinerals;
+	TArray<ASlimeMineralPatch*> Minerals;
+	for (TActorIterator<ASlimeFactionSite> It(World); It; ++It)
+	{
+		Sites.Add(*It);
+	}
+	for (TActorIterator<ASlimeMineralPatch> It(World); It; ++It)
+	{
+		AllMinerals.Add(*It);
+		if (It->bRegenerates)
+		{
+			Minerals.Add(*It);
+		}
+	}
+
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("SlimeEcologyNavigationValidation: map=%s sites=%d regen=%d."),
+		*UGameplayStatics::GetCurrentLevelName(this, true),
+		Sites.Num(),
+		Minerals.Num());
+
+	for (const ASlimeMineralPatch* Mineral : Minerals)
+	{
+		for (const ASlimeFactionSite* Site : Sites)
+		{
+			const FVector Start = Site->GetActorLocation() + FVector(0.f, 0.f, 50.f);
+			const FVector End = Mineral->GetActorLocation() + FVector(0.f, 0.f, 22.f);
+			FNavLocation ProjectedStart;
+			FNavLocation ProjectedEnd;
+			const bool bStartProjected = Nav->ProjectPointToNavigation(
+				Site->GetActorLocation(),
+				ProjectedStart,
+				FVector(500.f, 500.f, 500.f));
+			const bool bEndProjected = Nav->ProjectPointToNavigation(
+				Mineral->GetActorLocation(),
+				ProjectedEnd,
+				FVector(500.f, 500.f, 500.f));
+			UNavigationPath* Path =
+				Nav->FindPathToLocationSynchronously(World, Start, End);
+			const bool bValid = Path && Path->IsValid();
+			UE_LOG(LogSlimeWar, Log,
+				TEXT("NAVVALIDATION %s -> %s valid=%s distance2d=%.1f path=%.1f ")
+				TEXT("siteProjected=%s mineralProjected=%s siteNav=%s mineralNav=%s."),
+				*Mineral->PatchId.ToString(),
+				*Site->SiteId.ToString(),
+				bValid ? TEXT("true") : TEXT("false"),
+				FVector::Dist2D(Start, End),
+				bValid ? Path->GetPathLength() : -1.f,
+				bStartProjected ? TEXT("true") : TEXT("false"),
+				bEndProjected ? TEXT("true") : TEXT("false"),
+				bStartProjected ? *ProjectedStart.Location.ToCompactString() : TEXT("None"),
+				bEndProjected ? *ProjectedEnd.Location.ToCompactString() : TEXT("None"));
+		}
+	}
+
+	for (const ASlimeMineralPatch* Source : AllMinerals)
+	{
+		if (Source->bRegenerates)
+		{
+			continue;
+		}
+		for (const ASlimeMineralPatch* Destination : Minerals)
+		{
+			const FVector Start = Source->GetActorLocation() + FVector(0.f, 0.f, 22.f);
+			const FVector End = Destination->GetActorLocation() + FVector(0.f, 0.f, 22.f);
+			UNavigationPath* Path =
+				Nav->FindPathToLocationSynchronously(World, Start, End);
+			const bool bValid = Path && Path->IsValid();
+			UE_LOG(LogSlimeWar, Log,
+				TEXT("NAVRESOURCE %s -> %s valid=%s distance2d=%.1f path=%.1f."),
+				*Source->PatchId.ToString(),
+				*Destination->PatchId.ToString(),
+				bValid ? TEXT("true") : TEXT("false"),
+				FVector::Dist2D(Start, End),
+				bValid ? Path->GetPathLength() : -1.f);
+		}
 	}
 }
 

@@ -98,14 +98,15 @@ void ASlimeEcologyEnemy::BeginPlay()
 			Ecology->RegisterAgent(this);
 		}
 	}
-	if (USlimeHealthComponent* HealthComponent = GetHealthComponent())
-	{
-		HealthComponent->OnDamaged.RemoveAll(this);
-	}
 }
 
 void ASlimeEcologyEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (USlimeHealthComponent* HealthComponent = GetHealthComponent())
+	{
+		HealthComponent->OnDamaged.RemoveDynamic(this, &ASlimeEcologyEnemy::HandleDamaged);
+	}
+
 	if (UWorld* World = GetWorld())
 	{
 		if (USlimeEcologySubsystem* Ecology = World->GetSubsystem<USlimeEcologySubsystem>())
@@ -313,6 +314,10 @@ void ASlimeEcologyEnemy::NotifyCombatDamage(AActor* Causer)
 		{
 			Core->SetPlayerProvoked();
 		}
+		else if (Alert)
+		{
+			Alert->RaiseAlert(Player, true);
+		}
 		return;
 	}
 
@@ -405,16 +410,19 @@ void ASlimeEcologyEnemy::HandleDeath()
 	{
 		if (USlimePaintSubsystem* Paint = World->GetSubsystem<USlimePaintSubsystem>())
 		{
+			const float CapsuleRadius = GetCapsuleComponent()
+				? GetCapsuleComponent()->GetScaledCapsuleRadius()
+				: 20.f;
 			const float SplatRadius = FMath::Max(
 				55.f,
-				(GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleRadius() : 20.f)
-					* 1.6f);
+				CapsuleRadius * 1.6f);
 			Paint->RegisterSplat(
 				GetActorLocation(),
 				Paint->GetFactionColor(Faction),
 				SplatRadius,
 				FMath::FRandRange(0.f, 2.f * PI),
-				Faction);
+				Faction,
+				CapsuleRadius);
 		}
 	}
 

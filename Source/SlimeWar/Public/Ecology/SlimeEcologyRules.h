@@ -350,6 +350,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
 	float ResourceTargetHold = 2.f;
 
+	/** A mineral whose path repeatedly fails is ignored for this long before it is retried. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
+	float ResourceUnreachableRetrySeconds = 8.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource")
 	float GatherRange = 120.f;
 
@@ -407,6 +411,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Alert")
 	float AlertDuration = 10.f;
+
+	/** Alerted slimes become ready for autonomous fusion after this short delay. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Alert")
+	float AlertFusionReadyDelay = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Alert")
 	float AlertPropagationRadius = 500.f;

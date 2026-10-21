@@ -54,6 +54,11 @@ void USlimeAlertComponent::RaiseAlert(AActor* Source, bool bPropagate)
 	}
 	AlertRemaining = Rules->AlertDuration;
 	AlertSource = Source;
+	if (USlimeEcologyFusionComponent* Fusion =
+		Enemy->GetEcologyFusionComponent())
+	{
+		Fusion->NotifyAlertForHostileFusion(Rules->AlertFusionReadyDelay);
+	}
 
 	UE_LOG(LogSlimeWar, Verbose,
 		TEXT("EcologyAlert: %s raised by %s (warning %.2f, alert %.2f, propagate %s)."),

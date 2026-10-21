@@ -67,6 +67,7 @@ public:
 	void ApplySplitCalm(float Seconds);
 	void ResetForAssimilation();
 	void SetTemporaryContactReady(float Seconds);
+	void NotifyAlertForHostileFusion(float ReadyDelay);
 	void NotifyPartnerDied();
 
 	bool IsEngaged() const;
@@ -140,4 +141,5 @@ private:
 	bool bInitiator = false;
 	bool bResolving = false;
         bool bShotSnapshotReady = false;
+	bool bHostileIntentSnapshot = false;
 };

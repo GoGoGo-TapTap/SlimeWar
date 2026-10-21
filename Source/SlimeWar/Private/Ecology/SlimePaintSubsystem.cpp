@@ -119,11 +119,34 @@ void USlimePaintSubsystem::RegisterSplat(
 	const FLinearColor& Color,
 	float Radius,
 	float Rotation,
-	ESlimeFaction Faction)
+	ESlimeFaction Faction,
+	float SourceCapsuleRadius)
 {
 	EnsureRenderTarget();
 	FSlimePaintSplat Splat;
-	Splat.Location = Location;
+	FVector GroundLocation = Location;
+	bool bFoundGround = false;
+	if (UWorld* World = GetWorld())
+	{
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(SlimePaintGround), false);
+		FHitResult Hit;
+		if (World->LineTraceSingleByChannel(
+			Hit,
+			Location + FVector(0.f, 0.f, 100.f),
+			Location - FVector(0.f, 0.f, 1000.f),
+			ECC_WorldStatic,
+			Params))
+		{
+			GroundLocation = Hit.ImpactPoint + FVector(0.f, 0.f, 2.f);
+			bFoundGround = true;
+		}
+	}
+	if (!bFoundGround)
+	{
+		GroundLocation.Z = Location.Z - FMath::Max(1.f, SourceCapsuleRadius) + 2.f;
+	}
+
+	Splat.Location = GroundLocation;
 	Splat.Color = Color;
 	Splat.Radius = FMath::Max(1.f, Radius);
 	Splat.Rotation = Rotation;
@@ -188,14 +211,14 @@ void USlimePaintSubsystem::SpawnPaintDecal(
 	}
 
 	const FVector DecalSize(
-		FMath::Max(1.f, Splat.Radius * 0.5f),
+		FMath::Max(100.f, Splat.Radius),
 		FMath::Max(1.f, Splat.Radius * 2.f),
 		FMath::Max(1.f, Splat.Radius * 2.f));
 	UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(
 		this,
 		DecalMaterial,
 		DecalSize,
-		Splat.Location + FVector(0.f, 0.f, 2.f),
+		Splat.Location,
 		FRotator(-90.f, Splat.Rotation, 0.f),
 		0.f);
 	if (Decal)

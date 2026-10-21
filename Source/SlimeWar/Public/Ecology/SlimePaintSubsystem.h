@@ -38,7 +38,8 @@ public:
 		const FLinearColor& Color,
 		float Radius,
 		float Rotation = 0.f,
-		ESlimeFaction Faction = ESlimeFaction::A);
+		ESlimeFaction Faction = ESlimeFaction::A,
+		float SourceCapsuleRadius = 20.f);
 
 	UTextureRenderTarget2D* GetPaintRenderTarget() const { return PaintRenderTarget; }
 	int32 GetSplatCount() const { return SplatCount; }

@@ -111,5 +111,6 @@ private:
 	TWeakObjectPtr<ASlimeEcologyEnemy> NearestHostileCore;
 	FRandomStream RandomStream;
 	TMap<FIntPoint, int32> ExplorationVisits;
+	TMap<TWeakObjectPtr<ASlimeMineralPatch>, float> MineralTargetCooldownRemaining;
 	int32 RefreshCount = 0;
 };

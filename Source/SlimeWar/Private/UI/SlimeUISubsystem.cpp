@@ -81,6 +81,9 @@ void USlimeUISubsystem::Deinitialize()
 		}
 	}
 
+	bNextLevelTravelPending = false;
+	PendingNextLevelPackage = NAME_None;
+
 	Super::Deinitialize();
 }
 
@@ -805,6 +808,14 @@ bool USlimeUISubsystem::HasNextLevel() const
 
 bool USlimeUISubsystem::RequestNextLevel()
 {
+	// The result widget invokes this from its OnClicked event. Keep the actual travel out of that
+	// Blueprint stack: OpenLevel tears down the world once travel is processed, and the event must
+	// finish before any of its widget objects can become invalid.
+	if (bNextLevelTravelPending)
+	{
+		return true;
+	}
+
 	if (bPaused)
 	{
 		SetPauseState(false);
@@ -842,17 +853,52 @@ bool USlimeUISubsystem::RequestNextLevel()
 		return false;
 	}
 
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("USlimeUISubsystem::RequestNextLevel: the current world is unavailable."));
+		return false;
+	}
+
 	// The drop point index cannot carry over: the next level may have a different number of points,
 	// so its own preparation screen has to ask again.
 	Session->SetSelectedLevelId(Next->LevelId);
 	Session->ClearSelectedDropPoint();
 	Session->RequestEnterGameplay();
 
-	UE_LOG(LogSlimeWar, Log, TEXT("USlimeUISubsystem: next level %s (%s)."),
+	PendingNextLevelPackage = FName(*MapPackage);
+	bNextLevelTravelPending = true;
+	World->GetTimerManager().SetTimerForNextTick(
+		this, &USlimeUISubsystem::TravelToPendingNextLevel);
+
+	UE_LOG(LogSlimeWar, Log, TEXT("USlimeUISubsystem: next level %s (%s) scheduled for the next tick."),
 		*Next->LevelId.ToString(), *MapPackage);
 
-	UGameplayStatics::OpenLevel(this, FName(*MapPackage));
 	return true;
+}
+
+void USlimeUISubsystem::TravelToPendingNextLevel()
+{
+	const FName MapPackage = PendingNextLevelPackage;
+	PendingNextLevelPackage = NAME_None;
+	bNextLevelTravelPending = false;
+
+	if (MapPackage.IsNone())
+	{
+		return;
+	}
+
+	if (!GetWorld())
+	{
+		UE_LOG(LogSlimeWar, Warning,
+			TEXT("USlimeUISubsystem::TravelToPendingNextLevel: the current world is unavailable."));
+		return;
+	}
+
+	UE_LOG(LogSlimeWar, Log, TEXT("USlimeUISubsystem: opening next level %s."),
+		*MapPackage.ToString());
+	UGameplayStatics::OpenLevel(this, MapPackage);
 }
 
 void USlimeUISubsystem::RequestLevelSelect()

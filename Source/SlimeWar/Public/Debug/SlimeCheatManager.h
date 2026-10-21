@@ -221,6 +221,10 @@ public:
 	UFUNCTION(Exec)
 	void SlimeEcologyResourceStatus();
 
+	/** Validate every regenerating mineral against every faction site using the runtime navmesh. */
+	UFUNCTION(Exec)
+	void SlimeEcologyNavigationValidation();
+
 	UFUNCTION(Exec)
 	void SlimeEcologyResourceSoakTest(float Seconds = 30.f);
 
@@ -297,6 +301,8 @@ public:
 	void SlimePause();
 
 private:
+	void ValidateEcologyNavigationNow();
+
 	/** Same-frame spawns are not always visible to the actor iterator yet; retry once next tick. */
 	UFUNCTION()
 	void RetryDumpBodyMetrics();

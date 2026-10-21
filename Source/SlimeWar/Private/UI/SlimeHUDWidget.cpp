@@ -48,7 +48,8 @@ void USlimeHUDWidget::NativeDestruct()
 ASlimeRunGameState* USlimeHUDWidget::GetRunGameState() const
 {
 	const APlayerController* PC = GetOwningPlayer();
-	return PC ? PC->GetWorld()->GetGameState<ASlimeRunGameState>() : nullptr;
+	const UWorld* World = PC ? PC->GetWorld() : nullptr;
+	return World ? World->GetGameState<ASlimeRunGameState>() : nullptr;
 }
 
 void USlimeHUDWidget::BindRun()

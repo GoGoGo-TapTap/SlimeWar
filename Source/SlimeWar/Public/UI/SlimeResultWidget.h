@@ -8,6 +8,7 @@
 #include "SlimeResultWidget.generated.h"
 
 class UTexture;
+class UButton;
 
 /**
  * Settlement screen (PD-10).
@@ -22,6 +23,7 @@ class SLIMEWAR_API USlimeResultWidget : public UUserWidget
 
 public:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	/** All settlement numbers in one struct (see FSlimeRunResult). */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
@@ -68,6 +70,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
 	bool RequestNextLevel();
 
+	/** Void Blueprint entry point used by the result page to avoid a bool return through a world transition. */
+	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
+	void RequestNextLevelDeferred();
+
 	/** Open the level select screen: screen switch only, the world is not reloaded. */
 	UFUNCTION(BlueprintCallable, Category = "Slime|UI")
 	void RequestLevelSelect();
@@ -81,4 +87,11 @@ public:
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Slime|UI")
 	void OnResultShown();
+
+protected:
+	UFUNCTION()
+	void HandleNextLevelClicked();
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UButton> Btn_NextLevel;
 };

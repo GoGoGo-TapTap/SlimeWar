@@ -393,7 +393,8 @@ void USlimeEcologySubsystem::NotifyAgentRemoved(
 
 ASlimeMineralPatch* USlimeEcologySubsystem::FindBestMineralPatch(
 	const ASlimeEcologyEnemy* Enemy,
-	float MaxRange) const
+	float MaxRange,
+	const TSet<TWeakObjectPtr<ASlimeMineralPatch>>* IgnoredPatches) const
 {
 	if (!Enemy)
 	{
@@ -406,7 +407,8 @@ ASlimeMineralPatch* USlimeEcologySubsystem::FindBestMineralPatch(
         const UWorld* World = GetWorld();
 	for (ASlimeMineralPatch* Patch : MineralPatches)
 	{
-		if (!Patch || Patch->Stock <= 0)
+		if (!Patch || Patch->Stock <= 0
+			|| (IgnoredPatches && IgnoredPatches->Contains(Patch)))
 		{
 			continue;
 		}
@@ -816,6 +818,21 @@ int32 USlimeEcologySubsystem::GetRegisteredCount() const
 	return Count;
 }
 
+int32 USlimeEcologySubsystem::GetLiveAgentCount() const
+{
+	int32 Count = 0;
+	for (const TWeakObjectPtr<ASlimeEcologyEnemy>& Entry : RegisteredAgents)
+	{
+		const ASlimeEcologyEnemy* Agent = Entry.Get();
+		const USlimeHealthComponent* Health = Agent ? Agent->GetHealthComponent() : nullptr;
+		if (Agent && !Agent->IsActorBeingDestroyed() && (!Health || !Health->IsDead()))
+		{
+			++Count;
+		}
+	}
+	return Count;
+}
+
 ASlimeFactionSite* USlimeEcologySubsystem::FindSiteForFaction(ESlimeFaction Faction) const
 {
 	for (ASlimeFactionSite* Site : Sites)
@@ -1005,20 +1022,22 @@ void USlimeEcologySubsystem::EvaluateExtinction(float DeltaTime)
 	}
 
 	ExtinctionCheckAccumulator += DeltaTime;
-	if (ExtinctionCheckAccumulator < 0.5f)
+	if (ExtinctionCheckAccumulator < 0.25f)
 	{
 		return;
 	}
 	ExtinctionCheckAccumulator = 0.f;
 
-	if (GetRegisteredCount() > 0 || PendingSpawns.Num() > 0 || GetGroundCargo() > 0)
+	if (GetLiveAgentCount() > 0 || PendingSpawns.Num() > 0)
 	{
 		return;
 	}
 
 	bExtinctionReported = true;
 	OnExtinction.Broadcast();
-	UE_LOG(LogSlimeWar, Log, TEXT("EcologySubsystem: extinction detected."));
+	UE_LOG(LogSlimeWar, Log,
+		TEXT("EcologySubsystem: extinction detected (ground cargo remaining: %d)."),
+		GetGroundCargo());
 }
 
 FIntPoint USlimeEcologySubsystem::ToCell(const FVector& Location) const

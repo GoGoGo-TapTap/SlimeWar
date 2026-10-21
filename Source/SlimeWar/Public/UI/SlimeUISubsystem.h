@@ -128,6 +128,7 @@ public:
 protected:
 	/** Runs one tick after world begin play, when the GameState and the pawn exist. */
 	void SetupUI();
+	void TravelToPendingNextLevel();
 
 	void HandleRunStateChanged(ESlimeRunState NewState);
 	void HandleRunEnded(ERunEndReason Reason);
@@ -202,6 +203,9 @@ protected:
 
 	bool bWidgetsCreated = false;
 	bool bPaused = false;
+	bool bNextLevelTravelPending = false;
+
+	FName PendingNextLevelPackage;
 
 	ESlimeUIFlowState UIFlowState = ESlimeUIFlowState::MainMenu;
 };

@@ -2,6 +2,8 @@
 
 #include "UI/SlimeResultWidget.h"
 
+#include "Components/Button.h"
+#include "Engine/World.h"
 #include "Flow/SlimeRunGameState.h"
 #include "GameFramework/PlayerController.h"
 #include "UI/SlimeResultCamera.h"
@@ -12,6 +14,26 @@ void USlimeResultWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	RefreshResult();
+
+	// The authored result-page click graph previously produced a bool through the Blueprint VM,
+	// which crashed after the map transition invalidated the widget. Own the click here instead:
+	// the graph may keep its visual/audio nodes, but cannot continue through the travel call.
+	if (Btn_NextLevel)
+	{
+		Btn_NextLevel->OnClicked.Clear();
+		Btn_NextLevel->OnClicked.AddUniqueDynamic(
+			this, &USlimeResultWidget::HandleNextLevelClicked);
+	}
+}
+
+void USlimeResultWidget::NativeDestruct()
+{
+	if (Btn_NextLevel)
+	{
+		Btn_NextLevel->OnClicked.RemoveDynamic(
+			this, &USlimeResultWidget::HandleNextLevelClicked);
+	}
+	Super::NativeDestruct();
 }
 
 void USlimeResultWidget::RefreshResult()
@@ -46,7 +68,9 @@ void USlimeResultWidget::RefreshResult()
 bool USlimeResultWidget::WasPassed() const
 {
 	const APlayerController* PC = GetOwningPlayer();
-	const ASlimeRunGameState* RunState = PC ? PC->GetWorld()->GetGameState<ASlimeRunGameState>() : nullptr;
+	const UWorld* World = PC ? PC->GetWorld() : nullptr;
+	const ASlimeRunGameState* RunState =
+		World ? World->GetGameState<ASlimeRunGameState>() : nullptr;
 	return RunState ? RunState->GetRunResult().bPassed : false;
 }
 
@@ -94,6 +118,16 @@ bool USlimeResultWidget::RequestNextLevel()
 		return UI->RequestNextLevel();
 	}
 	return false;
+}
+
+void USlimeResultWidget::RequestNextLevelDeferred()
+{
+	RequestNextLevel();
+}
+
+void USlimeResultWidget::HandleNextLevelClicked()
+{
+	RequestNextLevelDeferred();
 }
 
 void USlimeResultWidget::RequestLevelSelect()
