@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{72E6972D-3944-416A-B096-A680A915B9A3}",
     "Language": "SFX",
-    "Hash": "{7B348B32-B241-C8D9-6223-A9536399A466}",
+    "Hash": "{6DE405B4-D001-7EC3-71B9-D360ABE1BFF6}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\GJ2026",
     "ShortName": "GJ2026",
     "Path": "GJ2026.bnk",
@@ -885,6 +885,6 @@
     ]
    }
   ],
-  "FileHash": "{F7037FA2-690F-CF46-F25F-972AF82629E3}"
+  "FileHash": "{2BF964E7-D591-2858-695A-CE1D118038C6}"
  }
 }

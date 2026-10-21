@@ -350,6 +350,7 @@ void ASlimeHUD::DrawEcologyStateDebug()
 
 		if (Weakpoint && Weakpoint->IsWeakpointActive())
 		{
+#if ENABLE_DRAW_DEBUG
 			DrawDebugSphere(
 				World,
 				Weakpoint->GetComponentLocation(),
@@ -360,6 +361,7 @@ void ASlimeHUD::DrawEcologyStateDebug()
 				0.f,
 				0,
 				2.f);
+#endif
 		}
 	}
 }

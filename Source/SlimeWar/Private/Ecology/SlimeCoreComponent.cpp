@@ -745,6 +745,7 @@ void USlimeCoreComponent::Detonate()
 			FMath::FRandRange(0.f, 2.f * PI),
 			Enemy->GetFaction());
 	}
+#if ENABLE_DRAW_DEBUG
         DrawDebugSphere(
                 GetWorld(),
                 Origin,
@@ -755,6 +756,7 @@ void USlimeCoreComponent::Detonate()
                 0.8f,
                 0,
                 3.f);
+#endif
 
 	TArray<ASlimeEcologyEnemy*> Neighbours;
 	Ecology->QueryNeighbors(Enemy, Radius, Neighbours);
@@ -786,6 +788,7 @@ void USlimeCoreComponent::Detonate()
 			if (bCanChain
 				&& OtherCore && OtherCore->IsCore() && !OtherCore->HasExploded())
 		{
+#if ENABLE_DRAW_DEBUG
                         DrawDebugLine(
                                 GetWorld(),
                                 Origin,
@@ -795,6 +798,7 @@ void USlimeCoreComponent::Detonate()
                                 0.8f,
                                 0,
                                 4.f);
+#endif
                         UE_LOG(LogSlimeWar, Log,
                                 TEXT("CoreExplosionEffect: chain detonate %s."),
                                 *GetNameSafe(Other));
@@ -838,6 +842,7 @@ void USlimeCoreComponent::Detonate()
                                 PushSpeed);
 		}
 
+#if ENABLE_DRAW_DEBUG
                 DrawDebugLine(
                         GetWorld(),
                         Origin,
@@ -857,6 +862,7 @@ void USlimeCoreComponent::Detonate()
                         0.8f,
                         0,
                         2.f);
+#endif
 	}
 }
 
